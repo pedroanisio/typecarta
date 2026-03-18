@@ -149,7 +149,7 @@ The specification includes a worked scorecard for three IRs:
 npm install typecarta
 
 # Development:
-git clone https://github.com/<org>/typecarta.git
+git clone https://github.com/pedroanisio/typecarta.git
 cd typecarta
 pnpm install
 pnpm build
