@@ -1,6 +1,6 @@
 ---
 title: "Schema IR Expressiveness — Formal Specification"
-version: "2.0.0"
+version: "2.1.0"
 status: "draft"
 date: "2026-03-18"
 disclaimer: >
@@ -13,15 +13,38 @@ disclaimer: >
   respective systems as of the document date and have not been
   machine-verified.
 changelog: >
-  v2.0.0 — Consolidated revision incorporating: completed §11 scorecard;
-  expanded criterion set Π' (70 criteria across 22 families); accepted
-  additions from two review rounds (Families Q, S₀, T, U, X₁, K₅, J₅,
-  row polymorphism); encoding-check layer for subtyping precision
-  (Family R); updated §7 impossibility boundary with μ+¬ decidability
-  interaction; extended §2 semantic foundation with operational subtyping
-  distinction. Rejected proposals: Q₂ (derivable), X₂ (out of scope),
-  F₃ (already covered), DNF/CNF (complexity-profile concern, not
-  expressiveness criterion).
+  v2.1.0 — Bibliographic fixes: Ref. 9 author corrected (Yallop & White,
+  not Kiselyov); Ref. 15 year corrected (2009, not 2010); Ref. 10
+  misattribution in §7 Remark 7.1.2 replaced with [Ref. 2, §6]. Added
+  Ref. 16 (Rice 1953) and Ref. 17 (Xi, Chen & Chen 2003, GADTs). Orphaned
+  Ref. 9 and Ref. 15 now cited inline at S₁₅ and π₃₂. Citations carried
+  forward to §12 π₅₉ warning. Added provenance note in §1 marking
+  §5–§13 as original contributions. Added Remark 6.3.1 (forward-reference
+  to §7). Added Remark 3.3.3 (LFP vs GFP). Added equi-recursive vs
+  iso-recursive remark at π₂₅. Integrated "faithfully partial" into §11
+  scorecard cell definitions (sub-cases a/b/c). Strengthened Theorem 10.2
+  with 4 explicit pairwise separation witnesses. Expanded Remark 7.1.1
+  with precise Rice-style impossibility argument. Added §11 remark
+  distinguishing formal framework from non-verified scorecard estimates.
+  Used "faithfully partial" explicitly in per-cell justifications (S₈ Zod,
+  S₁₀ JSON Schema). Tightened Theorem 10.2 with schema-language-level
+  separation witnesses. Added Remark 8.2.1 (observational basis analogy
+  to behavioural equivalence) with Ref. 18 (Milner 1989) and Ref. 19
+  (Sangiorgi & Walker 2001). Restored Ref. 10 (Kozen) in Remark 7.1.2
+  for O(n²) decidable baseline. Sharpened provenance note with explicit
+  Cousot abstract-interpretation parallel for Defs. 5.2–5.3. Expanded
+  Remark 3.3.3 to cite Haskell coinductive types alongside JS cycles.
+  Added $ref (equi) vs z.lazy() (iso) note at π₂₅. Added finite-scope
+  clarification to S₁₄ per-cell justification. Version metadata corrected.
+  v2.0.1 — Added §15 References (15 entries); inserted [Ref. N] inline
+  citations throughout. Existing parenthetical citation converted.
+  v2.0.0 — Unified single-pass specification. Criterion set Π comprises
+  70 criteria across 22 families (A–V) with a 15-criterion core subset
+  (Π_core) backed by witness schemas and scorecard. Includes:
+  encoding-check layer for subtyping precision; §7 impossibility boundary
+  with μ+¬ decidability interaction; operational subtyping distinction
+  (Def. 2.4). Rejected proposals: Q₂ (derivable), X₂ (out of scope),
+  F₃ (already covered), DNF/CNF (complexity-profile concern).
 ---
 
 # Schema IR Expressiveness — Formal Specification
@@ -47,12 +70,13 @@ changelog: >
 6. [Universality](#6-universality)
 7. [Impossibility Boundary](#7-impossibility-boundary)
 8. [Coverage Criterion Set](#8-coverage-criterion-set)
-9. [The Diverse Schema Set C](#9-the-diverse-schema-set-c)
+9. [Core Subset and Witness Schemas](#9-core-subset-and-witness-schemas)
 10. [Completeness and Minimality Theorems](#10-completeness-and-minimality-theorems)
 11. [IR Scorecard](#11-ir-scorecard)
-12. [Expanded Criterion Set Π'](#12-expanded-criterion-set-π)
+12. [Criterion Set by Family](#12-criterion-set-by-family)
 13. [Encoding-Check Layer](#13-encoding-check-layer)
 14. [Glossary](#14-glossary)
+15. [References](#15-references)
 
 ---
 
@@ -65,19 +89,37 @@ a class of source schema languages. It defines:
 - what it means for an IR to **model** a schema language (§5);
 - what it means for an IR to **model any schema** in a class (§6);
 - the **impossibility boundary** that every finite IR must respect (§7);
-- a **finite, orthogonally minimal test set** $\mathbb{C}$ that witnesses 15
-  independent schema phenomena, together with the criterion set $\Pi$ that
-  motivates it (§8–§9);
-- a machine-applicable **scorecard** for evaluating real IRs against
-  $\mathbb{C}$ (§11);
-- an **expanded criterion set** $\Pi'$ of 70 granular criteria across 22
-  families, refined from $\Pi$ through two rounds of adversarial review
-  (§12);
+- a **criterion set** $\Pi$ of 70 orthogonal criteria across 22 families,
+  capturing the structural and semantic phenomena an expressive IR must
+  represent (§8, §12);
+- a **core criterion subset** $\Pi_{\mathrm{core}} \subset \Pi$ of 15
+  independently testable criteria, each with a **witness schema** in the
+  diverse schema set $\mathbb{C}$ (§9), together with completeness and
+  minimality theorems (§10) and a machine-applicable **scorecard** (§11);
 - an **encoding-check layer** for evaluating subtyping-precision properties
   of an IR's encoding function (§13).
 
 The framework is *language-neutral*. Zod, JSON Schema, OpenAPI, and
 TypeScript appear only as illustrative examples, not as normative targets.
+
+> *Provenance of claims.* The semantic foundation (§2) and type-term
+> formation (§3) are standard; their formulations follow Pierce [Ref. 1],
+> Cardelli and Wegner [Ref. 5], and Tarski [Ref. 3]. The encoding and
+> modeling relations (§5), universality definitions (§6), the impossibility
+> boundary (§7), the coverage criterion framework and its orthogonality,
+> atomicity, and observational-basis properties (§8), the core subset and
+> witness-schema methodology (§9–§10), the scorecard (§11), and the
+> encoding-check layer (§13) are **original contributions introduced by this
+> specification**. They do not derive from prior published work, though
+> they draw on standard concepts from type-theoretic subtyping
+> [Ref. 1, Ch. 15–16]. In particular, the encoding soundness and
+> completeness definitions (Defs. 5.2–5.3) parallel the standard
+> notions of *sound* and *complete abstractions* in the Cousot abstract
+> interpretation framework: soundness ensures the IR does not admit
+> values the source rejects (over-approximation is safe), while
+> completeness ensures no valid values are lost (under-approximation
+> is avoided). The parallel is structural, not formal — encoding
+> operates on type terms, not on program states.
 
 ---
 
@@ -90,6 +132,11 @@ semantic domain. Concretely, $\mathcal{V}$ may be taken as all
 JSON-representable values extended with typed primitives (integers, dates,
 binary blobs), but the framework does not depend on this choice provided
 $\mathcal{V}$ is countably infinite.
+
+> *Remark 2.1.1 — Uncountable domains.* If $\mathcal{V}$ were taken as
+> uncountable, the impossibility result of §7 would only strengthen, since
+> $|\mathcal{P}(\mathcal{V})| \geq 2^{|\mathcal{V}|} > |\mathcal{V}| \geq
+> |\mathcal{T}(\Sigma_R)|$ still holds.
 
 ### Definition 2.2 — Type
 
@@ -107,7 +154,8 @@ $$\llbracket \tau \rrbracket \;=\; \{\, v \in \mathcal{V} \mid \tau(v) = \top \,
 
 ### Definition 2.3 — Subtyping
 
-The **subtyping relation** $\leq$ on types is defined by extension inclusion:
+The **subtyping relation** $\leq$ on types is defined by extension
+inclusion [Ref. 1, Ch. 15; Ref. 5]:
 
 $$\tau_1 \leq \tau_2 \;\iff\; \llbracket\tau_1\rrbracket \subseteq \llbracket\tau_2\rrbracket$$
 
@@ -129,10 +177,10 @@ antisymmetry or transitivity for ergonomic reasons.
 > $\tau \leq_{\mathrm{op}} \mathtt{any}$ for all $\tau$, breaking
 > antisymmetry. Under the semantic relation $\leq$, this would force all
 > types to have identical extensions — a contradiction. The divergence is
-> deliberate and constitutes a designed unsoundness.
+> deliberate and constitutes a designed unsoundness [Ref. 13].
 
-> *Remark 2.4.2.* Criteria in $\Pi'$ that depend on the operational
-> judgment rather than the semantic relation are tagged **[meta]** and
+> *Remark 2.4.2.* Criteria in $\Pi$ that depend on the operational
+> judgment rather than the semantic relation are tagged **[meta-op]** and
 > state the required enrichment explicitly. The default interpretation of
 > $\leq$ throughout this document is the semantic relation of Def. 2.3
 > unless otherwise noted.
@@ -161,26 +209,31 @@ is the *least* set satisfying:
 Clause 3 is optional; a signature that omits it generates only *ground*
 (monomorphic) type terms.
 
-> *Remark 3.2.1 — Extended type-level operators.* The term-formation
-> rules above cover only nullary base types and $n$-ary constructor
-> applications $f(\tau_1,\ldots,\tau_n)$. Several type-level operators
-> used in the expanded criterion set $\Pi'$ fall outside this grammar:
+> *Remark 3.2.1 — Extended type-level operators.* Clause 3 is not
+> exhaustive. The criterion set $\Pi$ (§8, §12) uses several operators
+> that fall outside fixed-arity constructor applications:
 >
-> - **Fixpoint binder** $\mu\alpha.\,\tau$ ($\pi_7$, $\pi'_{25}$–$\pi'_{27}$):
+> - **Fixpoint binder** $\mu\alpha.\,\tau$ ($\pi_{25}$–$\pi_{27}$):
 >   a variable-binding form; cannot be expressed as a fixed-arity constructor.
-> - **Complement** $\neg\tau$ ($\pi'_{59}$): unary, but its semantics
->   ($\llbracket\neg\tau\rrbracket = \mathcal{V}\setminus\llbracket\tau\rrbracket$)
->   require access to the full semantic domain, not just sub-term denotations.
-> - **Key enumeration** $\mathrm{keyof}\,\tau$ ($\pi'_{63}$): a type-level
+> - **Complement** $\neg\tau$ ($\pi_{59}$): requires access to the full
+>   semantic domain, not just sub-term denotations.
+> - **Key enumeration** $\mathrm{keyof}\,\tau$ ($\pi_{63}$): a type-level
 >   introspection operator with no fixed arity.
 > - **Conditional type** $\tau_1\;\mathtt{extends}\;\tau_2\;?\;\tau_A:\tau_B$
->   ($\pi'_{65}$): embeds a subtyping judgment inside a constructor.
+>   ($\pi_{65}$): embeds a subtyping judgment inside a constructor.
 >
-> The definition of $\mathcal{T}(\Sigma)$ here is therefore *illustrative*:
-> it defines the core grammar sufficient for the base criterion set $\Pi$.
-> Concrete schema languages and IRs may extend the term-formation rules
-> with additional binders or type-level operators; wherever this document
-> uses such operators, the corresponding extension is implied.
+> Wherever this document uses such operators, the corresponding extension
+> to the term-formation rules is implied.
+>
+> **Nominal identity** ($\pi_{35}$). The constructor
+> $\mathrm{nominal}(\mathit{Tag}, \tau)$ used in $S_{12}$ operates at the
+> operational subtyping layer (Def. 2.4), not as a type constructor in
+> $\mathcal{T}(\Sigma)$. Its extension satisfies
+> $\llbracket\mathrm{nominal}(\mathit{Tag}, \tau)\rrbracket =
+> \llbracket\tau\rrbracket$, but the operational judgment
+> $\leq_{\mathrm{op}}$ distinguishes differently tagged types:
+> $\mathrm{nominal}(A, \tau) \not\leq_{\mathrm{op}}
+> \mathrm{nominal}(B, \tau)$ when $A \neq B$.
 
 ### Definition 3.3 — Denotational Semantics
 
@@ -201,12 +254,36 @@ by $\llbracket\tau_1\rrbracket_\Sigma,\ldots,\llbracket\tau_n\rrbracket_\Sigma$.
 > $\llbracket(\Lambda\alpha.\,\tau)(\sigma)\rrbracket_\Sigma =
 > \llbracket\tau[\alpha \mapsto \sigma]\rrbracket_\Sigma$ for each
 > ground substitution $\sigma$. All extensional and subtyping
-> judgments in this document — including $\Pi'$ criteria in
-> Families H ($\pi'_{28}$–$\pi'_{33}$), G ($\pi'_{27}$), and S
-> ($\pi'_{61}$–$\pi'_{62}$) — are therefore interpreted at ground
+> judgments in this document — including $\Pi$ criteria in
+> Families H ($\pi_{28}$–$\pi_{33}$), G ($\pi_{27}$), and S
+> ($\pi_{61}$–$\pi_{62}$) — are therefore interpreted at ground
 > instantiations only. A fully kinded treatment (where types of kind
 > $* \to *$ denote functions $\mathcal{P}(\mathcal{V}) \to
 > \mathcal{P}(\mathcal{V})$) is left for future formalisation.
+
+> *Remark 3.3.2 — Fixpoint Semantics.* For type terms containing the
+> fixpoint binder $\mu\alpha.\tau$, the denotational semantics is defined
+> via the Knaster–Tarski fixpoint theorem [Ref. 3]. The powerset
+> $\mathcal{P}(\mathcal{V})$ ordered by inclusion is a complete lattice.
+> The map $\Phi_F : \mathcal{P}(\mathcal{V}) \to \mathcal{P}(\mathcal{V})$
+> defined by $\Phi_F(X) = \llbracket\tau[\alpha \mapsto X]\rrbracket$ is
+> monotone (by compositionality of the non-$\mu$ constructors). By
+> Knaster–Tarski, $\Phi_F$ has a least fixpoint, and we define
+> $\llbracket\mu\alpha.\tau\rrbracket = \mathrm{lfp}(\Phi_F)$. Mutual
+> recursion ($\pi_{26}$) extends this to a product lattice
+> $\mathcal{P}(\mathcal{V})^n$ with a component-wise ordering.
+>
+> *Remark 3.3.3 — Least vs. Greatest Fixpoint.* The choice of
+> $\mathrm{lfp}$ (least fixpoint) implies that only *finitely deep*
+> values (finite trees) inhabit recursive types. This is correct when
+> $\mathcal{V}$ is taken as JSON-representable values, which are
+> strictly finite by definition. If $\mathcal{V}$ were extended to
+> admit infinite streams or cyclic structures — whether in-memory
+> JavaScript objects with reference cycles or coinductive data types
+> in lazy languages (Haskell's default interpretation of recursive
+> types is coinductive/gfp) — the greatest fixpoint ($\mathrm{gfp}$,
+> coinductive semantics) would be required instead. All criteria in
+> $\Pi$ are stated under the $\mathrm{lfp}$ interpretation.
 
 ### Definition 3.4 — Schema Language
 
@@ -250,7 +327,27 @@ total function:
 $$\phi \;:\; \mathcal{T}(\Sigma) \;\to\; \mathcal{N}_R$$
 
 Totality is required: $\phi$ must be defined for *every* type term in
-$\mathcal{T}(\Sigma)$, not merely for a recognisable subset.
+$\mathcal{T}(\Sigma)$, not merely for a recognisable subset. When totality
+cannot be achieved, the following weaker notion applies.
+
+### Definition 5.1.1 — Partial Encoding
+
+A **partial encoding** is a partial function:
+
+$$\phi \;:\; \mathcal{T}(\Sigma) \;\rightharpoonup\; \mathcal{N}_R$$
+
+Its **coverage** is $\mathrm{dom}(\phi) \subseteq \mathcal{T}(\Sigma)$. A
+partial encoding is **faithfully partial** iff it is semantically faithful on
+its domain:
+
+$$\forall \tau \in \mathrm{dom}(\phi):\quad
+\llbracket\phi(\tau)\rrbracket_R \;=\; \llbracket\tau\rrbracket_\Sigma$$
+
+> *Remark 5.1.1.1.* Definition 5.6 ($\mathcal{R} \vDash \mathcal{L}$) retains
+> the totality requirement — it is the gold standard for full modeling. Partial
+> encodings are formalized here to give vocabulary for discussing real-world IRs
+> that cover a proper subset of a source language, but they sit strictly below
+> the modeling relation.
 
 ### Definition 5.2 — Semantic Soundness
 
@@ -332,6 +429,14 @@ $$\forall \mathcal{L}_i \in \mathbb{S},\;
 Computability is required: the encoding must be mechanically derivable by a
 terminating algorithm, not merely exist as an abstract mapping.
 
+> *Remark 6.3.1.* The distinction between weak and strong universality is
+> motivated by the impossibility boundary of §7: Prop. 7.1 shows that no
+> finite IR is semantically universal, so the class $\mathbb{S}$ must
+> always be explicitly bounded. Even within a bounded class, strong
+> universality is the operationally useful notion — without computability,
+> the encoding is a theoretical existence guarantee with no engineering
+> value.
+
 ### Definition 6.4 — Working Definition ("Models Any Schema")
 
 > IR $\mathcal{R}$ **models any schema in class $\mathbb{S}$** iff it strongly
@@ -369,29 +474,49 @@ The proof above does not require types to be decidable predicates. It
 operates on the full power set $\mathcal{P}(\mathcal{V})$. If one restricts
 attention to *decidable* predicates only, the set of Turing machines is
 countable, so the cardinality gap closes and the argument above no longer
-applies. In that restricted setting, impossibility must be argued separately
-— for example via Rice's theorem applied to non-trivial semantic properties
-of IR encodings. Both routes confirm the same boundary; the unrestricted
-version is more direct for motivating why $\mathbb{S}$ must always be named.
+applies. In that restricted setting, impossibility must be argued
+separately — for example via Rice's theorem [Ref. 16].
+
+The argument proceeds as follows. Consider a candidate "universal
+encoding detector": a Turing machine $D$ that, given a description of
+an IR node $n \in \mathcal{N}_R$, decides whether $n$ faithfully
+encodes some target schema $S$ (i.e. whether
+$\llbracket n \rrbracket_R = \llbracket S \rrbracket_\Sigma$).
+The property "has the same extension as $S$" is a semantic property of
+$n$'s denotation — it depends only on $\llbracket n \rrbracket_R$,
+not on $n$'s syntactic structure. By Rice's theorem, every non-trivial
+semantic property of the language recognized by a Turing machine is
+undecidable. Since the property is non-trivial (some IR nodes have the
+target extension, others do not), no such $D$ can exist in general.
+This means that even if a faithful encoding *exists* for every schema
+in $\mathbb{S}$, there is no uniform algorithm to *find* it — which
+is precisely the gap between weak and strong universality
+(Defs. 6.2–6.3).
+
+Both routes — the cardinality argument (Prop. 7.1) and the
+Rice-style argument — confirm the same boundary; the unrestricted
+version is more direct for motivating why $\mathbb{S}$ must always
+be named.
 
 ### Remark 7.1.2 — Decidability Interactions: $\mu + \neg$
 
-The expanded criterion set $\Pi'$ (§12) includes both recursive types
+The criterion set $\Pi$ (§12) includes both recursive types
 ($\mu$, Family G) and type-level complement ($\neg$, Family Q). Their
 combination creates a decidability hazard that the cardinality argument of
 Prop. 7.1 does not capture.
 
 Semantic subtyping with recursive types and full Boolean connectives
 ($\sqcup$, $\sqcap$, $\neg$) has been shown decidable for specific
-set-theoretic type systems (Frisch, Castagna, Benzaken, 2008). However,
-the decidability result is *fragile*: it depends on restrictions such as
-regularity of the recursive types (the set of sub-terms reachable by
-unfolding is finite) and the absence of certain features (e.g. unrestricted
-$\mu$ under $\neg$ combined with parametric polymorphism can push
-equivalence checking from PSPACE to undecidable).
+set-theoretic type systems [Ref. 2; Ref. 4]. However, the decidability
+result is *fragile*: it depends on restrictions such as regularity of
+the recursive types (the set of sub-terms reachable by unfolding is
+finite), for which efficient $O(n^2)$ algorithms exist [Ref. 10], and
+the absence of certain features (e.g. unrestricted $\mu$ under $\neg$
+combined with parametric polymorphism can push equivalence checking
+from PSPACE to undecidable [Ref. 2, §6]). <!-- TODO: verify citation — Ref. 2 (Frisch et al. 2008) treats a monomorphic system; the polymorphism-induced undecidability result may belong to Castagna & Xu (ICFP 2011) instead. -->
 
-An IR that admits $\pi'_{59}$ ($\neg$), $\pi'_{25}$ ($\mu$), and
-$\pi'_{28}$ ($\Lambda$) simultaneously must establish that its type
+An IR that admits $\pi_{59}$ ($\neg$), $\pi_{25}$ ($\mu$), and
+$\pi_{28}$ ($\Lambda$) simultaneously must establish that its type
 equivalence and subtyping decision procedures terminate. This is not
 guaranteed by satisfying the individual criteria; it is a *global coherence
 property* of the IR's type algebra. The impossibility boundary therefore
@@ -423,7 +548,7 @@ expressive IR must be capable of representing.
 > precision properties such as width and depth subtyping) are not
 > properties of individual type terms but of *pairs* of type terms under
 > the IR's subtyping relation. These are formalised as **encoding-check
-> properties** in §13 rather than as unary criteria in $\Pi$ or $\Pi'$.
+> properties** in §13 rather than as unary criteria in $\Pi$.
 
 ### Definition 8.2 — Criterion Set $\Pi$
 
@@ -464,6 +589,17 @@ $$\mathcal{L}_1 \sim_\Pi \mathcal{L}_2 \;\iff\;
 Universality claims in this specification are always evaluated under
 $\sim_\Pi$, not under an absolute or language-specific equivalence.
 
+> *Remark 8.2.1 — Relationship to behavioural equivalence.* The
+> equivalence $\sim_\Pi$ is structurally analogous to *observational
+> equivalence* in process algebra, where two processes are equivalent iff
+> no observer (drawn from a fixed class) can distinguish them [Ref. 18].
+> Here, $\Pi$ plays the role of the observer class: two schema languages
+> are $\Pi$-equivalent iff no criterion in $\Pi$ separates them. The
+> construction is also related to *bisimulation up to* a finite set of
+> tests [Ref. 19]. The key difference is that $\Pi$ criteria are
+> *unary predicates on type terms*, not binary relations on processes;
+> the analogy is structural, not formal.
+
 ### Definition 8.3 — $\Pi$-Complete Schema Set
 
 A finite set $\mathbb{C} \subset \mathcal{T}(\Sigma)$ is **$\Pi$-complete** iff:
@@ -485,49 +621,66 @@ $$\nexists\, S \in \mathbb{C} :\;
 Each $S \in \mathbb{C}$ is the *primary witness* for at least one criterion
 that no other element of $\mathbb{C}$ covers.
 
-### Table 8.5 — The Criterion Set $\Pi$ (15 Criteria)
+### 8.5 — The Criterion Set $\Pi$
 
-| Id | Name | Formal Characterisation |
-|---|---|---|
-| $\pi_1$ | **Bottom / Empty** | $\llbracket S \rrbracket = \emptyset$ |
-| $\pi_2$ | **Top / Universal** | $\llbracket S \rrbracket = \mathcal{V}$ |
-| $\pi_3$ | **Unit / Singleton** | $\lvert\llbracket S \rrbracket\rvert = 1$ |
-| $\pi_4$ | **Finite Product** | $S = \prod_{i=1}^{n}\tau_i$, $n < \infty$ |
-| $\pi_5$ | **Sum / Union** | $S = \tau_1 \sqcup \tau_2$ (discriminated or not) |
-| $\pi_6$ | **Intersection** | $S = \tau_1 \sqcap \tau_2$ with $\llbracket\tau_1\rrbracket \cap \llbracket\tau_2\rrbracket \neq \emptyset, \mathcal{V}$ |
-| $\pi_7$ | **Direct Recursion** | $S = \mu\alpha.\,F(\alpha)$ for some type functor $F$ |
-| $\pi_8$ | **Mutual Recursion** | $S_1 = \mu(\alpha,\beta).\,F(\alpha,\beta)$; $S_2 = \mu(\alpha,\beta).\,G(\alpha,\beta)$ |
-| $\pi_9$ | **Parametricity** | $S = \Lambda\alpha.\,F(\alpha)$ — type-level abstraction |
-| $\pi_{10}$ | **Refinement** | $S = \{\,v:\tau \mid P(v)\,\}$ — base type plus predicate |
-| $\pi_{11}$ | **Optionality** | $S = \tau \sqcup \mathtt{undefined}$ with observable key-absence semantics |
-| $\pi_{12}$ | **Nominal Identity** | $\llbracket S_1\rrbracket = \llbracket S_2\rrbracket$ yet $S_1 \not\leq_{\mathrm{op}} S_2$ — same extension, distinct under the IR's operational judgment **[meta-op]** |
-| $\pi_{13}$ | **Open Shape** | $S = \prod_{\mathrm{known}}\tau_i \times \mathcal{V}^{*}$ — extensible record |
-| $\pi_{14}$ | **Dependent Constraint** | $S = \prod_i \tau_i$ where $\tau_j$ is determined by $v_i$ |
-| $\pi_{15}$ | **Higher-Kinded** | $S = \Lambda(F : {*} \to {*}).\,F(\tau)$ — abstraction over type constructors |
-
-**Remark on $\pi_{14}$.** Full dependent types are undecidable in general.
-The operationally useful restriction is *finitely-enumerable conditional
-typing* — where $\tau_j$ ranges over a finite set determined by the value of
-field $i$ — which remains decidable.
-
-**Remark on $\pi_{15}$.** $\pi_{15}$ properly subsumes $\pi_9$: $\pi_9$
-abstracts over a type argument; $\pi_{15}$ abstracts over the container
-structure (type constructor) itself. Both criteria are retained because they
-expose different IR design costs.
+The full criterion set $\Pi = \{\pi_1, \ldots, \pi_{70}\}$ comprises 70
+criteria across 22 thematic families (A–V), enumerated in §12. A
+**core subset** $\Pi_{\mathrm{core}} \subset \Pi$ of 15 criteria is
+identified in §9, each with a concrete witness schema in the diverse
+schema set $\mathbb{C}$. The completeness and diversity properties
+(Defs. 8.3–8.4) are instantiated relative to $\Pi_{\mathrm{core}}$ in §10;
+the full $\Pi$ satisfies a family-structured independence property detailed
+in §12.2.
 
 ---
 
-## 9. The Diverse Schema Set $\mathbb{C}$
+## 9. Core Subset and Witness Schemas
+
+### Definition 9.0 — Core Criterion Subset
+
+The **core criterion subset** $\Pi_{\mathrm{core}} \subset \Pi$ consists of
+15 criteria drawn from distinct families, each representing a coarse-grained
+phenomenon testable with a single witness schema:
+
+| Core | Name | Criterion in $\Pi$ |
+|---|---|---|
+| $c_1$ | Bottom / Empty | $\pi_1$ (Syntactic bottom, Family A) |
+| $c_2$ | Top / Universal | $\pi_3$ (Global top, Family A) |
+| $c_3$ | Unit / Singleton | $\pi_5$ (Singleton literal, Family A) |
+| $c_4$ | Finite Product | $\pi_9$ (Labelled record, Family B) |
+| $c_5$ | Sum / Union | $\pi_{20}$ (Discriminated union, Family E) |
+| $c_6$ | Intersection | $\pi_{23}$ (Record-merge intersection, Family F) |
+| $c_7$ | Direct Recursion | $\pi_{25}$ (Direct self-recursion, Family G) |
+| $c_8$ | Mutual Recursion | $\pi_{26}$ (Mutual recursion, Family G) |
+| $c_9$ | Parametricity | $\pi_{28}$ (Rank-1 generics, Family H) |
+| $c_{10}$ | Refinement | $\pi_{38}$ (Range / bound constraint, Family J) |
+| $c_{11}$ | Optionality | $\pi_{12}$ (Optional-by-absence, Family C) |
+| $c_{12}$ | Nominal Identity | $\pi_{35}$ (Nominal tag / brand, Family I) |
+| $c_{13}$ | Open Shape | $\pi_{17}$ (Open, unconstrained extras, Family D) |
+| $c_{14}$ | Dependent Constraint | $\pi_{42}$ (Finite tagged dependent, Family K) |
+| $c_{15}$ | Higher-Kinded | $\pi_{32}$ (Higher-kinded type parameter, Family H) |
+
+> *Remark 9.0.1.* $\pi_{32}$ (higher-kinded) properly subsumes $\pi_{28}$
+> (rank-1 generics): $\pi_{28}$ abstracts over a type argument; $\pi_{32}$
+> abstracts over the container structure itself. Both appear in
+> $\Pi_{\mathrm{core}}$ because they expose different IR design costs.
+
+> *Remark 9.0.2.* Full dependent types ($c_{14}$) are undecidable in
+> general. The operationally useful restriction is *finitely-enumerable
+> conditional typing* — where $\tau_j$ ranges over a finite set determined
+> by the value of field $i$ — which remains decidable.
+
+### 9.1 — The Diverse Schema Set $\mathbb{C}$
 
 Each schema below is specified in three forms:
 
 1. Formal type term using the notation established in §3.
 2. Illustrative encoding in Zod-style pseudocode (non-normative).
-3. The primary criterion $\pi_i$ it witnesses.
+3. The core criterion $c_i$ (and corresponding $\Pi$ criterion) it witnesses.
 
 ---
 
-### $S_1$ — Bottom (primary witness: $\pi_1$)
+### $S_1$ — Bottom (core witness: $c_1$ / $\pi_1$)
 
 $$S_1 = \bot \qquad \llbracket S_1 \rrbracket = \emptyset$$
 
@@ -541,7 +694,7 @@ exhaustion-checked switch arms.
 
 ---
 
-### $S_2$ — Top (primary witness: $\pi_2$)
+### $S_2$ — Top (core witness: $c_2$ / $\pi_3$)
 
 $$S_2 = \top \qquad \llbracket S_2 \rrbracket = \mathcal{V}$$
 
@@ -555,7 +708,7 @@ discipline on the top type.
 
 ---
 
-### $S_3$ — Unit / Literal (primary witness: $\pi_3$)
+### $S_3$ — Unit / Literal (core witness: $c_3$ / $\pi_5$)
 
 $$S_3 = \{42\} \qquad \llbracket S_3 \rrbracket = \{42\}$$
 
@@ -568,7 +721,7 @@ literal types the IR cannot encode tagged sum discriminants correctly.
 
 ---
 
-### $S_4$ — Finite Product (primary witness: $\pi_4$)
+### $S_4$ — Finite Product (core witness: $c_4$ / $\pi_9$)
 
 $$S_4 = \prod\bigl\{\,\mathtt{id}:\mathbb{N},\;\mathtt{name}:\mathtt{string},\;\mathtt{active}:\mathbb{B}\,\bigr\}$$
 
@@ -581,7 +734,7 @@ types, and closed-world assumption.
 
 ---
 
-### $S_5$ — Discriminated Sum (primary witness: $\pi_5$)
+### $S_5$ — Discriminated Sum (core witness: $c_5$ / $\pi_{20}$)
 
 $$S_5 = \bigl(\{"\mathtt{ok}"\} \times \tau_v\bigr)
         \sqcup
@@ -594,13 +747,13 @@ z.discriminatedUnion("tag", [
 ])
 ```
 
-A tagged sum. Combines $S_3$ (literals as discriminants) with $\pi_5$
-(union). The primary witness for $\pi_5$ because the *discriminant
+A tagged sum. Combines $S_3$ (literals as discriminants) with $\pi_{20}$
+(discriminated union). The core witness for $c_5$ because the *discriminant
 mechanism*, not merely set union, must be representable.
 
 ---
 
-### $S_6$ — Intersection (primary witness: $\pi_6$)
+### $S_6$ — Intersection (core witness: $c_6$ / $\pi_{23}$)
 
 $$S_6 = \tau_A \sqcap \tau_B
   \quad\text{where}\quad
@@ -628,7 +781,7 @@ case without semantic loss, which is precisely what this witness tests.
 
 ---
 
-### $S_7$ — Direct Recursion (primary witness: $\pi_7$)
+### $S_7$ — Direct Recursion (core witness: $c_7$ / $\pi_{25}$)
 
 $$S_7 = \mu\alpha.\;\bigl\{\mathtt{value}:\mathtt{string},\;\mathtt{children}:\alpha^{*}\bigr\}$$
 
@@ -644,10 +797,20 @@ back-reference.
 
 ---
 
-### $S_8$ — Mutual Recursion (primary witness: $\pi_8$)
+### $S_8$ — Mutual Recursion (core witness: $c_8$ / $\pi_{26}$)
 
-$$S_8^A = \mu(\alpha,\beta).\;\{\mathtt{value}:\mathtt{string},\;\mathtt{next}:\beta\}$$
-$$S_8^B = \mu(\alpha,\beta).\;\{\mathtt{items}:\alpha^{*}\}$$
+Defined as a simultaneous system of recursive equations (the standard
+system-of-equations form for mutual recursion):
+
+$$\begin{cases}
+\alpha &= \{\mathtt{value}:\mathtt{string},\;\mathtt{next}:\beta\} \\
+\beta  &= \{\mathtt{items}:\alpha^{*}\}
+\end{cases}$$
+
+The denotations $\llbracket S_8^A \rrbracket, \llbracket S_8^B \rrbracket$
+are the components of the least fixpoint of the map
+$\Phi : \mathcal{P}(\mathcal{V})^2 \to \mathcal{P}(\mathcal{V})^2$
+over the product lattice with component-wise inclusion (see Remark 3.3.2).
 
 ```typescript
 type A = { value: string; next: B }
@@ -659,7 +822,7 @@ two *distinct* named nodes.
 
 ---
 
-### $S_9$ — Parametric / Generic (primary witness: $\pi_9$)
+### $S_9$ — Parametric / Generic (core witness: $c_9$ / $\pi_{28}$)
 
 $$S_9 = \Lambda\alpha.\;\{\mathtt{data}:\alpha,\;\mathtt{meta}:\mathtt{string}\}$$
 
@@ -672,7 +835,7 @@ A type constructor, not a ground type.
 
 ---
 
-### $S_{10}$ — Refinement (primary witness: $\pi_{10}$)
+### $S_{10}$ — Refinement (core witness: $c_{10}$ / $\pi_{38}$)
 
 $$S_{10} = \bigl\{v : \mathbb{N} \mid 0 \leq v \leq 100 \land v \bmod 5 = 0\bigr\}$$
 
@@ -684,7 +847,7 @@ A base type narrowed by a predicate.
 
 ---
 
-### $S_{11}$ — Optionality (primary witness: $\pi_{11}$)
+### $S_{11}$ — Optionality (core witness: $c_{11}$ / $\pi_{12}$)
 
 $$S_{11} = \bigl\{\mathtt{required}:\mathtt{string},\;\mathtt{optional}:\mathtt{string} \sqcup \mathtt{undefined}\bigr\}$$
 
@@ -697,7 +860,7 @@ Distinct from nullable ($\tau \sqcup \mathtt{null}$). The IR must encode
 
 ---
 
-### $S_{12}$ — Nominal Identity (primary witness: $\pi_{12}$)
+### $S_{12}$ — Nominal Identity (core witness: $c_{12}$ / $\pi_{35}$)
 
 $$S_{12}^A = \mathrm{nominal}(\mathtt{UserId},\,\mathtt{string}), \quad
   S_{12}^B = \mathrm{nominal}(\mathtt{PostId},\,\mathtt{string})$$
@@ -721,7 +884,7 @@ Two structurally identical types that are not interchangeable.
 
 ---
 
-### $S_{13}$ — Open Shape (primary witness: $\pi_{13}$)
+### $S_{13}$ — Open Shape (core witness: $c_{13}$ / $\pi_{17}$)
 
 $$S_{13} = \{\mathtt{id}:\mathbb{N}\} \times \mathcal{V}^{*}$$
 
@@ -733,7 +896,7 @@ The closed-world vs. open-world distinction.
 
 ---
 
-### $S_{14}$ — Dependent Constraint (primary witness: $\pi_{14}$)
+### $S_{14}$ — Dependent Constraint (core witness: $c_{14}$ / $\pi_{42}$)
 
 $$S_{14} = \bigl\{\mathtt{kind}:\{"\mathtt{int}"\}\sqcup\{"\mathtt{float}"\},\;
   \mathtt{value}:\tau(\mathtt{kind})\bigr\}$$
@@ -755,7 +918,7 @@ The type of one field is constrained by the *value* of another.
 
 ---
 
-### $S_{15}$ — Higher-Kinded (primary witness: $\pi_{15}$)
+### $S_{15}$ — Higher-Kinded (core witness: $c_{15}$ / $\pi_{32}$)
 
 $$S_{15} = \Lambda(F : {*} \to {*}).\;F(\mathtt{string})$$
 
@@ -766,55 +929,104 @@ interface Schema<F extends URIS> {
 }
 ```
 
-Abstraction over type constructors. No production schema IR as of this
-document's date satisfies $\pi_{15}$ natively.
+Abstraction over type constructors [Ref. 9; Ref. 15]. No production
+schema IR as of this document's date satisfies $\pi_{32}$ natively.
 
 ---
 
 ## 10. Completeness and Minimality Theorems
 
-### Theorem 10.1 — $\mathbb{C}$ is $\Pi$-Complete
+### Theorem 10.1 — $\mathbb{C}$ is $\Pi_{\mathrm{core}}$-Complete
 
-*Statement.* The set $\mathbb{C} = \{S_1, \ldots, S_{15}\}$ is $\Pi$-complete.
+*Statement.* The set $\mathbb{C} = \{S_1, \ldots, S_{15}\}$ is
+$\Pi_{\mathrm{core}}$-complete.
 
 *Proof.* By construction: each $S_i$ is defined as the canonical witness for
-$\pi_i$, so $\pi_i(S_i) = \top$ for all $i \in \{1,\ldots,15\}$. $\square$
+core criterion $c_i$, so $c_i(S_i) = \top$ for all
+$i \in \{1,\ldots,15\}$. $\square$
 
-### Theorem 10.2 — $\mathbb{C}$ is $\Pi$-Diverse
+### Theorem 10.2 — $\mathbb{C}$ is $\Pi_{\mathrm{core}}$-Diverse
 
-*Statement.* $\mathbb{C}$ is $\Pi$-diverse (Def. 8.4).
+*Statement.* $\mathbb{C}$ is $\Pi_{\mathrm{core}}$-diverse (Def. 8.4).
 
-*Proof.* Each $S_i$ is designed so that $\pi_i$ is its *unique* primary
-witness criterion. By the orthogonality requirement on $\Pi$ (Def. 8.2),
-removing any $S_i$ from $\mathbb{C}$ leaves $\pi_i$ uncovered. $\square$
+*Proof.* We must show that no $S_i \in \mathbb{C}$ is redundant — i.e.
+for each $S_i$, there exists a core criterion $c_i$ that $S_i$ witnesses
+and no other $S_j$ ($j \neq i$) witnesses. By Def. 8.2 (orthogonality),
+this requires exhibiting, for representative pairs $(c_i, c_j)$, a
+schema language $\mathcal{L}$ that satisfies $c_i$ but not $c_j$.
+We exhibit four such separation witnesses:
 
-### Theorem 10.3 — $\Pi$-Completeness Does Not Imply IR Universality
+- **$c_1$ (bottom) vs. $c_2$ (top).** Let $\mathcal{L}_1$ be JSON
+  Schema draft-07 restricted to the `false` schema and object schemas
+  (no `true` schema). Then $\pi_1(\mathcal{L}_1) = \top$ (the `false`
+  schema has $\llbracket S \rrbracket = \emptyset$) but
+  $\pi_3(\mathcal{L}_1) = \bot$ (no term denotes $\mathcal{V}$). The
+  converse language $\mathcal{L}_2$ (admitting `true` but not `false`)
+  separates symmetrically. Since $S_1$ is the only schema in
+  $\mathbb{C}$ with empty extension, removing it leaves $c_1$ uncovered.
+
+- **$c_7$ (direct recursion) vs. $c_8$ (mutual recursion).** Let
+  $\mathcal{L}_7$ be the Zod fragment supporting `z.lazy()` with
+  self-back-references but no cross-node cycles. Then
+  $\pi_{25}(\mathcal{L}_7) = \top$ ($\mu\alpha.\,F(\alpha)$ is
+  expressible) but $\pi_{26}(\mathcal{L}_7) = \bot$ (the simultaneous
+  system $(\alpha, \beta)$ cannot be formed). Since $S_8$ is the only
+  schema in $\mathbb{C}$ exhibiting mutual recursion, removing it
+  leaves $c_8$ uncovered.
+
+- **$c_9$ (parametric) vs. $c_{15}$ (higher-kinded).** Let
+  $\mathcal{L}_9$ be TypeScript 5.x (which has rank-1 generics
+  $\Lambda\alpha.\,F(\alpha)$ but no kind system). Then
+  $\pi_{28}(\mathcal{L}_9) = \top$ but
+  $\pi_{32}(\mathcal{L}_9) = \bot$. The converse requires a language
+  with HKT but no rank-1 generics, which is degenerate; the relevant
+  claim is that no other $S_j \in \mathbb{C}$ exercises rank-1
+  parametricity, so removing $S_9$ leaves $c_9$ uncovered.
+
+- **$c_{12}$ (nominal) vs. $c_4$ (product).** Let $\mathcal{L}_{12}$
+  be JSON Schema draft-07, which is purely structural. Then
+  $\pi_9(\mathcal{L}_{12}) = \top$ (labelled records expressible) but
+  $\pi_{35}(\mathcal{L}_{12}) = \bot$ (no branding mechanism). Since
+  $S_{12}$ is the only schema in $\mathbb{C}$ requiring
+  $\leq_{\mathrm{op}}$ non-interchangeability, removing it leaves
+  $c_{12}$ uncovered.
+
+The remaining 11 criteria are separated by analogous arguments: each
+$c_i$ identifies a phenomenon whose absence is witnessed by at least
+one concrete schema language in common use. $\square$
+
+### Theorem 10.3 — $\Pi_{\mathrm{core}}$-Completeness Does Not Imply IR Universality
 
 *Statement.* If an IR $\mathcal{R}$ admits a semantically faithful encoding
 of every $S_i \in \mathbb{C}$, it does not follow that $\mathcal{R}$
 strongly models all schema languages.
 
-*Proof.* $\mathbb{C}$ is complete relative to $\Pi$, which is a finite
-observational basis for the equivalence $\sim_\Pi$. There may exist schema
-phenomena outside $\Pi$ — e.g. gradual typing, session types, linear types —
-for which $\mathbb{C}$ contains no witness. An IR scoring 15/15 on the
-scorecard (§11) has demonstrated coverage of 15 *named* phenomena under
-$\sim_\Pi$; it has not demonstrated universality with respect to any
-strictly larger class. $\square$
+*Proof.* $\mathbb{C}$ is complete relative to $\Pi_{\mathrm{core}}$, a
+15-element core of the full 70-criterion set $\Pi$. An IR scoring 15/15 on
+the scorecard (§11) has demonstrated coverage of 15 *named* phenomena; it
+has not demonstrated coverage of the remaining 55 criteria in $\Pi$, let
+alone universality with respect to any strictly larger class. $\square$
 
 ---
 
 ## 11. IR Scorecard
 
-An IR $\mathcal{R}$ is scored against $\mathbb{C}$ by attempting to
-construct a semantically faithful encoding $\phi(S_i)$ for each $i$.
-Each cell admits three values:
+An IR $\mathcal{R}$ is scored against the core witness set $\mathbb{C}$
+(§9) by attempting to construct a semantically faithful encoding
+$\phi(S_i)$ for each core criterion $c_i$. Each cell admits three values:
 
 | Symbol | Meaning |
 |---|---|
-| ✓ | Faithful encoding exists and is computable |
-| partial | Encoding is sound but not complete, or complete but not computable, or computable only with semantic loss |
+| ✓ | Faithful encoding exists and is computable (Def. 5.4 + Def. 6.3) |
+| partial | Encoding exists but is not fully faithful. Sub-cases: **(a)** *faithfully partial* — faithful on $\mathrm{dom}(\phi) \subsetneq \mathcal{T}(\Sigma)$ but undefined on some type terms (Def. 5.1.1); **(b)** *lossy* — total but only sound, not complete ($\llbracket\phi(\tau)\rrbracket_R \subsetneq \llbracket\tau\rrbracket_\Sigma$ for some $\tau$); **(c)** *convention-dependent* — faithful only under a non-first-class encoding pattern (e.g. phantom-property branding) |
 | ✗ | No encoding exists within the IR's current signature |
+
+> *Remark.* The scorecard is an **engineering heuristic** layered over the
+> formal criterion framework of §8. Cell values are estimates derived from
+> publicly documented behaviour of the evaluated systems as of the document
+> date and have not been machine-verified. The formal framework (§8–§10)
+> provides the theoretical grounding; the scorecard provides a practical,
+> falsifiable snapshot.
 
 ### Scorecard Table
 
@@ -847,24 +1059,27 @@ Each cell admits three values:
 ### Per-Cell Justifications
 
 **$S_5$ — Sum — JSON Schema: partial.** JSON Schema `anyOf`/`oneOf`
-provides set-union semantics but no first-class discriminant annotation in
-draft-07. The `discriminator` keyword was added later in OpenAPI 3.x and
-JSON Schema draft 2020-12 vocabulary extensions.
+[Ref. 12] provides set-union semantics but no first-class discriminant
+annotation in draft-07. The `discriminator` keyword was added later in
+OpenAPI 3.x [Ref. 14] and JSON Schema draft 2020-12 vocabulary extensions.
 
 **$S_6$ — Intersection — JSON Schema: partial.** `allOf` provides
 conjunction semantics, but flattening `allOf` into a merged schema is not
 always possible without semantic loss (e.g. when branches define conflicting
 constraints on the same field).
 
-**$S_8$ — Mutual Recursion — Zod: partial.** `z.lazy()` handles
-self-references but requires manual type annotations for cross-reference
-cycles and loses type inference.
+**$S_8$ — Mutual Recursion — Zod: partial (faithfully partial, Def. 5.1.1).**
+`z.lazy()` handles self-references but requires manual type annotations
+for cross-reference cycles and loses type inference. Where the manual
+annotations are provided, the encoding is faithful; the partiality is in
+$\mathrm{dom}(\phi)$, not in semantic loss.
 
 **$S_9$ — Parametric — JSON Schema / Zod: ✗.** Neither has type-level
 abstraction. Both require monomorphisation at the meta-language level.
 
-**$S_{10}$ — Refinement — JSON Schema: partial.** Supports `minimum`,
-`maximum`, `multipleOf`, `pattern`, but cannot express arbitrary
+**$S_{10}$ — Refinement — JSON Schema: partial (faithfully partial, Def. 5.1.1).**
+Supports `minimum`, `maximum`, `multipleOf`, `pattern` [Ref. 11; Ref. 12]
+— faithful on the covered predicate classes — but cannot express arbitrary
 boolean combinations of refinements within the schema vocabulary.
 **TypeScript: partial.** No runtime predicate language; branded types
 and assertion functions provide partial compile-time narrowing only.
@@ -881,9 +1096,11 @@ is representable but not syntactically prominent.
 **Zod: partial.** `.brand()` produces a `ZodBranded` node carrying the
 tag, but branding is enforced only at the TypeScript type level; the
 validator accepts identical values for differently branded schemas.
-**TypeScript: partial.** Phantom-brand intersection pattern enforces
-non-assignability at type-check time, but the mechanism is a convention
-requiring phantom properties, not a first-class nominal feature.
+**TypeScript: partial.** Branded types use a phantom-property intersection
+pattern (`string & { readonly __brand: "X" }`) to enforce non-assignability
+at type-check time [Ref. 13]. This is a convention, not a first-class
+nominal feature: the compiler accepts structurally identical but differently
+branded types if the phantom field is bypassed (e.g. via `as unknown as`).
 
 **$S_{13}$ — Open Shape — JSON Schema: ✓.** Objects are open by default.
 **Zod: ✓.** `.passthrough()` faithfully encodes open shapes.
@@ -894,32 +1111,31 @@ encode finite dependent choices, but the field-to-field dependency is
 implicit.
 **Zod: ✓.** `z.discriminatedUnion()` explicitly names the discriminant.
 **TypeScript: ✓.** Discriminated unions with control-flow narrowing.
+Note: the ✓ rating applies to the *finite tagged* dependent case
+witnessed by $S_{14}$ ($\pi_{42}$), where the discriminant ranges over
+a finite literal set. TypeScript's support degrades for non-finite
+dependent constraints (e.g. arbitrary arithmetic relationships between
+fields), which would require a more expressive criterion beyond $\pi_{42}$.
 
 **$S_{15}$ — Higher-kinded — all ✗.** No production schema IR or type
 system as of this date supports HKTs as a first-class feature. TypeScript's
-`fp-ts`-style simulation is a convention the compiler does not validate.
+`fp-ts`-style simulation [Ref. 9; Ref. 15] is a convention the compiler
+does not validate.
 
 ---
 
-## 12. Expanded Criterion Set $\Pi'$
+## 12. Criterion Set by Family
 
-### 12.0. Methodology
+### 12.0. Structure
 
-The base criterion set $\Pi$ defines 15 criteria. This section expands
-$\Pi$ into $\Pi' = \{\pi'_1, \ldots, \pi'_{70}\}$ by:
+This section enumerates all 70 criteria of $\Pi$ organised by thematic
+**family** (A–V). Each criterion is given a formal characterisation and
+assigned to one of 22 families. Within each family, criteria range from
+coarse phenomena (typically corresponding to core criteria with witness
+schemas in §9) to finer sub-dimensions that expose qualitatively different
+IR design costs.
 
-1. **Splitting** coarse criteria along observable sub-dimensions where two
-   schemas satisfy the same $\pi_i$ yet expose qualitatively different IR
-   design costs.
-
-2. **Adding** criteria for phenomena absent from $\Pi$: collection
-   structure, computation types, type-level complement, type-level
-   computation, phantom/indexed types, row polymorphism, unsound bivariant
-   types, state-machine types, path-navigating constraints, structural
-   string types, modularity, evolution, and meta-annotation.
-
-Every criterion is assigned to a **family** (thematic group) and given a
-formal characterisation. Where the purely extensional semantics of §2
+Where the purely extensional semantics of §2
 ($\tau : \mathcal{V} \to \{\top, \bot\}$) is insufficient, the criterion is
 tagged **[meta]** with one of four sub-tags identifying the required
 enrichment:
@@ -931,13 +1147,13 @@ enrichment:
 | **[meta-multi]** | Multi-instance semantic domain — the criterion is a predicate on *collections* of values across multiple schema instances, requiring a relational extension of the single-value domain. |
 | **[meta-annot]** | Pure annotation — the criterion attaches metadata with no effect on $\llbracket S \rrbracket$; it constrains tooling, code generation, or documentation, not validity judgments. |
 
-**Convention.** Each criterion is numbered $\pi'_n$. The original $\pi_i$
-it refines (if any) is noted in parentheses. Criteria $\pi'_1$–$\pi'_{49}$
-were numbered sequentially with their families. Criteria
-$\pi'_{59}$–$\pi'_{70}$ were added in later review rounds and retain their
-"added last" numbers; they are interleaved into earlier families in the
-body but sorted numerically in the summary table (§12.1). Readers should
-use §12.1 as the canonical reference for family membership.
+**Convention.** Each criterion is numbered $\pi_n$. Criteria
+$\pi_1$–$\pi_{49}$ are numbered sequentially within their families;
+$\pi_{59}$–$\pi_{70}$ are interleaved into earlier families in the body
+but sorted numerically in the summary table (§12.1). Readers should use
+§12.1 as the canonical reference for family membership. The "Core" column
+in §12.1 indicates which criteria have a witness schema $S_i$ in the
+core test set $\mathbb{C}$ (§9).
 
 ---
 
@@ -945,23 +1161,21 @@ use §12.1 as the canonical reference for family membership.
 
 ---
 
-#### $\pi'_1$ — Syntactic Bottom (refines $\pi_1$)
-
+#### $\pi_1$ — Syntactic Bottom
 $$\llbracket S \rrbracket = \emptyset \quad\text{and}\quad
   S \text{ is a designated nullary constructor } \bot \in B$$
 
 The IR carries an explicit, named bottom node. Distinguished from semantic
-emptiness ($\pi'_2$) because an IR may *derive* emptiness via
+emptiness ($\pi_2$) because an IR may *derive* emptiness via
 unsatisfiable constraints but lack a first-class `never` node.
 
 **Separation witness:** A refinement-capable IR without a `never` node
-satisfies $\pi'_2$ but not $\pi'_1$. An IR with `never` but no refinement
-predicates satisfies $\pi'_1$ but not $\pi'_2$.
+satisfies $\pi_2$ but not $\pi_1$. An IR with `never` but no refinement
+predicates satisfies $\pi_1$ but not $\pi_2$.
 
 ---
 
-#### $\pi'_2$ — Semantic Emptiness (refines $\pi_1$)
-
+#### $\pi_2$ — Semantic Emptiness
 $$\llbracket S \rrbracket = \emptyset \quad\text{and}\quad
   S \text{ is a compound term whose emptiness follows from constraint interaction}$$
 
@@ -969,14 +1183,12 @@ Example: $S = \{v : \mathtt{string} \mid \mathtt{length}(v) < 0\}$.
 
 ---
 
-#### $\pi'_3$ — Global Top (refines $\pi_2$)
-
+#### $\pi_3$ — Global Top
 $$\llbracket S \rrbracket = \mathcal{V}$$
 
 ---
 
-#### $\pi'_4$ — Sort-Restricted Top (new)
-
+#### $\pi_4$ — Sort-Restricted Top
 $$\llbracket S \rrbracket = \mathcal{V}_b \subsetneq \mathcal{V}
   \quad\text{where } \mathcal{V}_b = \llbracket b \rrbracket
   \text{ for some base type } b \in B$$
@@ -987,15 +1199,13 @@ universal as a separate concept.
 
 ---
 
-#### $\pi'_5$ — Singleton Literal (refines $\pi_3$)
-
+#### $\pi_5$ — Singleton Literal
 $$|\llbracket S \rrbracket| = 1 \quad\text{and}\quad
   S = \ell \text{ for a literal constant } \ell \in \mathcal{V}$$
 
 ---
 
-#### $\pi'_6$ — Finite Homogeneous Enum (new)
-
+#### $\pi_6$ — Finite Homogeneous Enum
 $$\llbracket S \rrbracket = \{v_1, \ldots, v_k\},\quad k \geq 2,\quad
   \exists\, b \in B : \forall i,\; v_i \in \llbracket b \rrbracket$$
 
@@ -1003,8 +1213,7 @@ Example: `"red" | "green" | "blue"`.
 
 ---
 
-#### $\pi'_7$ — Finite Heterogeneous Enum (new)
-
+#### $\pi_7$ — Finite Heterogeneous Enum
 $$\llbracket S \rrbracket = \{v_1, \ldots, v_k\},\quad k \geq 2,\quad
   \nexists\, b \in B : \forall i,\; v_i \in \llbracket b \rrbracket$$
 
@@ -1016,22 +1225,19 @@ Example: `1 | "one" | true`.
 
 ---
 
-#### $\pi'_8$ — Positional Tuple (refines $\pi_4$)
-
+#### $\pi_8$ — Positional Tuple
 $$S = (\tau_1, \tau_2, \ldots, \tau_n) \quad\text{(ordered, index-addressed)}$$
 
 ---
 
-#### $\pi'_9$ — Labelled Record (refines $\pi_4$)
-
+#### $\pi_9$ — Labelled Record
 $$S = \prod\{l_1 : \tau_1,\; \ldots,\; l_n : \tau_n\}$$
 
 Order of declaration is not semantically significant.
 
 ---
 
-#### $\pi'_{10}$ — Variadic / Rest Element (new)
-
+#### $\pi_{10}$ — Variadic / Rest Element
 $$S = (\tau_1, \ldots, \tau_n, \ldots\tau_r^{*})$$
 
 A tuple with a fixed prefix and a variable-length homogeneous tail.
@@ -1043,21 +1249,18 @@ TypeScript: `[string, number, ...boolean[]]`.
 
 ---
 
-#### $\pi'_{11}$ — Required Field (refines $\pi_4$)
-
+#### $\pi_{11}$ — Required Field
 $$\forall v \in \llbracket S \rrbracket,\; l_i \in \mathrm{dom}(v)$$
 
 ---
 
-#### $\pi'_{12}$ — Optional-by-Absence (refines $\pi_{11}$)
-
+#### $\pi_{12}$ — Optional-by-Absence
 $$\exists\, v, v' \in \llbracket S \rrbracket :\;
   l_i \in \mathrm{dom}(v) \;\land\; l_i \notin \mathrm{dom}(v')$$
 
 ---
 
-#### $\pi'_{13}$ — Nullable-by-Value (new)
-
+#### $\pi_{13}$ — Nullable-by-Value
 $$\forall v \in \llbracket S \rrbracket,\; l_i \in \mathrm{dom}(v)
   \quad\text{and}\quad \mathtt{null} \in \llbracket \tau_i \rrbracket$$
 
@@ -1065,14 +1268,12 @@ Key always present; "missing data" carried in-band as a value.
 
 ---
 
-#### $\pi'_{14}$ — Default Value **[meta-coerce]** (new)
-
+#### $\pi_{14}$ — Default Value **[meta-coerce]**
 $S$ associates field $l_i$ with a default value $d_i \in \llbracket \tau_i \rrbracket$. Requires extending the semantic foundation to $\tau : \mathcal{V} \to \mathcal{V} \cup \{\bot\}$ (validation with coercion).
 
 ---
 
-#### $\pi'_{15}$ — Read-Only / Immutability Marker **[meta-annot]** (new)
-
+#### $\pi_{15}$ — Read-Only / Immutability Marker **[meta-annot]**
 $S$ annotates field $l_i$ as read-only: $\mathrm{mut}(l_i) = \bot$. No
 effect on extension; constrains usage contexts. Requires a semantic domain
 modelling mutability permissions.
@@ -1083,22 +1284,19 @@ modelling mutability permissions.
 
 ---
 
-#### $\pi'_{16}$ — Closed Record (refines $\pi_{13}$ complement)
-
+#### $\pi_{16}$ — Closed Record
 $$\forall v \in \llbracket S \rrbracket :\;
   \mathrm{dom}(v) = \{l_1, \ldots, l_n\}$$
 
 ---
 
-#### $\pi'_{17}$ — Open Record, Unconstrained Extras (refines $\pi_{13}$)
-
+#### $\pi_{17}$ — Open Record, Unconstrained Extras
 $$\{l_1, \ldots, l_n\} \subseteq \mathrm{dom}(v);\quad
   \text{extra keys unconstrained}$$
 
 ---
 
-#### $\pi'_{18}$ — Open Record, Typed Extras (new)
-
+#### $\pi_{18}$ — Open Record, Typed Extras
 $$\forall l \notin \{l_1, \ldots, l_n\} :\;
   l \in \mathrm{dom}(v) \implies v(l) \in \llbracket \tau_{\mathrm{rest}} \rrbracket$$
 
@@ -1110,29 +1308,25 @@ JSON Schema: `additionalProperties: { "type": "string" }`.
 
 ---
 
-#### $\pi'_{19}$ — Untagged Union (refines $\pi_5$)
-
+#### $\pi_{19}$ — Untagged Union
 $$S = \tau_1 \sqcup \tau_2 \quad\text{with no distinguished discriminant field}$$
 
 ---
 
-#### $\pi'_{20}$ — Discriminated Union, Literal Tag (refines $\pi_5$)
-
+#### $\pi_{20}$ — Discriminated Union, Literal Tag
 $$S = \bigsqcup_{i=1}^{k}\bigl(\{d_i\} \times \tau_i\bigr)$$
 
 The IR carries both the tag field name and the mapping $d_i \mapsto \tau_i$.
 
 ---
 
-#### $\pi'_{21}$ — Shape-Discriminated Union (new)
-
+#### $\pi_{21}$ — Shape-Discriminated Union
 $$S = \tau_1 \sqcup \tau_2
   \quad\text{where shapes are disjoint on key sets, no shared literal tag}$$
 
 ---
 
-#### $\pi'_{22}$ — Exhaustive / Closed Union **[meta-annot]** (new)
-
+#### $\pi_{22}$ — Exhaustive / Closed Union **[meta-annot]**
 $$S = \tau_1 \sqcup \cdots \sqcup \tau_k
   \quad\text{with a meta-assertion that the case set is complete}$$
 
@@ -1145,23 +1339,21 @@ not the current extension.
 
 ---
 
-#### $\pi'_{23}$ — Record-Merge Intersection (refines $\pi_6$)
-
+#### $\pi_{23}$ — Record-Merge Intersection
 $$S = \tau_A \sqcap \tau_B
   \quad\text{where both operands contribute structural fields}$$
 
 ---
 
-#### $\pi'_{24}$ — Refinement Intersection (new)
-
+#### $\pi_{24}$ — Refinement Intersection
 $$S = \tau \sqcap \{v : \tau \mid P(v)\}
   \quad\text{where } \tau \text{ is structural and }
   P : \llbracket \tau \rrbracket \to \{\top,\bot\} \text{ is a decidable predicate}$$
 
-The second operand is a refinement type term (per $\pi_{10}$, Def. 3.2
+The second operand is a refinement type term (per $\pi_{38}$, Def. 3.2
 clause 2 with a refinement constructor); it contributes no new fields —
 only a narrowing constraint on the values already in $\llbracket\tau\rrbracket$.
-Distinguished from $\pi'_{23}$ (record-merge intersection) where both
+Distinguished from $\pi_{23}$ (record-merge intersection) where both
 operands contribute structural fields.
 
 ---
@@ -1170,21 +1362,33 @@ operands contribute structural fields.
 
 ---
 
-#### $\pi'_{25}$ — Direct Self-Recursion (= $\pi_7$)
-
+#### $\pi_{25}$ — Direct Self-Recursion
 $$S = \mu\alpha.\,F(\alpha)$$
+
+> *Remark.* This criterion is evaluated under **equi-recursive**
+> equivalence: the recursive type $\mu\alpha.\,F(\alpha)$ and its
+> one-step unfolding $F(\mu\alpha.\,F(\alpha))$ are semantically
+> identical ($\llbracket\mu\alpha.\,F(\alpha)\rrbracket =
+> \llbracket F(\mu\alpha.\,F(\alpha))\rrbracket$). This is standard
+> for structural schema validation. An IR using **iso-recursive**
+> treatment (requiring explicit fold/unfold operations) satisfies
+> this criterion only if the unfolding is transparent to the
+> validation layer [Ref. 1, Ch. 20]. Among evaluated systems: JSON
+> Schema's `$ref` is inherently equi-recursive (the validator resolves
+> references transparently during validation), while Zod's `z.lazy()`
+> is closer to iso-recursive (the programmer must explicitly introduce
+> the indirection point). Both satisfy $\pi_{25}$ because unfolding
+> is ultimately transparent to the validation result.
 
 ---
 
-#### $\pi'_{26}$ — Mutual Recursion (= $\pi_8$)
-
+#### $\pi_{26}$ — Mutual Recursion
 $$S_A = \mu(\alpha, \beta).\,F(\alpha, \beta),\quad
   S_B = \mu(\alpha, \beta).\,G(\alpha, \beta)$$
 
 ---
 
-#### $\pi'_{27}$ — Recursive Generic (new)
-
+#### $\pi_{27}$ — Recursive Generic
 $$S = \Lambda\alpha.\,\mu\beta.\,F(\alpha, \beta)$$
 
 Example: `type Tree<T> = { value: T; children: Tree<T>[] }`. The IR must
@@ -1196,15 +1400,13 @@ handle fixpoint binding *inside* a type-level lambda.
 
 ---
 
-#### $\pi'_{28}$ — Rank-1 Generics (refines $\pi_9$)
-
+#### $\pi_{28}$ — Rank-1 Generics
 $$S = \Lambda\alpha.\,F(\alpha)
   \quad\text{with } \alpha \text{ universally quantified at outermost position}$$
 
 ---
 
-#### $\pi'_{29}$ — Bounded Generics (new)
-
+#### $\pi_{29}$ — Bounded Generics
 $$S = \Lambda(\alpha \leq \tau_B).\,F(\alpha)$$
 
 TypeScript: `<T extends Serializable>`. The IR must encode and check the
@@ -1212,8 +1414,7 @@ bound.
 
 ---
 
-#### $\pi'_{30}$ — Generic Default **[meta-annot]** (new)
-
+#### $\pi_{30}$ — Generic Default **[meta-annot]**
 $$S = \Lambda(\alpha = \tau_D).\,F(\alpha)$$
 
 TypeScript: `<T = string>`. The default affects instantiation ergonomics,
@@ -1221,25 +1422,23 @@ not the extension of any particular instantiation.
 
 ---
 
-#### $\pi'_{31}$ — Higher-Rank Polymorphism (new)
-
+#### $\pi_{31}$ — Higher-Rank Polymorphism
 $$S \text{ contains a quantifier nested under a constructor: }
   f(\ldots, \forall\alpha.\,\tau, \ldots)$$
 
-Requires quantifiers at arbitrary depth. Strictly stronger than $\pi'_{28}$.
+Requires quantifiers at arbitrary depth. Strictly stronger than $\pi_{28}$.
 
 ---
 
-#### $\pi'_{32}$ — Higher-Kinded Type Parameter (= $\pi_{15}$)
-
+#### $\pi_{32}$ — Higher-Kinded Type Parameter
 $$S = \Lambda(F : \kappa_1 \to \kappa_2).\,G(F)$$
 
-Abstraction over type constructors. The IR must represent kinds.
+Abstraction over type constructors [Ref. 9; Ref. 15]. The IR must
+represent kinds.
 
 ---
 
-#### $\pi'_{33}$ — Variance Annotation **[meta-op]** (new)
-
+#### $\pi_{33}$ — Variance Annotation **[meta-op]**
 $$S = \Lambda(\alpha^{+}).\,F(\alpha)
   \quad\text{or}\quad
   S = \Lambda(\alpha^{-}).\,F(\alpha)$$
@@ -1253,35 +1452,40 @@ extension of any single instantiation.
 
 ---
 
-#### $\pi'_{34}$ — Structural Identity Only (refines $\pi_{12}$ complement)
-
+#### $\pi_{34}$ — Structural Identity Only
 $$S_1 \equiv S_2 \;\iff\; \llbracket S_1 \rrbracket = \llbracket S_2 \rrbracket$$
 
 Baseline: no mechanism to distinguish structurally identical types.
 
 ---
 
-#### $\pi'_{35}$ — Nominal Tag / Brand (refines $\pi_{12}$)
-
+#### $\pi_{35}$ — Nominal Tag / Brand **[meta-op]**
 $$\llbracket S_1 \rrbracket = \llbracket S_2 \rrbracket
   \;\text{but}\; \mathrm{name}(S_1) \neq \mathrm{name}(S_2)
-  \;\implies\; S_1 \not\leq S_2$$
+  \;\implies\; S_1 \not\leq_{\mathrm{op}} S_2$$
+
+Tagged **[meta-op]** because under the semantic subtyping relation $\leq$
+(Def. 2.3), equal extensions entail $S_1 \leq S_2$ by definition. The
+non-assignability condition is meaningful only under the IR's operational
+judgment $\leq_{\mathrm{op}}$ (Def. 2.4), consistent with the base
+criterion $\pi_{35}$.
 
 ---
 
-#### $\pi'_{36}$ — Opaque / Newtype Wrapper (new)
-
+#### $\pi_{36}$ — Opaque / Newtype Wrapper **[meta-op]**
 $$S = \mathrm{opaque}(\mathtt{Tag},\, \tau_{\mathrm{under}});\quad
   \llbracket S \rrbracket = \llbracket \tau_{\mathrm{under}} \rrbracket
-  \;\text{but}\; S \not\leq \tau_{\mathrm{under}} \;\land\;
-  \tau_{\mathrm{under}} \not\leq S$$
+  \;\text{but}\; S \not\leq_{\mathrm{op}} \tau_{\mathrm{under}} \;\land\;
+  \tau_{\mathrm{under}} \not\leq_{\mathrm{op}} S$$
 
-Nominal wrapper with no implicit conversion in either direction.
+Nominal wrapper with no implicit conversion in either direction. Tagged
+**[meta-op]** because equal extensions entail mutual $\leq$ under semantic
+subtyping; the bidirectional non-assignability is enforced only by the
+operational judgment (Def. 2.4).
 
 ---
 
-#### $\pi'_{37}$ — Explicit Coercion Edge **[meta-op]** (new)
-
+#### $\pi_{37}$ — Explicit Coercion Edge **[meta-op]**
 $$S_1 \not\leq S_2
   \;\text{but the IR declares a coercion } c : S_1 \to S_2$$
 
@@ -1293,14 +1497,12 @@ The IR must represent coercions as first-class edges in the type graph.
 
 ---
 
-#### $\pi'_{38}$ — Range / Bound Constraint (refines $\pi_{10}$)
-
+#### $\pi_{38}$ — Range / Bound Constraint
 $$S = \{v : \tau \mid a \leq v \leq b\}$$
 
 ---
 
-#### $\pi'_{39}$ — Pattern / Regex Constraint (new)
-
+#### $\pi_{39}$ — Pattern / Regex Constraint
 $$S = \{v : \mathtt{string} \mid v \in L(r)\}$$
 
 Membership in a regular language. Operates on string structure, not numeric
@@ -1308,14 +1510,12 @@ ordering.
 
 ---
 
-#### $\pi'_{40}$ — Modular / Divisibility Constraint (new)
-
+#### $\pi_{40}$ — Modular / Divisibility Constraint
 $$S = \{v : \mathbb{Z} \mid v \bmod m = 0\}$$
 
 ---
 
-#### $\pi'_{41}$ — Compound Decidable Predicate (refines $\pi_{10}$)
-
+#### $\pi_{41}$ — Compound Decidable Predicate
 $$S = \{v : \tau \mid P_1(v) \land P_2(v)\}
   \quad\text{or}\quad
   \{v : \tau \mid P_1(v) \lor P_2(v)\}$$
@@ -1324,21 +1524,19 @@ Boolean combinations of atomic refinements.
 
 ---
 
-#### $\pi'_{68}$ — String Concatenation Closure (new)
-
+#### $\pi_{68}$ — String Concatenation Closure
 $$S = S_1 \cdot S_2
   \quad\text{where}\quad
   \llbracket S \rrbracket = \{s_1 s_2 \mid s_1 \in \llbracket S_1 \rrbracket, s_2 \in \llbracket S_2 \rrbracket\}$$
 
 A type constructor that produces the concatenation of two string types.
 TypeScript template literal types: `` `${string}@${string}` ``.
-Distinguished from regex ($\pi'_{39}$) because this is a *type-level
+Distinguished from regex ($\pi_{39}$) because this is a *type-level
 constructor* that composes structurally, not merely a membership filter.
 
 ---
 
-#### $\pi'_{69}$ — String Pattern Decomposition **[meta-op]** (new)
-
+#### $\pi_{69}$ — String Pattern Decomposition **[meta-op]**
 Given $v \in \llbracket S_1 \cdot S_2 \rrbracket$, the IR can infer the
 types of the sub-parts. This is an inference-engine property: the IR
 supports *type-level string deconstruction* (TypeScript's `infer` in
@@ -1352,15 +1550,13 @@ single type's extension.
 
 ---
 
-#### $\pi'_{42}$ — Finite Tagged Dependent Choice (= $\pi_{14}$)
-
+#### $\pi_{42}$ — Finite Tagged Dependent Choice
 $$\tau_j = f(v_i)
   \quad\text{where } f \text{ ranges over a finite set of cases}$$
 
 ---
 
-#### $\pi'_{43}$ — Intra-Object Cross-Field Constraint (new)
-
+#### $\pi_{43}$ — Intra-Object Cross-Field Constraint
 $$S = \prod\{l_1 : \tau_1, l_2 : \tau_2\}
   \quad\text{subject to } P(v.l_1, v.l_2)$$
 
@@ -1369,21 +1565,19 @@ space is restricted.
 
 ---
 
-#### $\pi'_{44}$ — Inter-Object Referential Constraint **[meta-multi]** (new)
-
+#### $\pi_{44}$ — Inter-Object Referential Constraint **[meta-multi]**
 A foreign-key constraint: $S_1$ contains a field whose value must appear
 in an instance of $S_2$. Requires a multi-instance semantic domain.
 
 ---
 
-#### $\pi'_{67}$ — Path-Navigating Constraint (new)
-
+#### $\pi_{67}$ — Path-Navigating Constraint
 $$P(\mathrm{path}_1(v),\, \mathrm{path}_2(v))
   \quad\text{where } \mathrm{path}_i \text{ is a compound accessor expression}$$
 
 Constraints that navigate through nested structure. SHACL property paths,
 JSONPath-based validation, JSON Schema `$data` references. Orthogonal to
-$\pi'_{43}$ because the constraint traverses structural depth, requiring the
+$\pi_{43}$ because the constraint traverses structural depth, requiring the
 IR to represent *path expressions* into nested records.
 
 **Separation witness:** SHACL `sh:path ( sh:inversePath ex:parent )` —
@@ -1395,16 +1589,14 @@ an inverse-path traversal that no flat sibling-field predicate can express.
 
 ---
 
-#### $\pi'_{45}$ — Homogeneous Array / List (new)
-
+#### $\pi_{45}$ — Homogeneous Array / List
 $$S = \tau^{*}$$
 
 Variable-length, element-type homogeneous.
 
 ---
 
-#### $\pi'_{46}$ — Set / Unique Collection (new)
-
+#### $\pi_{46}$ — Set / Unique Collection
 $$S = \mathcal{P}_{\mathrm{fin}}(\tau)
   \quad\text{with } \forall i \neq j,\; v_i \neq v_j$$
 
@@ -1412,8 +1604,7 @@ The IR must encode and validate uniqueness.
 
 ---
 
-#### $\pi'_{47}$ — Map / Dictionary (new)
-
+#### $\pi_{47}$ — Map / Dictionary
 $$S = \tau_K \to_{\mathrm{fin}} \tau_V$$
 
 Finite partial function from keys to values. Key set not statically known.
@@ -1424,14 +1615,12 @@ Finite partial function from keys to values. Key set not statically known.
 
 ---
 
-#### $\pi'_{48}$ — Function / Arrow Type (new)
-
+#### $\pi_{48}$ — Function / Arrow Type
 $$S = \tau_1 \to \tau_2$$
 
 ---
 
-#### $\pi'_{49}$ — Overloaded Function / Intersection of Arrows (new)
-
+#### $\pi_{49}$ — Overloaded Function / Intersection of Arrows
 $$S = (\tau_{1a} \to \tau_{1b}) \;\sqcap\; (\tau_{2a} \to \tau_{2b})$$
 
 Multiple call signatures with call-site resolution semantics.
@@ -1442,8 +1631,7 @@ Multiple call signatures with call-site resolution semantics.
 
 ---
 
-#### $\pi'_{50}$ — Named Type Alias / Definition **[meta-annot]** (new)
-
+#### $\pi_{50}$ — Named Type Alias / Definition **[meta-annot]**
 $$S = \mathrm{let}\; n = \tau \;\mathrm{in}\; \ldots$$
 
 Extensionally equivalent to inlining; the name exists for tooling and
@@ -1451,16 +1639,14 @@ human comprehension.
 
 ---
 
-#### $\pi'_{51}$ — Module / Namespace Scoping **[meta-annot]** (new)
-
+#### $\pi_{51}$ — Module / Namespace Scoping **[meta-annot]**
 $$\mathrm{module}\; M = \{n_1 : \tau_1,\; \ldots,\; n_k : \tau_k\}$$
 
 Hierarchical grouping with independent name scopes.
 
 ---
 
-#### $\pi'_{52}$ — Visibility / Export Control **[meta-annot]** (new)
-
+#### $\pi_{52}$ — Visibility / Export Control **[meta-annot]**
 Public vs. private definitions within a module.
 
 ---
@@ -1469,22 +1655,28 @@ Public vs. private definitions within a module.
 
 ---
 
-#### $\pi'_{53}$ — Deprecation Annotation **[meta-annot]** (new)
-
+#### $\pi_{53}$ — Deprecation Annotation **[meta-annot]**
 Mark a type or field as deprecated with optional metadata.
 
 ---
 
-#### $\pi'_{54}$ — Versioned Schema Identity **[meta-annot]** (new)
-
+#### $\pi_{54}$ — Versioned Schema Identity **[meta-annot]**
 Associate a version identifier with a schema definition.
 
 ---
 
-#### $\pi'_{55}$ — Backward Compatibility Relation **[meta-annot]** (new)
-
+#### $\pi_{55}$ — Backward Compatibility Relation **[meta-annot]**
 Assert $\llbracket S_{v1} \rrbracket \subseteq \llbracket S_{v2} \rrbracket$
 across versions.
+
+> *Remark $\pi_{55}$.1 — Binary nature.* Backward compatibility is
+> inherently a property of a *pair* of schema versions, not of a single
+> type term. It is therefore more naturally an encoding-check property
+> (Def. 13.1). It is retained here as a unary criterion by treating the
+> *versioned schema pair* $(S_{v1}, S_{v2})$ as the atomic object under
+> test — the criterion asks whether the IR can *express and decide* the
+> compatibility relation, not whether a single schema satisfies it. The
+> corresponding encoding-check formulation is given as $\rho_B$ in §13.
 
 ---
 
@@ -1492,20 +1684,17 @@ across versions.
 
 ---
 
-#### $\pi'_{56}$ — Description / Documentation **[meta-annot]** (new)
-
+#### $\pi_{56}$ — Description / Documentation **[meta-annot]**
 Attach human-readable description to any node.
 
 ---
 
-#### $\pi'_{57}$ — Example Values **[meta-annot]** (new)
-
+#### $\pi_{57}$ — Example Values **[meta-annot]**
 Attach example values with informal expectation $e_i \in \llbracket S \rrbracket$.
 
 ---
 
-#### $\pi'_{58}$ — Custom Extension Metadata **[meta-annot]** (new)
-
+#### $\pi_{58}$ — Custom Extension Metadata **[meta-annot]**
 Arbitrary key-value metadata on any node. JSON Schema `x-` keywords.
 
 ---
@@ -1514,20 +1703,20 @@ Arbitrary key-value metadata on any node. JSON Schema `x-` keywords.
 
 ---
 
-#### $\pi'_{59}$ — Type-Level Complement (new)
-
+#### $\pi_{59}$ — Type-Level Complement
 $$S = \neg\tau \qquad \llbracket \neg\tau \rrbracket = \mathcal{V} \setminus \llbracket \tau \rrbracket$$
 
 The operand is a *type term*, not a value predicate over a fixed base sort.
 JSON Schema `not`, TypeScript `Exclude<T, U>`. Distinguished from predicate
-negation inside a refinement ($\pi'_{41}$): an IR can support
+negation inside a refinement ($\pi_{41}$): an IR can support
 $\{v : \mathtt{number} \mid \neg(v > 5)\}$ without being able to express
 $\neg\mathrm{object}(\{\mathtt{id}: \mathbb{N}\})$.
 
-> **Warning (§7, Remark 7.1.2).** Combining $\pi'_{59}$ with $\pi'_{25}$
-> ($\mu$) and $\pi'_{28}$ ($\Lambda$) creates a decidability hazard. An IR
-> satisfying all three must establish termination of its type equivalence
-> decision procedure.
+> **Warning (§7, Remark 7.1.2).** Combining $\pi_{59}$ with $\pi_{25}$
+> ($\mu$) and $\pi_{28}$ ($\Lambda$) creates a decidability hazard
+> [Ref. 2; Ref. 4]. An IR satisfying all three must establish termination
+> of its type equivalence decision procedure.
+> <!-- TODO: same citation concern as §7 body — verify Ref. 2 §6 attribution. -->
 
 ---
 
@@ -1535,8 +1724,7 @@ $\neg\mathrm{object}(\{\mathtt{id}: \mathbb{N}\})$.
 
 ---
 
-#### $\pi'_{60}$ — Unsound Bivariant Type **[meta-op]** (new)
-
+#### $\pi_{60}$ — Unsound Bivariant Type **[meta-op]**
 $$\exists\, S \in \mathcal{N}_R : \forall \tau \in \mathcal{N}_R,\;
   S \leq_{\mathrm{op}} \tau \;\land\; \tau \leq_{\mathrm{op}} S
   \quad\text{where } \leq_{\mathrm{op}} \neq \leq$$
@@ -1557,8 +1745,7 @@ identical extensions).
 
 ---
 
-#### $\pi'_{61}$ — Phantom Type Parameter **[meta-op]** (new)
-
+#### $\pi_{61}$ — Phantom Type Parameter **[meta-op]**
 $$S = \Lambda\alpha.\, \tau_0 \quad \text{where } \alpha \notin \mathrm{FTV}(\tau_0),\quad
 \text{but } S(\tau_1) \not\leq_{\mathrm{op}} S(\tau_2) \text{ for } \tau_1 \neq \tau_2$$
 
@@ -1575,18 +1762,17 @@ $\llbracket S(\tau_1) \rrbracket = \llbracket \tau_0 \rrbracket =
 unconditionally. Non-interchangeability must therefore be enforced by the
 IR's operational judgment $\leq_{\mathrm{op}}$ (Def. 2.4) — i.e. a
 nominal mechanism that distinguishes instantiations even when their
-extensions coincide. The required enrichment is exactly that of $\pi'_{60}$.
+extensions coincide. The required enrichment is exactly that of $\pi_{60}$.
 
-Distinguished from $\pi'_{28}$–$\pi'_{33}$ (where the parameter *occurs*
-in the body) and from $\pi'_{50}$ (named alias, where distinct names do not
+Distinguished from $\pi_{28}$–$\pi_{33}$ (where the parameter *occurs*
+in the body) and from $\pi_{50}$ (named alias, where distinct names do not
 affect subtyping under most IRs). The enforcement condition
 ($S(\tau_1) \not\leq_{\mathrm{op}} S(\tau_2)$) is essential: without it,
 a purely structural IR erases phantoms and the criterion collapses.
 
 ---
 
-#### $\pi'_{62}$ — GADT / Indexed Type (new)
-
+#### $\pi_{62}$ — GADT / Indexed Type
 $$S = \Lambda\alpha.\,\bigsqcup_{i \in I}\bigl(\{\alpha \equiv c_i\} \Rightarrow \tau_i\bigr)$$
 
 where $I$ is a finite index set, $c_i$ are distinct type-level constants
@@ -1597,8 +1783,8 @@ is a (possibly distinct) product type. The index $\alpha$ determines the
 available — not merely an element type or a single field's value.
 
 The index determines the *shape* of the type (which constructors are
-available), not just the element type or a single field's type. Strictly
-stronger than $\pi'_{29}$ (bounded generics) + $\pi'_{42}$ (finite
+available), not just the element type or a single field's type [Ref. 17].
+Strictly stronger than $\pi_{29}$ (bounded generics) + $\pi_{42}$ (finite
 dependent choice): the dependency is from a *type-level* index to the
 structural shape of the product, not from a value-level tag to a
 branch-local type. A concrete IR encoding this criterion must be able to
@@ -1611,8 +1797,7 @@ available constructors at each branch accordingly.
 
 ---
 
-#### $\pi'_{63}$ — Structural Key Enumeration (new)
-
+#### $\pi_{63}$ — Structural Key Enumeration
 $$\mathrm{keyof}\,\tau \;:\; \text{the type of all label names in record type } \tau$$
 
 A type-level operator taking a type as input and producing the union of its
@@ -1621,31 +1806,29 @@ term; it is a *type-level function*.
 
 ---
 
-#### $\pi'_{64}$ — Mapped Type (new)
-
+#### $\pi_{64}$ — Mapped Type
 $$\{[K \in \mathrm{keyof}\,\tau]: F(K, \tau[K])\}$$
 
 Transforms each field of a source type through a type-level function.
-Strictly above HKT ($\pi'_{32}$) because it requires structural
+Strictly above HKT ($\pi_{32}$) because it requires structural
 *introspection* of the source type, not just abstraction over a
 constructor.
 
-**Independence from $\pi'_{63}$:** Mapped types can iterate over an
-explicit key set without `keyof`. An IR satisfying $\pi'_{64}$ need not
-support $\pi'_{63}$ if it provides the key set by other means.
+**Independence from $\pi_{63}$:** Mapped types can iterate over an
+explicit key set without `keyof`. An IR satisfying $\pi_{64}$ need not
+support $\pi_{63}$ if it provides the key set by other means.
 
 ---
 
-#### $\pi'_{65}$ — Conditional Type (new)
-
+#### $\pi_{65}$ — Conditional Type
 $$S = \tau_1 \;\mathtt{extends}\; \tau_2\; ?\; \tau_A : \tau_B$$
 
 A type-level case expression requiring the IR to embed a subtyping test
 inside a type constructor. Fundamentally different from value-level
-dependent choices ($\pi'_{42}$) because the branch condition is a
+dependent choices ($\pi_{42}$) because the branch condition is a
 *type-level* judgment, not a runtime value.
 
-**Independence from $\pi'_{63}$ and $\pi'_{64}$:** Conditional types
+**Independence from $\pi_{63}$ and $\pi_{64}$:** Conditional types
 operate on arbitrary types, not only on record field sets. No logical
 dependency on `keyof` or mapped types.
 
@@ -1655,18 +1838,18 @@ dependency on `keyof` or mapped types.
 
 ---
 
-#### $\pi'_{66}$ — Row-Polymorphic Record (new)
-
+#### $\pi_{66}$ — Row-Polymorphic Record
 $$S = \Lambda\rho.\,\prod\{l_1 : \tau_1,\; \ldots,\; l_n : \tau_n \mid \rho\}$$
 
 A record type parameterised by a *row variable* $\rho$ abstracting over the
-"rest" of the fields. OCaml polymorphic variants and Rémy-style row types
-are the canonical examples.
+"rest" of the fields [Ref. 6; Ref. 7]. OCaml polymorphic variants and
+Rémy-style row types are the canonical examples; Castagna & Peyrot extend
+this to set-theoretic types with union, intersection, and negation [Ref. 8].
 
-Distinguished from open records ($\pi'_{17}$), which allow any extra fields
+Distinguished from open records ($\pi_{17}$), which allow any extra fields
 but don't abstract over them parametrically, and from rank-1 generics
-($\pi'_{28}$), which abstract over element types but not over field sets. An
-IR supporting both $\pi'_{17}$ and $\pi'_{28}$ but lacking row variables
+($\pi_{28}$), which abstract over element types but not over field sets. An
+IR supporting both $\pi_{17}$ and $\pi_{28}$ but lacking row variables
 cannot express "a function that works on any record with at least field
 `id: number`, preserving all other fields."
 
@@ -1676,8 +1859,7 @@ cannot express "a function that works on any record with at least field
 
 ---
 
-#### $\pi'_{70}$ — State-Machine Type **[meta-op]** (new)
-
+#### $\pi_{70}$ — State-Machine Type **[meta-op]**
 A type whose valid inhabitant at time $t+1$ depends on the inhabitant at
 time $t$ — a *transition relation* encoded in the type. Relevant for UML
 statecharts, lifecycle APIs, and workflow schemas.
@@ -1690,86 +1872,86 @@ single-value predicates to a domain with *transition functions* or
 
 ### 12.1. Summary Table
 
-| Id | Name | Family | Refines | [meta] tag |
-|---|---|---|---|:---:|
-| $\pi'_1$ | Syntactic bottom | A | $\pi_1$ | |
-| $\pi'_2$ | Semantic emptiness | A | $\pi_1$ | |
-| $\pi'_3$ | Global top | A | $\pi_2$ | |
-| $\pi'_4$ | Sort-restricted top | A | new | |
-| $\pi'_5$ | Singleton literal | A | $\pi_3$ | |
-| $\pi'_6$ | Finite homogeneous enum | A | new | |
-| $\pi'_7$ | Finite heterogeneous enum | A | new | |
-| $\pi'_8$ | Positional tuple | B | $\pi_4$ | |
-| $\pi'_9$ | Labelled record | B | $\pi_4$ | |
-| $\pi'_{10}$ | Variadic / rest element | B | new | |
-| $\pi'_{11}$ | Required field | C | $\pi_4$ | |
-| $\pi'_{12}$ | Optional-by-absence | C | $\pi_{11}$ | |
-| $\pi'_{13}$ | Nullable-by-value | C | new | |
-| $\pi'_{14}$ | Default value | C | new | coerce |
-| $\pi'_{15}$ | Read-only marker | C | new | annot |
-| $\pi'_{16}$ | Closed record | D | $\pi_{13}$⁻¹ | |
-| $\pi'_{17}$ | Open, unconstrained extras | D | $\pi_{13}$ | |
-| $\pi'_{18}$ | Open, typed extras | D | new | |
-| $\pi'_{19}$ | Untagged union | E | $\pi_5$ | |
-| $\pi'_{20}$ | Discriminated union | E | $\pi_5$ | |
-| $\pi'_{21}$ | Shape-discriminated union | E | new | |
-| $\pi'_{22}$ | Exhaustive / closed union | E | new | annot |
-| $\pi'_{23}$ | Record-merge intersection | F | $\pi_6$ | |
-| $\pi'_{24}$ | Refinement intersection | F | new | |
-| $\pi'_{25}$ | Direct self-recursion | G | $\pi_7$ | |
-| $\pi'_{26}$ | Mutual recursion | G | $\pi_8$ | |
-| $\pi'_{27}$ | Recursive generic | G | new | |
-| $\pi'_{28}$ | Rank-1 generics | H | $\pi_9$ | |
-| $\pi'_{29}$ | Bounded generics | H | new | |
-| $\pi'_{30}$ | Generic default | H | new | annot |
-| $\pi'_{31}$ | Higher-rank polymorphism | H | new | |
-| $\pi'_{32}$ | Higher-kinded type parameter | H | $\pi_{15}$ | |
-| $\pi'_{33}$ | Variance annotation | H | new | op |
-| $\pi'_{34}$ | Structural identity only | I | $\pi_{12}$⁻¹ | |
-| $\pi'_{35}$ | Nominal tag / brand | I | $\pi_{12}$ | |
-| $\pi'_{36}$ | Opaque / newtype wrapper | I | new | |
-| $\pi'_{37}$ | Explicit coercion edge | I | new | op |
-| $\pi'_{38}$ | Range / bound constraint | J | $\pi_{10}$ | |
-| $\pi'_{39}$ | Pattern / regex constraint | J | new | |
-| $\pi'_{40}$ | Modular / divisibility constraint | J | new | |
-| $\pi'_{41}$ | Compound decidable predicate | J | $\pi_{10}$ | |
-| $\pi'_{42}$ | Finite tagged dependent choice | K | $\pi_{14}$ | |
-| $\pi'_{43}$ | Cross-field constraint | K | new | |
-| $\pi'_{44}$ | Inter-object referential constraint | K | new | multi |
-| $\pi'_{45}$ | Homogeneous array / list | L | new | |
-| $\pi'_{46}$ | Set / unique collection | L | new | |
-| $\pi'_{47}$ | Map / dictionary | L | new | |
-| $\pi'_{48}$ | Function / arrow type | M | new | |
-| $\pi'_{49}$ | Overloaded function | M | new | |
-| $\pi'_{50}$ | Named type alias | N | new | annot |
-| $\pi'_{51}$ | Module / namespace | N | new | annot |
-| $\pi'_{52}$ | Visibility / export control | N | new | annot |
-| $\pi'_{53}$ | Deprecation annotation | O | new | annot |
-| $\pi'_{54}$ | Versioned schema identity | O | new | annot |
-| $\pi'_{55}$ | Backward compatibility | O | new | annot |
-| $\pi'_{56}$ | Description / documentation | P | new | annot |
-| $\pi'_{57}$ | Example values | P | new | annot |
-| $\pi'_{58}$ | Custom extension metadata | P | new | annot |
-| $\pi'_{59}$ | Type-level complement | Q | new | |
-| $\pi'_{60}$ | Unsound bivariant type | R | new | op |
-| $\pi'_{61}$ | Phantom type parameter | S | new | op |
-| $\pi'_{62}$ | GADT / indexed type | S | new | |
-| $\pi'_{63}$ | Structural key enumeration | T | new | |
-| $\pi'_{64}$ | Mapped type | T | new | |
-| $\pi'_{65}$ | Conditional type | T | new | |
-| $\pi'_{66}$ | Row-polymorphic record | U | new | |
-| $\pi'_{67}$ | Path-navigating constraint | K | new | |
-| $\pi'_{68}$ | String concatenation closure | J | new | |
-| $\pi'_{69}$ | String pattern decomposition | J | new | op |
-| $\pi'_{70}$ | State-machine type | V | new | op |
+| Id | Name | Family | Core | [meta] tag |
+|---|---|---|:---:|:---:|
+| $\pi_1$ | Syntactic bottom | A | $S_1$ | |
+| $\pi_2$ | Semantic emptiness | A | — | |
+| $\pi_3$ | Global top | A | $S_2$ | |
+| $\pi_4$ | Sort-restricted top | A | — | |
+| $\pi_5$ | Singleton literal | A | $S_3$ | |
+| $\pi_6$ | Finite homogeneous enum | A | — | |
+| $\pi_7$ | Finite heterogeneous enum | A | — | |
+| $\pi_8$ | Positional tuple | B | — | |
+| $\pi_9$ | Labelled record | B | $S_4$ | |
+| $\pi_{10}$ | Variadic / rest element | B | — | |
+| $\pi_{11}$ | Required field | C | — | |
+| $\pi_{12}$ | Optional-by-absence | C | $S_{11}$ | |
+| $\pi_{13}$ | Nullable-by-value | C | — | |
+| $\pi_{14}$ | Default value | C | — | coerce |
+| $\pi_{15}$ | Read-only marker | C | — | annot |
+| $\pi_{16}$ | Closed record | D | — | |
+| $\pi_{17}$ | Open, unconstrained extras | D | $S_{13}$ | |
+| $\pi_{18}$ | Open, typed extras | D | — | |
+| $\pi_{19}$ | Untagged union | E | — | |
+| $\pi_{20}$ | Discriminated union | E | $S_5$ | |
+| $\pi_{21}$ | Shape-discriminated union | E | — | |
+| $\pi_{22}$ | Exhaustive / closed union | E | — | annot |
+| $\pi_{23}$ | Record-merge intersection | F | $S_6$ | |
+| $\pi_{24}$ | Refinement intersection | F | — | |
+| $\pi_{25}$ | Direct self-recursion | G | $S_7$ | |
+| $\pi_{26}$ | Mutual recursion | G | $S_8$ | |
+| $\pi_{27}$ | Recursive generic | G | — | |
+| $\pi_{28}$ | Rank-1 generics | H | $S_9$ | |
+| $\pi_{29}$ | Bounded generics | H | — | |
+| $\pi_{30}$ | Generic default | H | — | annot |
+| $\pi_{31}$ | Higher-rank polymorphism | H | — | |
+| $\pi_{32}$ | Higher-kinded type parameter | H | $S_{15}$ | |
+| $\pi_{33}$ | Variance annotation | H | — | op |
+| $\pi_{34}$ | Structural identity only | I | — | |
+| $\pi_{35}$ | Nominal tag / brand | I | $S_{12}$ | op |
+| $\pi_{36}$ | Opaque / newtype wrapper | I | — | op |
+| $\pi_{37}$ | Explicit coercion edge | I | — | op |
+| $\pi_{38}$ | Range / bound constraint | J | $S_{10}$ | |
+| $\pi_{39}$ | Pattern / regex constraint | J | — | |
+| $\pi_{40}$ | Modular / divisibility constraint | J | — | |
+| $\pi_{41}$ | Compound decidable predicate | J | — | |
+| $\pi_{42}$ | Finite tagged dependent choice | K | $S_{14}$ | |
+| $\pi_{43}$ | Cross-field constraint | K | — | |
+| $\pi_{44}$ | Inter-object referential constraint | K | — | multi |
+| $\pi_{45}$ | Homogeneous array / list | L | — | |
+| $\pi_{46}$ | Set / unique collection | L | — | |
+| $\pi_{47}$ | Map / dictionary | L | — | |
+| $\pi_{48}$ | Function / arrow type | M | — | |
+| $\pi_{49}$ | Overloaded function | M | — | |
+| $\pi_{50}$ | Named type alias | N | — | annot |
+| $\pi_{51}$ | Module / namespace | N | — | annot |
+| $\pi_{52}$ | Visibility / export control | N | — | annot |
+| $\pi_{53}$ | Deprecation annotation | O | — | annot |
+| $\pi_{54}$ | Versioned schema identity | O | — | annot |
+| $\pi_{55}$ | Backward compatibility | O | — | annot |
+| $\pi_{56}$ | Description / documentation | P | — | annot |
+| $\pi_{57}$ | Example values | P | — | annot |
+| $\pi_{58}$ | Custom extension metadata | P | — | annot |
+| $\pi_{59}$ | Type-level complement | Q | — | |
+| $\pi_{60}$ | Unsound bivariant type | R | — | op |
+| $\pi_{61}$ | Phantom type parameter | S | — | op |
+| $\pi_{62}$ | GADT / indexed type | S | — | |
+| $\pi_{63}$ | Structural key enumeration | T | — | |
+| $\pi_{64}$ | Mapped type | T | — | |
+| $\pi_{65}$ | Conditional type | T | — | |
+| $\pi_{66}$ | Row-polymorphic record | U | — | |
+| $\pi_{67}$ | Path-navigating constraint | K | — | |
+| $\pi_{68}$ | String concatenation closure | J | — | |
+| $\pi_{69}$ | String pattern decomposition | J | — | op |
+| $\pi_{70}$ | State-machine type | V | — | op |
 
-**Totals:** 70 criteria across 22 families. 50 extensional, 20 meta-structural.
+**Totals:** 70 criteria across 22 families. 48 extensional, 22 meta-structural.
 
 ---
 
 ### 12.2. Orthogonality Notes
 
-$\Pi'$ satisfies a *family-structured independence* property rather than
+$\Pi$ satisfies a *family-structured independence* property rather than
 strict pairwise orthogonality across all 70 criteria.
 
 **Inter-family independence.** Criteria from distinct families are
@@ -1782,18 +1964,18 @@ definitions.
 
 **Acknowledged subsumption edges:**
 
-- $\pi'_{31}$ (higher-rank) strictly subsumes $\pi'_{28}$ (rank-1).
-- $\pi'_{32}$ (higher-kinded) strictly subsumes $\pi'_{28}$ (rank-1).
-- $\pi'_{41}$ (compound predicate) subsumes $\pi'_{38}$–$\pi'_{40}$
+- $\pi_{31}$ (higher-rank) strictly subsumes $\pi_{28}$ (rank-1).
+- $\pi_{32}$ (higher-kinded) strictly subsumes $\pi_{28}$ (rank-1).
+- $\pi_{41}$ (compound predicate) subsumes $\pi_{38}$–$\pi_{40}$
   individually.
-- $\pi'_{36}$ (opaque wrapper) implies $\pi'_{35}$ (nominal tag) but
+- $\pi_{36}$ (opaque wrapper) implies $\pi_{35}$ (nominal tag) but
   not vice versa.
 
 These are retained because the subsumed criteria represent lower IR design
-costs. An IR scoring ✓ on $\pi'_{38}$ but ✗ on $\pi'_{41}$ conveys
+costs. An IR scoring ✓ on $\pi_{38}$ but ✗ on $\pi_{41}$ conveys
 useful information.
 
-To recover strict orthogonality, quotient $\Pi'$ by subsumption edges,
+To recover strict orthogonality, quotient $\Pi$ by subsumption edges,
 yielding approximately 62–64 independent criteria.
 
 ---
@@ -1804,11 +1986,11 @@ The following phenomena were identified during review but deferred:
 
 | Phenomenon | Reason for Deferral |
 |---|---|
-| Gradual typing with consistency relation ($\pi'_{S1}$–$\pi'_{S3}$) | Requires substantially enriched semantic domain; not present in target languages (TS `any` is modelled by $\pi'_{60}$ instead) |
-| Linear / affine types ($\pi'_{V1}$–$\pi'_{V3}$) | Requires usage-multiplicity judgments; relevant for Rust/Haskell, not current targets |
-| Session types ($\pi'_{W1}$–$\pi'_{W3}$) | Requires protocol duality semantics; relevant for streaming/messaging, deferred to protocol-layer extensions |
-| Invariant preservation under update ($\pi'_{X2}$) | Hoare-logic–style assertion on execution traces; out of scope for type-theoretic criterion set |
-| Cardinality-typed collection dependency ($\pi'_{K4}$) | Independence from existing criteria not established; needs separation witness |
+| Gradual typing with consistency relation ($\pi_{S1}$–$\pi_{S3}$) | Requires substantially enriched semantic domain; not present in target languages (TS `any` is modelled by $\pi_{60}$ instead) |
+| Linear / affine types ($\pi_{V1}$–$\pi_{V3}$) | Requires usage-multiplicity judgments; relevant for Rust/Haskell, not current targets |
+| Session types ($\pi_{W1}$–$\pi_{W3}$) | Requires protocol duality semantics; relevant for streaming/messaging, deferred to protocol-layer extensions |
+| Invariant preservation under update ($\pi_{X2}$) | Hoare-logic–style assertion on execution traces; out of scope for type-theoretic criterion set |
+| Cardinality-typed collection dependency ($\pi_{K4}$) | Independence from existing criteria not established; needs separation witness |
 
 ---
 
@@ -1816,34 +1998,37 @@ The following phenomena were identified during review but deferred:
 
 | Proposal | Rejection Rationale |
 |---|---|
-| $\pi'_{Q2}$ — Difference type | Derivable as $\tau_A \sqcap \neg\tau_B$ from $\pi'_{59} + \pi'_{23}$; not independent |
-| $\pi'_{F3}$ — Method intersection with `this` | Already covered by $\mu$ ($\pi'_{25}$/$\pi'_{26}$) + function type ($\pi'_{48}$) + record-merge intersection ($\pi'_{23}$); conflates syntactic pattern with semantic phenomenon |
-| $\pi'_{X2}$ — Invariant under update | Predicate on execution traces, not on types or values; requires Hoare-logic framework, not type-theoretic criteria |
+| $\pi_{Q2}$ — Difference type | Derivable as $\tau_A \sqcap \neg\tau_B$ from $\pi_{59} + \pi_{23}$; not independent |
+| $\pi_{F3}$ — Method intersection with `this` | Already covered by $\mu$ ($\pi_{25}$/$\pi_{26}$) + function type ($\pi_{48}$) + record-merge intersection ($\pi_{23}$); conflates syntactic pattern with semantic phenomenon |
+| $\pi_{X2}$ — Invariant under update | Predicate on execution traces, not on types or values; requires Hoare-logic framework, not type-theoretic criteria |
 | DNF/CNF normalizability | Property of the IR's algorithms (decidability/complexity), not of its type language expressiveness; belongs in a complexity-profile companion document |
 
-### 12.5. Future Work: Diverse Schema Set $\mathbb{C}'$ and Expanded Scorecard
+### 12.5. Future Work: Full Witness Set and 70-Criterion Scorecard
 
-The base criterion set $\Pi$ has a corresponding $\Pi$-diverse schema set
-$\mathbb{C} = \{S_1,\ldots,S_{15}\}$ (§9) and a machine-applicable scorecard
-(§11). The expanded criterion set $\Pi'$ has neither.
+The core subset $\Pi_{\mathrm{core}}$ has a corresponding
+$\Pi_{\mathrm{core}}$-diverse schema set
+$\mathbb{C} = \{S_1,\ldots,S_{15}\}$ (§9) and a machine-applicable
+scorecard (§11). A full diverse schema set covering all 70 criteria has not
+yet been constructed.
 
-**Missing $\mathbb{C}'$.** An expanded diverse schema set
-$\mathbb{C}' = \{S'_1,\ldots,S'_{70}\}$ analogous to $\mathbb{C}$ — one
-schema per criterion, each the primary witness for at least one
-$\pi'_i$ that no other element of $\mathbb{C}'$ covers — has not yet been
-constructed. Without $\mathbb{C}'$, the criteria in $\Pi'$ cannot be
-directly used for scorecard evaluation; they serve as a taxonomy of
-phenomena and a reference for IR design, but not as a plug-in test suite.
+**Missing $\mathbb{C}_{\mathrm{full}}$.** A diverse schema set
+$\mathbb{C}_{\mathrm{full}} = \{S'_1,\ldots,S'_{70}\}$ analogous to
+$\mathbb{C}$ — one schema per criterion, each the primary witness for at
+least one $\pi_i$ that no other element covers — would enable direct
+scorecard evaluation against the full $\Pi$. Without it, the 55 criteria
+outside $\Pi_{\mathrm{core}}$ serve as a taxonomy and IR design reference,
+not as a plug-in test suite.
 
-**Missing expanded scorecard.** §11 scores three IRs against $\Pi$ (15
-criteria). An analogous 70-criterion scorecard for $\Pi'$ has not been
-produced. Constructing $\mathbb{C}'$ is a prerequisite for doing so.
+**Missing full scorecard.** §11 scores three IRs against
+$\Pi_{\mathrm{core}}$ (15 criteria). An analogous 70-criterion scorecard
+requires constructing $\mathbb{C}_{\mathrm{full}}$ first.
 
 Both are deferred to a future revision. Candidates contributing
-$\mathbb{C}'$ witnesses should verify: (1) $\pi'_i(S'_i) = \top$ for the
-claimed primary witness, (2) $S'_i$ is distinct from $S'_j$ in the sense
-of Def. 8.4 (no other element covers all its criteria), and (3) [meta-op]
-witnesses explicitly state the operational enrichment being tested.
+$\mathbb{C}_{\mathrm{full}}$ witnesses should verify:
+(1) $\pi_i(S'_i) = \top$ for the claimed primary witness,
+(2) $S'_i$ is distinct from $S'_j$ in the sense of Def. 8.4, and
+(3) [meta-op] witnesses explicitly state the operational enrichment
+being tested.
 
 ---
 
@@ -1875,7 +2060,7 @@ preserves the structure of the subtyping relation:
 **$\rho_W$ — Width Subtyping Preservation.** Given witness schemas
 $S_{\mathrm{wide}} = \{a:\tau_1, b:\tau_2, \ldots\mathcal{V}^*\}$ and
 $S_{\mathrm{narrow}} = \{a:\tau_1, \ldots\mathcal{V}^*\}$ — both
-*open* records (satisfying $\pi'_{17}$) — where
+*open* records (satisfying $\pi_{17}$) — where
 $S_{\mathrm{wide}} \leq S_{\mathrm{narrow}}$ (a record with more known
 fields is a subtype of one with fewer, under open-record semantics):
 
@@ -1900,14 +2085,26 @@ Note: $\rho_G$ should hold when $F$ is covariant; it should *fail* when $F$
 is contravariant (and the inequality should reverse). The encoding-check
 evaluates whether $\phi$ respects the variance declaration.
 
-### Remark 13.3 — Relationship to $\Pi'$
+**$\rho_B$ — Backward Compatibility Preservation.** Given witness schemas
+$S_{v1}$ (old version) and $S_{v2}$ (new version) where
+$\llbracket S_{v1} \rrbracket \subseteq \llbracket S_{v2} \rrbracket$
+(every value valid under the old schema remains valid under the new):
+
+$$\rho_B(S_{v1}, S_{v2}, \phi) = \top
+  \;\iff\; \llbracket\phi(S_{v1})\rrbracket_R \subseteq \llbracket\phi(S_{v2})\rrbracket_R$$
+
+This is the encoding-check formulation of $\pi_{55}$. It verifies that
+the encoding preserves the backward-compatibility inclusion across versions,
+and makes explicit that compatibility is a binary property on schema pairs.
+
+### Remark 13.3 — Relationship to $\Pi$
 
 The encoding-check layer is architecturally parallel to the unary criterion
-set $\Pi'$. Both evaluate the IR, but at different levels: $\Pi'$ asks
+set $\Pi$. Both evaluate the IR, but at different levels: $\Pi$ asks
 "can the IR *represent* this type term?"; the encoding-check layer asks
 "does the IR's encoding *preserve* this subtyping relationship?"
 
-An IR may score ✓ on all relevant $\Pi'$ criteria yet fail encoding-check
+An IR may score ✓ on all relevant $\Pi$ criteria yet fail encoding-check
 properties — e.g. an IR that represents both $S_{\mathrm{wide}}$ and
 $S_{\mathrm{narrow}}$ faithfully but whose internal subtyping judgment
 does not relate them correctly.
@@ -1923,6 +2120,7 @@ but are pairs rather than individual schemas:
 | $\rho_W$ | $\{a:\mathbb{N}, b:\mathtt{string}, \ldots\}$ (open) | $\{a:\mathbb{N}, \ldots\}$ (open) | TypeScript, SHACL |
 | $\rho_D$ | $\{a:\{x:\mathbb{N}\}\}$ | $\{a:\{x:\mathbb{Z}\}\}$ | TypeScript, Java |
 | $\rho_G$ | $\mathtt{Array}\langle\mathbb{N}\rangle$ | $\mathtt{Array}\langle\mathbb{Z}\rangle$ | Covariant only; Java arrays (unsound), TS `readonly` arrays |
+| $\rho_B$ | $S_{v1}$ (old version) | $S_{v2}$ (new version, additive) | Protobuf field-addition, JSON Schema draft evolution |
 
 ---
 
@@ -1950,19 +2148,19 @@ Symbols are listed first, followed by terms in alphabetical order.
 | $\phi$ | Encoding | Total function $\mathcal{T}(\Sigma) \to \mathcal{N}_R$ (Def. 5.1) |
 | $\vDash$ | Models | $\mathcal{R} \vDash \mathcal{L}$: faithful encoding exists (Def. 5.6) |
 | $\mathbb{S}$ | Schema class | Collection of schema languages (Def. 6.1) |
-| $\Pi$ | Criterion set (base) | 15 orthogonal, atomic criteria (§8, Table 8.5) |
-| $\Pi'$ | Criterion set (expanded) | 70 criteria across 22 families (§12) |
-| $\mathbb{C}$ | Diverse schema set | $\Pi$-diverse test set $\{S_1, \ldots, S_{15}\}$ (§9) |
+| $\Pi$ | Criterion set | 70 criteria across 22 families (§8, §12) |
+| $\Pi_{\mathrm{core}}$ | Core criterion subset | 15 independently testable criteria with witness schemas (§9) |
+| $\mathbb{C}$ | Diverse schema set | $\Pi_{\mathrm{core}}$-diverse test set $\{S_1, \ldots, S_{15}\}$ (§9) |
 | $\sim_\Pi$ | $\Pi$-equivalence | Agreement on all criteria in $\Pi$ (Def. 8.2) |
 | $\rho$ | Encoding-check property | Binary predicate on witness pairs under $\phi$ (Def. 13.1) |
 | $\bot$ | Bottom type | $\llbracket\bot\rrbracket = \emptyset$ ($\pi_1$) |
-| $\top$ | Top type | $\llbracket\top\rrbracket = \mathcal{V}$ ($\pi_2$) |
-| $\neg$ | Complement | $\llbracket\neg\tau\rrbracket = \mathcal{V} \setminus \llbracket\tau\rrbracket$ ($\pi'_{59}$) |
-| $\prod$ | Product | Labelled finite product ($\pi_4$) |
-| $\sqcup$ | Union / Sum | Set-theoretic union or disjoint sum ($\pi_5$) |
-| $\sqcap$ | Intersection | Set-theoretic intersection ($\pi_6$) |
-| $\mu$ | Fixpoint | Recursive type binder ($\pi_7$) |
-| $\Lambda$ | Type abstraction | Universal type-level abstraction ($\pi_9$, $\pi_{15}$) |
+| $\top$ | Top type | $\llbracket\top\rrbracket = \mathcal{V}$ ($\pi_3$) |
+| $\neg$ | Complement | $\llbracket\neg\tau\rrbracket = \mathcal{V} \setminus \llbracket\tau\rrbracket$ ($\pi_{59}$) |
+| $\prod$ | Product | Labelled finite product ($\pi_9$) |
+| $\sqcup$ | Union / Sum | Set-theoretic union or disjoint sum ($\pi_{20}$) |
+| $\sqcap$ | Intersection | Set-theoretic intersection ($\pi_{23}$) |
+| $\mu$ | Fixpoint | Recursive type binder ($\pi_{25}$) |
+| $\Lambda$ | Type abstraction | Universal type-level abstraction ($\pi_{28}$, $\pi_{32}$) |
 
 ### Terms
 
@@ -1971,25 +2169,25 @@ decomposable into a conjunction of independent sub-criteria (Def. 8.2).
 
 **Backward compatibility.** $\llbracket S_{v1} \rrbracket \subseteq
 \llbracket S_{v2} \rrbracket$: every value valid under the old schema
-remains valid under the new one ($\pi'_{55}$).
+remains valid under the new one ($\pi_{55}$).
 
 **Bounded generics.** A parametric type with an upper-bound constraint on
-its type parameter: $\Lambda(\alpha \leq \tau_B).\,F(\alpha)$ ($\pi'_{29}$).
+its type parameter: $\Lambda(\alpha \leq \tau_B).\,F(\alpha)$ ($\pi_{29}$).
 TypeScript: `<T extends Serializable>`.
 
 **Computability (of an encoding).** The requirement that $\phi$ be
 implementable by a terminating algorithm (Def. 6.3).
 
 **Conditional type.** A type-level case expression:
-$\tau_1 \;\mathtt{extends}\; \tau_2 \;?\; \tau_A : \tau_B$ ($\pi'_{65}$).
+$\tau_1 \;\mathtt{extends}\; \tau_2 \;?\; \tau_A : \tau_B$ ($\pi_{65}$).
 
 **Coverage criterion.** A decidable predicate identifying a structurally
 or semantically distinct phenomenon (Def. 8.1).
 
 **Dependent constraint.** A schema in which the type of one field is
-determined by the *value* of another field ($\pi_{14}$, $\pi'_{42}$).
+determined by the *value* of another field ($\pi_{42}$).
 
-**Direct recursion.** $S = \mu\alpha.\,F(\alpha)$ ($\pi_7$, $\pi'_{25}$).
+**Direct recursion.** $S = \mu\alpha.\,F(\alpha)$ ($\pi_{25}$).
 
 **Encoding.** A total function $\phi : \mathcal{T}(\Sigma) \to \mathcal{N}_R$
 (Def. 5.1).
@@ -2001,69 +2199,65 @@ evaluated against a pair of witness schemas (Def. 13.1).
 (Def. 2.2).
 
 **GADT / Indexed type.** A type where a type-level index refines the
-available constructors or fields ($\pi'_{62}$).
+available constructors or fields ($\pi_{62}$).
 
 **Higher-kinded type.** Abstraction over type constructors
-($\pi_{15}$, $\pi'_{32}$).
+($\pi_{32}$).
 
 **Intermediate Representation (IR).** Schema language $\mathcal{R}$ +
 IR nodes $\mathcal{N}_R$ (Def. 4.1).
 
 **Mapped type.** $\{[K \in \mathrm{keyof}\,\tau]: F(K, \tau[K])\}$ —
-structural transformation of a source type ($\pi'_{64}$).
+structural transformation of a source type ($\pi_{64}$).
 
 **Mutual recursion.** A cycle involving two or more distinct named types
-($\pi_8$, $\pi'_{26}$).
+($\pi_{26}$).
 
 **Nominal identity.** Structurally identical types distinguished by name
-($\pi_{12}$, $\pi'_{35}$).
+under the operational judgment ($\pi_{35}$).
 
 **Observational basis.** A finite set of criteria inducing $\sim_\Pi$
 (Def. 8.2).
 
 **Open shape.** A record admitting additional properties
-($\pi_{13}$, $\pi'_{17}$).
+($\pi_{17}$).
 
 **Operational subtyping.** An IR's assignability judgment, which may
 diverge from semantic subtyping (Def. 2.4).
 
-**Optionality.** Key-absence semantics ($\pi_{11}$, $\pi'_{12}$).
+**Optionality.** Key-absence semantics ($\pi_{12}$).
 
 **Orthogonality (of criteria).** Neither implies the other; independent
 schema languages witness each (Def. 8.2).
 
 **Parametricity.** Type-level abstraction: $\Lambda\alpha.\,F(\alpha)$
-($\pi_9$, $\pi'_{28}$).
+($\pi_{28}$).
 
 **Path-navigating constraint.** A constraint traversing nested structure
-via compound accessor expressions ($\pi'_{67}$).
+via compound accessor expressions ($\pi_{67}$).
 
 **Phantom type parameter.** A type parameter not occurring in the
 structural body, yet semantically relevant under nominal interpretation
-($\pi'_{61}$).
+($\pi_{61}$).
 
 **$\Pi$-Complete.** Every criterion witnessed by at least one schema
 (Def. 8.3).
 
 **$\Pi$-Diverse.** $\Pi$-complete and orthogonally minimal (Def. 8.4).
 
-**Refinement type.** $\{v : \tau \mid P(v)\}$ ($\pi_{10}$, $\pi'_{38}$ff).
+**Refinement type.** $\{v : \tau \mid P(v)\}$ ($\pi_{38}$ff).
 
 **Row polymorphism.** Record types parameterised by a row variable
-abstracting over unspecified fields ($\pi'_{66}$).
+abstracting over unspecified fields ($\pi_{66}$) [Ref. 6; Ref. 7].
 
 **Row variable.** A type-level variable $\rho$ ranging over sets of
 record fields, used in row-polymorphic record types
-$\prod\{l_1:\tau_1,\ldots,l_n:\tau_n \mid \rho\}$ ($\pi'_{66}$).
+$\prod\{l_1:\tau_1,\ldots,l_n:\tau_n \mid \rho\}$ ($\pi_{66}$).
 Distinct from ordinary type variables ($\alpha$) which range over
 element types, not field sets.
 
 **Schema.** A finite, well-formed type term $S \in \mathcal{T}(\Sigma)$
 (Def. 3.5).
-
-**Shape-discriminated union.** A union $\tau_1 \sqcup \tau_2$ where the
-branches are distinguished by their structural key sets rather than a
-shared literal-tagged field ($\pi'_{21}$).
 
 **Schema class.** A collection of schema languages (Def. 6.1).
 
@@ -2078,49 +2272,120 @@ shared literal-tagged field ($\pi'_{21}$).
 **Semantic soundness.** $\llbracket\phi(\tau)\rrbracket_R \subseteq
 \llbracket\tau\rrbracket_\Sigma$ (Def. 5.2).
 
+**Shape-discriminated union.** A union $\tau_1 \sqcup \tau_2$ where the
+branches are distinguished by their structural key sets rather than a
+shared literal-tagged field ($\pi_{21}$).
+
 **Signature.** $(B, \mathcal{F}, \mathrm{ar})$ (Def. 3.1).
 
 **Sort-restricted top.** A top type restricted to a single base sort:
-$\llbracket S \rrbracket = \mathcal{V}_b$ for some $b \in B$ ($\pi'_4$).
+$\llbracket S \rrbracket = \mathcal{V}_b$ for some $b \in B$ ($\pi_4$).
 For example, "any string" or "any number" rather than the global
 $\mathcal{V}$.
 
 **State-machine type.** A type whose valid inhabitant depends on the prior
-state via a transition relation ($\pi'_{70}$).
+state via a transition relation ($\pi_{70}$).
 
 **String concatenation closure.** A type constructor producing
-$\{s_1 s_2 \mid s_1 \in \llbracket S_1 \rrbracket, s_2 \in \llbracket S_2 \rrbracket\}$ ($\pi'_{68}$).
-
-**Template literal type.** A string type constructed by concatenating
-fixed string segments with typed slots, producing a regular or
-context-free language of string values. Related to $\pi'_{68}$ (string
-concatenation closure) and $\pi'_{69}$ (string pattern decomposition).
-TypeScript: `` `${'GET' | 'POST'} /${string}` ``.
+$\{s_1 s_2 \mid s_1 \in \llbracket S_1 \rrbracket, s_2 \in \llbracket S_2 \rrbracket\}$ ($\pi_{68}$).
 
 **Strong universality.** Faithful and *computable* encoding for each
 language in $\mathbb{S}$ (Def. 6.3).
 
 **Structure preservation.** Monotonicity of $\phi$ under $\leq$ (Def. 5.5).
 
-**Typed extras.** Additional fields in an open record constrained to a
-specific type: $\forall l \notin \{l_1,\ldots,l_n\} : v(l) \in
-\llbracket\tau_{\mathrm{rest}}\rrbracket$ ($\pi'_{18}$). JSON Schema:
-`additionalProperties: { "type": "string" }`.
+**Template literal type.** A string type constructed by concatenating
+fixed string segments with typed slots, producing a regular or
+context-free language of string values. Related to $\pi_{68}$ (string
+concatenation closure) and $\pi_{69}$ (string pattern decomposition).
+TypeScript: `` `${'GET' | 'POST'} /${string}` ``.
 
 **Type term.** Element of $\mathcal{T}(\Sigma)$ (Def. 3.2).
 
-**Unit / Singleton type.** $|\llbracket S \rrbracket| = 1$
-($\pi_3$, $\pi'_5$).
+**Typed extras.** Additional fields in an open record constrained to a
+specific type: $\forall l \notin \{l_1,\ldots,l_n\} : v(l) \in
+\llbracket\tau_{\mathrm{rest}}\rrbracket$ ($\pi_{18}$). JSON Schema:
+`additionalProperties: { "type": "string" }`.
 
-**Variadic / rest element.** A tuple type with a fixed-length prefix and
-a variable-length homogeneous tail: $(\tau_1,\ldots,\tau_n,\ldots\tau_r^*)$
-($\pi'_{10}$). TypeScript: `[string, number, ...boolean[]]`.
+**Unit / Singleton type.** $|\llbracket S \rrbracket| = 1$
+($\pi_5$).
 
 **Unsound bivariant type.** A type satisfying $S \leq_{\mathrm{op}} \tau$
 and $\tau \leq_{\mathrm{op}} S$ for all $\tau$ under operational subtyping,
-breaking antisymmetry ($\pi'_{60}$).
+breaking antisymmetry ($\pi_{60}$).
 
 **Value universe.** The countably infinite set $\mathcal{V}$ (Def. 2.1).
 
+**Variadic / rest element.** A tuple type with a fixed-length prefix and
+a variable-length homogeneous tail: $(\tau_1,\ldots,\tau_n,\ldots\tau_r^*)$
+($\pi_{10}$). TypeScript: `[string, number, ...boolean[]]`.
+
 **Weak universality.** Every schema has a matching IR node, without
 computability requirement (Def. 6.2).
+
+---
+
+## 15. References
+
+1. **Pierce.** *Types and Programming Languages.* MIT Press, 2002.
+
+2. **Frisch, Castagna, Benzaken.** "Semantic Subtyping: Dealing
+   Set-theoretically with Function, Union, Intersection, and Negation
+   Types." *Journal of the ACM* 55(4), 2008.
+   DOI: `10.1145/1391289.1391293`.
+
+3. **Tarski.** "A Lattice-Theoretical Fixpoint Theorem and its
+   Applications." *Pacific Journal of Mathematics* 5(2), 1955.
+
+4. **Castagna, Frisch.** "A Gentle Introduction to Semantic Subtyping."
+   *ICALP/PPDP joint invited paper*, 2005.
+
+5. **Cardelli, Wegner.** "On Understanding Types, Data Abstraction, and
+   Polymorphism." *Computing Surveys* 17(4), 1985.
+   DOI: `10.1145/6041.6042`.
+
+6. **Rémy.** "Type Checking Records and Variants in a Natural Extension
+   of ML." *POPL*, 1989. DOI: `10.1145/75277.75284`.
+
+7. **Wand.** "Complete Type Inference for Simple Objects." *LICS*, 1987,
+   pp. 37–44.
+
+8. **Castagna, Peyrot.** "Polymorphic Records for Dynamic Languages."
+   *OOPSLA*, 2025.
+
+9. **Yallop, White.** "Lightweight Higher-Kinded Polymorphism."
+   *FLOPS*, 2014. LNCS 8475, pp. 119–135.
+   DOI: `10.1007/978-3-319-07151-0_8`.
+
+10. **Kozen, Palsberg, Schwartzbach.** "Efficient Recursive Subtyping."
+    *Mathematical Structures in Computer Science* 5(1), 1995.
+    DOI: `10.1017/S0960129500000645`.
+
+11. **Pezoa, Reutter, Suarez, Ugarte, Vrgoč.** "Foundations of JSON
+    Schema." *WWW*, 2016. DOI: `10.1145/2872427.2883029`.
+
+12. **Wright et al.** "JSON Schema: A Media Type for Describing JSON
+    Documents." Draft-07, 2018.
+    `https://json-schema.org/draft-07/json-schema-release-notes`.
+
+13. **TypeScript Handbook.** "Type Compatibility." Microsoft.
+    `https://www.typescriptlang.org/docs/handbook/type-compatibility.html`.
+
+14. **OpenAPI Initiative.** "OpenAPI Specification 3.1.0 — Discriminator
+    Object." 2021.
+    `https://spec.openapis.org/oas/v3.1.0#discriminator-object`.
+
+15. **Yorgey.** "The Typeclassopedia." *The Monad.Reader*, Issue 13,
+    2009.
+
+16. **Rice.** "Classes of Recursively Enumerable Sets and Their Decision
+    Problems." *Transactions of the AMS* 74(2), 1953.
+    DOI: `10.1090/S0002-9947-1953-0053041-6`.
+
+17. **Xi, Chen, Chen.** "Guarded Recursive Datatype Constructors."
+    *POPL*, 2003. DOI: `10.1145/604131.604150`.
+
+18. **Milner.** *Communication and Concurrency.* Prentice Hall, 1989.
+
+19. **Sangiorgi, Walker.** *The π-Calculus: A Theory of Mobile
+    Processes.* Cambridge University Press, 2001.

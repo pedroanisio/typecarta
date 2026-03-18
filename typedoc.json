@@ -1,0 +1,22 @@
+{
+	"$schema": "https://typedoc.org/schema.json",
+	"entryPoints": [
+		"packages/core/src/index.ts",
+		"packages/witnesses/src/index.ts",
+		"packages/adapters/json-schema/src/index.ts",
+		"packages/encoding-check/src/index.ts"
+	],
+	"tsconfig": "tsconfig.docs.json",
+	"out": "docs/api",
+	"name": "typecarta",
+	"readme": "none",
+	"excludePrivate": true,
+	"excludeInternal": true,
+	"includeVersion": true,
+	"categorizeByGroup": true,
+	"sort": ["source-order"],
+	"navigation": {
+		"includeCategories": true,
+		"includeGroups": true
+	}
+}

@@ -1,0 +1,21 @@
+{
+	"name": "@typecarta/benchmarks",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"bench:scorecard": "npx tsx scorecard-perf/index.ts",
+		"bench:coverage": "npx tsx adapter-coverage/index.ts",
+		"bench:fidelity": "npx tsx encoding-fidelity/index.ts",
+		"bench:all": "npm run bench:scorecard && npm run bench:coverage && npm run bench:fidelity"
+	},
+	"dependencies": {
+		"@typecarta/core": "workspace:*",
+		"@typecarta/witnesses": "workspace:*",
+		"@typecarta/adapter-json-schema": "workspace:*"
+	},
+	"devDependencies": {
+		"tsx": "^4.0.0",
+		"typescript": "^5.7.0"
+	}
+}

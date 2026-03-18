@@ -1,0 +1,17 @@
+{
+	"name": "@typecarta/example-custom-ir",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"start": "npx tsx index.ts"
+	},
+	"dependencies": {
+		"@typecarta/core": "workspace:*",
+		"@typecarta/witnesses": "workspace:*"
+	},
+	"devDependencies": {
+		"tsx": "^4.0.0",
+		"typescript": "^5.7.0"
+	}
+}

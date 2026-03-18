@@ -1,0 +1,8 @@
+/target
+docs/api/
+*.pyc
+dist/
+node_modules/
+coverage
+typecarta/docs/
+tsconfig.tsbuildinfo

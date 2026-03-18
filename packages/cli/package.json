@@ -1,0 +1,25 @@
+{
+	"name": "@typecarta/cli",
+	"version": "0.1.0",
+	"description": "Command-line interface for typecarta",
+	"type": "module",
+	"bin": {
+		"typecarta": "./dist/index.js"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "tsc",
+		"test": "vitest run",
+		"clean": "rm -rf dist"
+	},
+	"dependencies": {
+		"@typecarta/core": "workspace:*",
+		"@typecarta/witnesses": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^25.5.0",
+		"typescript": "^5.7.0",
+		"vitest": "^3.0.0"
+	}
+}

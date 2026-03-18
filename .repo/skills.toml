@@ -1,0 +1,6 @@
+# .repo/skills.toml — Synced with installed skills
+# Run `repo skills` to check, `repo skills install` to install missing.
+# Fill in empty `source` fields so teammates can install too.
+
+skills = []
+
