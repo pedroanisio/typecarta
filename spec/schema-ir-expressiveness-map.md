@@ -1,6 +1,6 @@
 ---
 title: "Schema IR Expressiveness — Formal Specification"
-version: "2.1.0"
+version: "2.2.0"
 status: "draft"
 date: "2026-03-18"
 disclaimer: >
@@ -13,6 +13,11 @@ disclaimer: >
   respective systems as of the document date and have not been
   machine-verified.
 changelog: >
+  v2.2.0 — Resolve C34: replaced misattributed [Ref. 2, §6] with
+  [Ref. 20] (Castagna & Xu, ICFP 2011) in §7 Remark 7.1.2 and §12
+  π₅₉ warning; removed corresponding TODO comments. Added Remark 5.1.2
+  (shared-V assumption). Added Remark 13.5 (reduced-product caveat for
+  encoding-check properties). Added Ref. 20 (Castagna & Xu 2011).
   v2.1.0 — Bibliographic fixes: Ref. 9 author corrected (Yallop & White,
   not Kiselyov); Ref. 15 year corrected (2009, not 2010); Ref. 10
   misattribution in §7 Remark 7.1.2 replaced with [Ref. 2, §6]. Added
@@ -349,6 +354,20 @@ $$\forall \tau \in \mathrm{dom}(\phi):\quad
 > that cover a proper subset of a source language, but they sit strictly below
 > the modeling relation.
 
+> *Remark 5.1.2 — Shared value universe.* All encoding and modeling
+> definitions in this section (Defs. 5.1–5.6) presuppose that the source
+> language $\mathcal{L}$ and the IR $\mathcal{R}$ share the same value
+> universe $\mathcal{V}$ (Def. 2.1). The extension comparisons
+> $\llbracket\phi(\tau)\rrbracket_R \subseteq \llbracket\tau\rrbracket_\Sigma$
+> and $\llbracket\tau\rrbracket_\Sigma \subseteq
+> \llbracket\phi(\tau)\rrbracket_R$ are well-defined only when both sides
+> are subsets of the same set. In practice this assumption holds for the
+> schema languages considered in this specification (JSON Schema, Zod,
+> TypeScript), which all operate over JSON-representable values extended
+> with typed primitives. If source and IR have genuinely different value
+> domains, the encoding relation must be reformulated over a common
+> embedding — a generalization this specification does not pursue.
+
 ### Definition 5.2 — Semantic Soundness
 
 $\phi$ is **semantically sound** iff:
@@ -513,7 +532,7 @@ the recursive types (the set of sub-terms reachable by unfolding is
 finite), for which efficient $O(n^2)$ algorithms exist [Ref. 10], and
 the absence of certain features (e.g. unrestricted $\mu$ under $\neg$
 combined with parametric polymorphism can push equivalence checking
-from PSPACE to undecidable [Ref. 2, §6]). <!-- TODO: verify citation — Ref. 2 (Frisch et al. 2008) treats a monomorphic system; the polymorphism-induced undecidability result may belong to Castagna & Xu (ICFP 2011) instead. -->
+from PSPACE to undecidable [Ref. 20]).
 
 An IR that admits $\pi_{59}$ ($\neg$), $\pi_{25}$ ($\mu$), and
 $\pi_{28}$ ($\Lambda$) simultaneously must establish that its type
@@ -1714,9 +1733,8 @@ $\neg\mathrm{object}(\{\mathtt{id}: \mathbb{N}\})$.
 
 > **Warning (§7, Remark 7.1.2).** Combining $\pi_{59}$ with $\pi_{25}$
 > ($\mu$) and $\pi_{28}$ ($\Lambda$) creates a decidability hazard
-> [Ref. 2; Ref. 4]. An IR satisfying all three must establish termination
-> of its type equivalence decision procedure.
-> <!-- TODO: same citation concern as §7 body — verify Ref. 2 §6 attribution. -->
+> [Ref. 2; Ref. 4; Ref. 20]. An IR satisfying all three must establish
+> termination of its type equivalence decision procedure.
 
 ---
 
@@ -2122,6 +2140,20 @@ but are pairs rather than individual schemas:
 | $\rho_G$ | $\mathtt{Array}\langle\mathbb{N}\rangle$ | $\mathtt{Array}\langle\mathbb{Z}\rangle$ | Covariant only; Java arrays (unsound), TS `readonly` arrays |
 | $\rho_B$ | $S_{v1}$ (old version) | $S_{v2}$ (new version, additive) | Protobuf field-addition, JSON Schema draft evolution |
 
+### Remark 13.5 — Independence of Encoding-Check Properties
+
+The four encoding-check properties $\rho_W, \rho_D, \rho_G, \rho_B$ are
+evaluated independently. An encoding $\phi$ may satisfy each property
+individually yet fail a *conjunctive* property that combines two or more
+dimensions — for example, an IR that correctly preserves width subtyping
+and depth subtyping in isolation but breaks the subtyping relationship
+when width and depth variations occur simultaneously in the same schema
+pair. In abstract-interpretation terminology, the individual properties
+correspond to separate abstract domains, and their independent
+satisfaction does not guarantee the precision of their *reduced product*
+(Cousot & Cousot [Ref. 4, §4]). A full reduced-product analysis of the
+encoding-check layer is left for future work.
+
 ---
 
 ## 14. Glossary
@@ -2389,3 +2421,7 @@ computability requirement (Def. 6.2).
 
 19. **Sangiorgi, Walker.** *The π-Calculus: A Theory of Mobile
     Processes.* Cambridge University Press, 2001.
+
+20. **Castagna, Xu.** "Set-Theoretic Foundation of Parametric
+    Polymorphism and Subtyping." *ICFP*, 2011.
+    DOI: `10.1145/2034773.2034788`.
