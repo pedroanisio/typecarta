@@ -27,5 +27,6 @@ Use a pnpm workspace monorepo with Turborepo for build orchestration and Biome f
 ## Consequences
 
 - All packages share a single CI pipeline
-- Version bumps use changesets for independent publishing
+- Version bumps will use changesets for independent publishing (tooling not
+  yet installed — no `.changeset/` directory exists at time of writing)
 - Contributors must use pnpm (enforced via `packageManager` field)

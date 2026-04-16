@@ -7,8 +7,7 @@ prerequisite_for:
   - "packages/core/src/semantics/*"
   - "packages/witnesses/src/*"
 relates_to:
-  - "_docs/schema-ir-expressiveness-map.md (§3 Remark 3.2.1, §12)"
-  - "_docs/plan.md (packages/core/src/ast/)"
+  - "spec/schema-ir-expressiveness-map.md (§3 Remark 3.2.1, §12)"
 ---
 
 # ADR-002: TypeTerm AST Node-Kind Binding Decisions

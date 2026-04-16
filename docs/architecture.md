@@ -2,7 +2,7 @@
 
 ## Overview
 
-typecarta is a monorepo toolkit for formally evaluating and comparing schema language expressiveness. It implements the framework described in the Schema IR Expressiveness Map specification (v2.0.0).
+typecarta is a monorepo toolkit for formally evaluating and comparing schema language expressiveness. It implements the framework described in the Schema IR Expressiveness Map specification (v2.2.0).
 
 ## Package Map
 
@@ -45,6 +45,7 @@ typecarta/
 ├── spec/                     Formal specification (CC-BY-SA-4.0)
 ├── docs/                     Documentation
 ├── benchmarks/               Performance benchmarks
+├── bin/                      Repo-maintenance scripts
 └── examples/                 Worked examples
 ```
 
