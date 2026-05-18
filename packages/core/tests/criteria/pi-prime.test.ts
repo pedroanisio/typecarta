@@ -1,4 +1,6 @@
 import {
+	CORE_CRITERIA,
+	CORE_IDS,
 	CRITERIA,
 	CRITERION_IDS,
 	FAMILY_A,
@@ -23,6 +25,9 @@ import {
 	FAMILY_T,
 	FAMILY_U,
 	FAMILY_V,
+	SELF_CAPABILITIES,
+	SELF_CAPABILITY_BY_ID,
+	SELF_WITNESSES,
 	andPredicate,
 	array,
 	arrow,
@@ -87,6 +92,86 @@ describe("Π' expanded criterion set", () => {
 	it("getCriterionRegistry returns all 70", () => {
 		const reg = getCriterionRegistry();
 		expect(reg.size).toBe(70);
+	});
+
+	it("orders Π_core by spec §9 c-index, not family order", () => {
+		const expected = [
+			"pi-prime-01",
+			"pi-prime-03",
+			"pi-prime-05",
+			"pi-prime-09",
+			"pi-prime-20",
+			"pi-prime-23",
+			"pi-prime-25",
+			"pi-prime-26",
+			"pi-prime-28",
+			"pi-prime-38",
+			"pi-prime-12",
+			"pi-prime-35",
+			"pi-prime-17",
+			"pi-prime-42",
+			"pi-prime-32",
+		];
+
+		expect(CORE_IDS).toEqual(expected);
+		expect(CORE_CRITERIA.map((criterion) => criterion.id)).toEqual(expected);
+		expect(CORE_CRITERIA.every((criterion) => criterion.core === true)).toBe(true);
+	});
+
+	it("keeps self-witness fixtures for commonly misclassified criteria", () => {
+		const expectedIds = [
+			"pi-prime-08",
+			"pi-prime-44",
+			"pi-prime-47",
+			"pi-prime-48",
+			"pi-prime-53",
+			"pi-prime-54",
+			"pi-prime-55",
+			"pi-prime-56",
+			"pi-prime-57",
+			"pi-prime-58",
+			"pi-prime-67",
+		];
+
+		expect(SELF_WITNESSES.map((witness) => witness.criterionId)).toEqual(expectedIds);
+		for (const witness of SELF_WITNESSES) {
+			const criterion = getCriterion(witness.criterionId);
+			expect(criterion, witness.criterionId).toBeDefined();
+			expect(criterion!.evaluate(witness.term).status).toBe("satisfied");
+		}
+	});
+
+	it("keeps self-capability records valid and witness-backed", () => {
+		const expectedKinds = new Map([
+			["pi-prime-08", "apply:tuple"],
+			["pi-prime-44", "extension:foreign-key"],
+			["pi-prime-47", "apply:map"],
+			["pi-prime-48", "apply:arrow"],
+			["pi-prime-53", "annotation:deprecated"],
+			["pi-prime-54", "annotation:version"],
+			["pi-prime-55", "annotation:backwardCompatibleWith"],
+			["pi-prime-56", "annotation:description"],
+			["pi-prime-57", "annotation:examples"],
+			["pi-prime-58", "annotation:custom"],
+			["pi-prime-67", "extension:path-constraint"],
+		]);
+		const witnessIds = new Set(SELF_WITNESSES.map((witness) => witness.criterionId));
+
+		expect(SELF_CAPABILITIES.map((capability) => capability.criterionId)).toEqual([
+			...expectedKinds.keys(),
+		]);
+		expect(SELF_CAPABILITY_BY_ID.size).toBe(SELF_CAPABILITIES.length);
+
+		for (const capability of SELF_CAPABILITIES) {
+			expect(CRITERION_IDS).toContain(capability.criterionId);
+			expect(witnessIds.has(capability.criterionId)).toBe(true);
+			expect(capability.support).not.toBe("unsupported");
+			expect(capability.support).not.toBe("out-of-scope");
+			expect(capability.mechanism.length).toBeGreaterThan(0);
+			expect(capability.notes.length).toBeGreaterThan(0);
+			expect(capability.witnessKind).toBe(expectedKinds.get(capability.criterionId));
+			expect(SELF_CAPABILITY_BY_ID.get(capability.criterionId)).toBe(capability);
+		}
 	});
 });
 

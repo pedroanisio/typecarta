@@ -31,6 +31,9 @@ async function main(): Promise<void> {
 		case "adapters":
 			await import("./commands/adapters.js").then((m) => m.run(args.slice(1)));
 			break;
+		case "capabilities":
+			await import("./commands/capabilities.js").then((m) => m.run(args.slice(1)));
+			break;
 		default:
 			printUsage();
 	}
@@ -48,9 +51,11 @@ Usage:
   typecarta witness --criterion <pi-prime-NN>
   typecarta profile --schema <file> [--adapter <name>]
   typecarta check-encoding --source <adapter> --target <adapter>
+  typecarta capabilities [--format table|json]
 
 Tip:
   Run \`typecarta adapters\` to see registered adapter names.
+  Run \`typecarta capabilities --format json\` to export TypeCarta self-capability evidence.
   --filter core (15 criteria) is the default; --filter all evaluates all 70.
   --mode is a legacy alias: --mode core/full == --filter core/all.
 

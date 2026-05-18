@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import {
 	andPredicate,
 	array,
@@ -141,6 +142,32 @@ describe("TypeTerm constructors", () => {
 		const t = letBinding("X", base("string"), typeVar("X"));
 		expect(t.kind).toBe("let");
 		expect(t.name).toBe("X");
+	});
+});
+
+describe("TypeTerm source documentation", () => {
+	it("keeps primary witness comments aligned with canonical pi-prime IDs", () => {
+		const source = readFileSync(new URL("../../src/ast/type-term.ts", import.meta.url), "utf8");
+
+		expect(source).toContain("Bottom type node — ⟦⊥⟧ = ∅. Primary witness: pi-prime-01 / π₁.");
+		expect(source).toContain(
+			"Top / universal type node — ⟦⊤⟧ = 𝒱. Primary witness: pi-prime-03 / π₃.",
+		);
+		expect(source).toContain(
+			"Literal / singleton type node — |⟦S⟧| = 1. Primary witness: pi-prime-05 / π₅.",
+		);
+		expect(source).toContain(
+			"Universal quantifier node — Λα.τ. Primary witnesses: pi-prime-28 / π₂₈ and pi-prime-32 / π₃₂.",
+		);
+		expect(source).toContain(
+			"Fixpoint / recursive type node — μα.F(α). Primary witnesses: pi-prime-25 / π₂₅ and pi-prime-26 / π₂₆.",
+		);
+		expect(source).toContain(
+			"Refinement type node — {v:τ | P(v)}. Primary witness: pi-prime-38 / π₃₈.",
+		);
+		expect(source).toContain(
+			"Nominal / branded type node — nominal(Tag, τ). Primary witness: pi-prime-35 / π₃₅.",
+		);
 	});
 });
 

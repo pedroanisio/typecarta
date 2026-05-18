@@ -1,5 +1,6 @@
 import {
 	type IRAdapter,
+	SELF_CAPABILITIES,
 	type Signature,
 	type TypeTerm,
 	array,
@@ -152,6 +153,60 @@ describe("CLI output formatters", () => {
 			expect(parsed.left).toBeDefined();
 			expect(parsed.right).toBeDefined();
 			expect(parsed.differences).toBeInstanceOf(Array);
+		});
+	});
+});
+
+describe("capabilities command", () => {
+	it("exports TypeCarta self-capabilities as stable machine-readable JSON", async () => {
+		const logs: string[] = [];
+		const origLog = console.log;
+		console.log = (msg: string) => logs.push(msg);
+		try {
+			const { run } = await import("../src/commands/capabilities.js");
+			await run(["--format", "json"]);
+		} finally {
+			console.log = origLog;
+		}
+
+		const parsed = JSON.parse(logs.join("\n"));
+		expect(Object.keys(parsed).sort()).toEqual(["capabilities", "schemaVersion", "subject"]);
+		expect(parsed.subject).toBe("typecarta-self");
+		expect(parsed.schemaVersion).toBe("0.1.0");
+		expect(parsed.capabilities).toHaveLength(SELF_CAPABILITIES.length);
+		expect(parsed.capabilities).toEqual(SELF_CAPABILITIES);
+
+		const allowedSupport = new Set([
+			"native-node",
+			"apply-constructor",
+			"annotation",
+			"extension",
+			"unsupported",
+			"out-of-scope",
+		]);
+
+		for (const capability of parsed.capabilities) {
+			expect(Object.keys(capability).sort()).toEqual([
+				"criterionId",
+				"mechanism",
+				"notes",
+				"support",
+				"witnessKind",
+			]);
+			expect(capability.criterionId).toMatch(/^pi-prime-\d{2}$/);
+			expect(allowedSupport.has(capability.support)).toBe(true);
+			expect(capability.mechanism.length).toBeGreaterThan(0);
+			expect(capability.witnessKind.length).toBeGreaterThan(0);
+			expect(capability.notes.length).toBeGreaterThan(0);
+			expect(capability.term).toBeUndefined();
+		}
+
+		expect(parsed.capabilities[0]).toEqual({
+			criterionId: "pi-prime-08",
+			support: "apply-constructor",
+			mechanism: "TypeTerm apply constructor",
+			witnessKind: "apply:tuple",
+			notes: "Positional tuples use the well-known tuple constructor.",
 		});
 	});
 });

@@ -47,4 +47,26 @@ describe("documentation consistency", () => {
 		expect(spec).not.toContain("Missing full scorecard");
 		expect(readme).not.toContain("55 criteria outside the core lack witness schemas");
 	});
+
+	it("documents TypeCarta self-comparison rules and the capability export", () => {
+		const guide = readRepoFile("docs/guides/comparing-typecarta.md");
+		const scorecardGuide = readRepoFile("docs/guides/reading-the-scorecard.md");
+
+		expect(scorecardGuide).toContain("./comparing-typecarta.md");
+		expect(guide).toContain("typecarta capabilities --format json");
+		expect(guide).toContain("native-node");
+		expect(guide).toContain("apply-constructor");
+		expect(guide).toContain("annotation");
+		expect(guide).toContain("extension");
+		expect(guide).toContain("out-of-scope");
+		expect(guide).toContain("packages/core/src/criteria/pi-prime/self-capabilities.ts");
+		expect(guide).toContain("packages/core/src/criteria/pi-prime/self-witnesses.ts");
+		expect(guide).not.toContain("TypeCarta is universal by construction");
+	});
+
+	it("keeps generated external comparison HTML out of the repository", () => {
+		const gitignore = readRepoFile(".gitignore");
+
+		expect(gitignore).toContain("global-ast-space-*.html");
+	});
 });

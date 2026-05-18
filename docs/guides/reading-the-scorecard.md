@@ -50,6 +50,7 @@ For full 70-criterion mode, distinguish two claims:
 - **Adapter capability**: whether the current TypeCarta adapter preserves that phenomenon through `encode -> parse`.
 
 Use [Scorecard Spec Assessment](./scorecard-spec-assessment.md) when validating a scorecard against the specification.
+Use [Comparing TypeCarta Against Schema Languages](./comparing-typecarta.md) when a report includes TypeCarta itself as a comparison column.
 
 ## Comparison Mode
 

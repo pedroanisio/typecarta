@@ -21,6 +21,14 @@ export {
 	criterionRegistrySize,
 } from "./registry.js";
 
+export {
+	SELF_CAPABILITIES,
+	SELF_CAPABILITY_BY_ID,
+	type SelfCapability,
+	type SelfCapabilitySupport,
+} from "./self-capabilities.js";
+export { SELF_WITNESSES, type SelfWitness } from "./self-witnesses.js";
+
 import { FAMILY_A } from "./family-a.js";
 import { FAMILY_B } from "./family-b.js";
 import { FAMILY_C } from "./family-c.js";
@@ -45,6 +53,7 @@ import { FAMILY_U } from "./family-u.js";
 import { FAMILY_V } from "./family-v.js";
 // ─── Import and register all 22 families ───────────────────────────
 import { registerCriterion } from "./registry.js";
+import type { Criterion, CriterionId } from "./types.js";
 
 /** All 70 criteria in one flat array (ordered by family then ID). */
 export const CRITERIA = [
@@ -72,11 +81,38 @@ export const CRITERIA = [
 	...FAMILY_V,
 ] as const;
 
-/** The 15-criterion canonical core subset (formerly Π). */
-export const CORE_CRITERIA = CRITERIA.filter((c) => c.core === true);
+/** Identifiers of the 15-criterion canonical core subset in spec §9 c-index order. */
+export const CORE_IDS = [
+	"pi-prime-01",
+	"pi-prime-03",
+	"pi-prime-05",
+	"pi-prime-09",
+	"pi-prime-20",
+	"pi-prime-23",
+	"pi-prime-25",
+	"pi-prime-26",
+	"pi-prime-28",
+	"pi-prime-38",
+	"pi-prime-12",
+	"pi-prime-35",
+	"pi-prime-17",
+	"pi-prime-42",
+	"pi-prime-32",
+] as const satisfies readonly CriterionId[];
 
-/** Identifiers of the 15-criterion canonical core subset. */
-export const CORE_IDS = CORE_CRITERIA.map((c) => c.id);
+const CRITERIA_BY_ID = new Map(CRITERIA.map((criterion) => [criterion.id, criterion]));
+
+/** The 15-criterion canonical core subset (formerly Π), ordered by spec §9 c-index. */
+export const CORE_CRITERIA = CORE_IDS.map((id) => {
+	const criterion = CRITERIA_BY_ID.get(id);
+	if (criterion === undefined) {
+		throw new Error(`Missing core criterion ${id}`);
+	}
+	if (criterion.core !== true) {
+		throw new Error(`Criterion ${id} is listed in CORE_IDS but is not marked core`);
+	}
+	return criterion;
+}) as readonly Criterion[];
 
 // Auto-register all criteria
 for (const criterion of CRITERIA) {

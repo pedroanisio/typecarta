@@ -63,19 +63,19 @@ export type ConstructorName =
 
 // -- § 6  TypeTerm Node Kinds -- individual AST node interfaces --
 
-/** Bottom type node — ⟦⊥⟧ = ∅. Primary witness: π₁. */
+/** Bottom type node — ⟦⊥⟧ = ∅. Primary witness: pi-prime-01 / π₁. */
 export interface BottomNode {
 	readonly kind: "bottom";
 	readonly annotations?: Annotations;
 }
 
-/** Top / universal type node — ⟦⊤⟧ = 𝒱. Primary witness: π₂. */
+/** Top / universal type node — ⟦⊤⟧ = 𝒱. Primary witness: pi-prime-03 / π₃. */
 export interface TopNode {
 	readonly kind: "top";
 	readonly annotations?: Annotations;
 }
 
-/** Literal / singleton type node — |⟦S⟧| = 1. Primary witness: π₃. */
+/** Literal / singleton type node — |⟦S⟧| = 1. Primary witness: pi-prime-05 / π₅. */
 export interface LiteralNode {
 	readonly kind: "literal";
 	readonly value: string | number | boolean | null;
@@ -106,7 +106,7 @@ export interface ApplyNode {
 	readonly annotations?: Annotations;
 }
 
-/** Universal quantifier node — Λα.τ (Def. 3.2 clause 3). Primary witness: π₉. */
+/** Universal quantifier node — Λα.τ. Primary witnesses: pi-prime-28 / π₂₈ and pi-prime-32 / π₃₂. */
 export interface ForallNode {
 	readonly kind: "forall";
 	readonly var: string;
@@ -117,7 +117,7 @@ export interface ForallNode {
 	readonly annotations?: Annotations;
 }
 
-/** Fixpoint / recursive type node — μα.F(α) (Remark 3.2.1). Primary witness: π₇. */
+/** Fixpoint / recursive type node — μα.F(α). Primary witnesses: pi-prime-25 / π₂₅ and pi-prime-26 / π₂₆. */
 export interface MuNode {
 	readonly kind: "mu";
 	readonly var: string;
@@ -125,7 +125,7 @@ export interface MuNode {
 	readonly annotations?: Annotations;
 }
 
-/** Refinement type node — {v:τ | P(v)}. Primary witness: π₁₀. */
+/** Refinement type node — {v:τ | P(v)}. Primary witness: pi-prime-38 / π₃₈. */
 export interface RefinementNode {
 	readonly kind: "refinement";
 	readonly base: TypeTerm;
@@ -173,7 +173,7 @@ export interface RowPolyNode {
 	readonly annotations?: Annotations;
 }
 
-/** Nominal / branded type node — nominal(Tag, τ). Primary witness: π₁₂. */
+/** Nominal / branded type node — nominal(Tag, τ). Primary witness: pi-prime-35 / π₃₅. */
 export interface NominalNode {
 	readonly kind: "nominal";
 	readonly tag: string;
