@@ -24,12 +24,15 @@ describe("SHACL 1.0 full scorecard assessment", () => {
 		// not preserve (e.g. nominal subclasses, sh:multipleOf as SPARQL).
 		// See docs/guides/shacl-scorecard-audit.md for the per-row narrative.
 		//
-		// Totals shifted from (17, 30, 7, 16) → (23, 24, 7, 16) after the
-		// "empty product leak" parser fix (commit fixes pi-prime-03, -06,
-		// -07, -20, -21, -23, -42 — six rows ◐ → ✓).
+		// Revision history:
+		//   v1 (17 / 30 / 7 / 16) — initial SHACL adapter.
+		//   v2 (23 / 24 / 7 / 16) — "empty product leak" parser fix:
+		//     pi-prime-03, -06, -07, -20, -21, -23, -42 moved ◐ → ✓.
+		//   v3 (26 / 21 / 7 / 16) — refinement-facet encoder/parser pair:
+		//     pi-prime-24, -40, -41 moved ◐ → ✓.
 		expect(scorecard.totals).toEqual({
-			satisfied: 23,
-			partial: 24,
+			satisfied: 26,
+			partial: 21,
 			notSatisfied: 7,
 			outOfVocabulary: 16,
 		});

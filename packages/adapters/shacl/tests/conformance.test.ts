@@ -1,4 +1,5 @@
 import {
+	andPredicate,
 	array,
 	base,
 	complement,
@@ -6,6 +7,7 @@ import {
 	forall,
 	intersection,
 	literal,
+	multipleOfConstraint,
 	nominal,
 	product,
 	rangeConstraint,
@@ -243,6 +245,51 @@ describe("ShaclAdapter", () => {
 			it("top() round-trips as top(), not as product([])", () => {
 				const parsed = adapter.parse(adapter.encode(top()));
 				expect(parsed.kind).toBe("top");
+			});
+		});
+
+		// Regression tests for the encoder gaps surfaced by the reviewer's v3
+		// critique of the SHACL scorecard. The refinement encoder used to wrap
+		// facets in an `rdf:value` PropertyShape, breaking the round-trip for
+		// pi-prime-24 (refinement intersection) and pi-prime-41 (compound
+		// predicate). The fix hoists facets onto the NodeShape itself.
+		describe("regression: refinement facets round-trip", () => {
+			it("refinement(number, range) round-trips as a refinement, not a product", () => {
+				const term = refinement(base("number"), rangeConstraint(0, 100));
+				const parsed = adapter.parse(adapter.encode(term));
+				expect(parsed.kind).toBe("refinement");
+				if (parsed.kind === "refinement") {
+					expect(parsed.base.kind).toBe("base");
+					expect(parsed.predicate.kind).toBe("range");
+				}
+			});
+
+			it("intersection of base + refinement (pi-prime-24 lane) round-trips faithfully", () => {
+				const term = intersection([
+					base("number"),
+					refinement(base("number"), rangeConstraint(0, 100)),
+				]);
+				const parsed = adapter.parse(adapter.encode(term));
+				expect(parsed.kind).toBe("apply");
+				if (parsed.kind === "apply") {
+					expect(parsed.constructor).toBe("intersection");
+					expect(parsed.args).toHaveLength(2);
+					// Second arg must be a refinement node, not a product wrapper.
+					expect(parsed.args[1]?.kind).toBe("refinement");
+				}
+			});
+
+			it("refinement with and(range, multipleOf) (pi-prime-41 lane) preserves the compound predicate", () => {
+				const term = refinement(
+					base("number"),
+					andPredicate(rangeConstraint(0, 100), multipleOfConstraint(5)),
+				);
+				const parsed = adapter.parse(adapter.encode(term));
+				expect(parsed.kind).toBe("refinement");
+				if (parsed.kind === "refinement") {
+					// Compound predicate: parser must reconstruct an and-node.
+					expect(parsed.predicate.kind).toBe("and");
+				}
 			});
 		});
 	});

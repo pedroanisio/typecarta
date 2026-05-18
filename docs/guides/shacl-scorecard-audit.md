@@ -28,7 +28,8 @@ disclaimer:
 | Date | Totals (✓ / ◐ / ✗ / n/a) | Cause |
 |---|---|---|
 | 2026-05-18 v1 | 17 / 30 / 7 / 16 | Initial SHACL adapter (commit `a396295`) |
-| 2026-05-18 v2 | **23 / 24 / 7 / 16** | Parser fix: "empty product leak" — `parseNodeShape` no longer wraps logical-combinator-only shapes in a spurious `product([])`. Six rows ◐ → ✓ (pi-prime-03, -06, -07, -20, -21, -23, -42). Regression-tested. See [Reviewer follow-up (v2)](#reviewer-follow-up-v2) below for the full diff and a response to the reviewer's individual claims. |
+| 2026-05-18 v2 | 23 / 24 / 7 / 16 | Parser fix: "empty product leak" — `parseNodeShape` no longer wraps logical-combinator-only shapes in a spurious `product([])`. Six rows ◐ → ✓ (pi-prime-03, -06, -07, -20, -21, -23, -42). Regression-tested. See [Reviewer follow-up (v2)](#reviewer-follow-up-v2). |
+| 2026-05-18 v3 | **26 / 21 / 7 / 16** | Encoder fix: refinement facets hoisted to NodeShape (not wrapped in `rdf:value` PropertyShape); compound predicates round-trip via `andPredicate` reconstruction; `multipleOf` divisor preserved on a structural descriptor field. Three rows ◐ → ✓ (pi-prime-24, -40, -41). See [Reviewer follow-up (v3)](#reviewer-follow-up-v3). |
 
 ---
 
@@ -36,7 +37,7 @@ disclaimer:
 
 | Adapter | ✓ | partial | ✗ | n/a | Universe |
 |---|---:|---:|---:|---:|---:|
-| `shacl-1-0` | 23 | 24 | 7 | 16 | 70 |
+| `shacl-1-0` | 26 | 21 | 7 | 16 | 70 |
 | `JSON Schema` (draft-07) | 22 | 15 | 8 | 25 | 70 |
 
 **SHACL is wider but shallower than JSON Schema** on this witness set:
@@ -135,17 +136,26 @@ After the fix they are `✓`, matching JSON Schema:
 | pi-prime-23 Record-Merge Intersection | `partial` → `✓` | `✓` | `SP23_RECORD_MERGE` | `sh:and` over two NodeShapes round-trips to `intersection(product, product)` cleanly. |
 | pi-prime-42 Tagged Dependent Choice | `partial` → `✓` | `✓` | `SP42_TAGGED_DEPENDENT` | Same fix as 20. |
 
-### JSON Schema stronger than SHACL (3 rows — remaining)
+### SHACL further strengthened in v3
 
-After the v2 fix, the rows where JSON Schema still has a ✓ that SHACL
-does not:
+These rows shifted to ✓ in v3 after the refinement-facet encoder/parser
+pair. JSON Schema also has ✓ on each — SHACL now matches:
+
+| # | SHACL v2 → v3 | JS | Witness | Why |
+|---|:---:|:---:|---|---|
+| pi-prime-24 Refinement Intersection | `partial` → `✓` | `✓` | `SP24_REFINEMENT_INTERSECTION` | `encodeRefinement` no longer wraps facets in an `rdf:value` PropertyShape. Facets hoist onto the NodeShape itself (spec-valid per W3C REC §4.6). Round-trip recovers `intersection(base, refinement)` faithfully. |
+| pi-prime-40 Modular / Divisibility | `partial` → `✓` | `partial` | `SP40_MULTIPLE_OF` | `multipleOf` divisor is now preserved on a `multipleOf` descriptor field, with a parallel `sh:sparql` constraint emitted for validation honesty. Parser reads the divisor back into a `multipleOf` predicate. **Bonus: SHACL now stronger than JSON Schema on this row.** |
+| pi-prime-41 Compound Decidable Predicate | `partial` → `✓` | `✓` | `SP41_COMPOUND` | `andPredicate(range, multipleOf)` now flattens to NodeShape-level facets (`minInclusive`/`maxInclusive`/`multipleOf`); parser composes the facets back into an `andPredicate` via `nodeFacetsToPredicate`. |
+
+### JSON Schema still stronger than SHACL (2 rows — remaining)
+
+After the v3 fix, the rows where JSON Schema has a ✓ that SHACL does not:
 
 | # | SHACL | JS | Witness | Why |
 |---|:---:|:---:|---|---|
 | pi-prime-01 Syntactic Bottom | `partial` | `✓` | `SP01_SYNTACTIC_BOTTOM` | JSON Schema has `false` as a schema. SHACL has no first-class empty extension — encoded as `NodeShape { in: [] }`, which the criterion predicate doesn't recognize as a bottom node. **Projection artifact**. |
-| pi-prime-13 Nullable-by-Value | `partial` | `✓` | `SP13_NULLABLE_FIELD` | JSON Schema models nullable with `type: [..., "null"]`; SHACL has no native null type. The current adapter folds `base("null")` to `xsd:string` at encode, losing the null arm before parse. **Real SHACL adapter weakness**, separate from the parser bug; RDF genuinely has no null. |
-| pi-prime-24 Refinement Intersection | `partial` | `✓` | `SP24_REFINEMENT_INTERSECTION` | `encodeRefinement` wraps the base in a `complexType` with an `rdf:value` PropertyShape rather than flowing facets through to a `simpleType`. Round-trip yields `intersection(base, product(…))` instead of the witness's `intersection(base, refinement)`. **Real encoder limitation**, separate from the parser bug. Tracked for a follow-up encoder change. |
-| pi-prime-46 Set / Unique Collection | `partial` | `✗` | `SP46_SET` | SHACL has no native set — encodes as array. JSON Schema's `uniqueItems` is closer but the adapter throws. SHACL's `partial` is the more graceful failure; JSON Schema's `✗` is the more honest signal. |
+| pi-prime-13 Nullable-by-Value | `partial` | `✓` | `SP13_NULLABLE_FIELD` | JSON Schema models nullable with `type: [..., "null"]`; SHACL has no native null type. The current adapter folds `base("null")` to `xsd:string` at encode, losing the null arm before parse. **Real SHACL adapter weakness**; RDF genuinely has no null. Tracked for follow-up. |
+| pi-prime-46 Set / Unique Collection | `partial` | `✗` | `SP46_SET` | SHACL has no native set — encodes as array. JSON Schema's `uniqueItems` is closer but the adapter throws. SHACL's `partial` is the more graceful failure; JSON Schema's `✗` is the more honest signal. Methodological disagreement (data-layer vs IR-layer view) tracked in [Reviewer follow-up (v2)](#reviewer-follow-up-v2). |
 
 ### Where the comparison flips the adapter-hole story (10 rows)
 
@@ -295,3 +305,88 @@ follow-up is to add justification taxonomy to cells (e.g.
 `{value: "partial", reason: "adapter-encoder-limitation" | "witness-shape-mismatch" | …}`)
 so audits can mechanically distinguish these cases. Tracked for a
 future change.
+
+---
+
+## Reviewer follow-up (v3)
+
+The same reviewer returned (2026-05-18) and made the diagnosis sharper:
+*"The SHACL adapter's encoder is incomplete on Family J, K, and parts
+of F."* That's the live category of failure. The reviewer specifically
+asked us to audit emitters for `sh:and`, `sh:or`, `sh:equals`,
+`sh:disjoint`, `sh:path` with property-path syntax.
+
+After a focused probe of pi-prime-24 and pi-prime-41, two encoder gaps
+were confirmed:
+
+1. **`encodeRefinement` wrapped facets in an `rdf:value` PropertyShape.**
+   The witness `refinement(base("number"), rangeConstraint(0, 100))`
+   round-tripped to `intersection(base, product([…]))` — the parser
+   couldn't reconstruct a refinement because the facets lived inside a
+   nested property, not at the NodeShape level.
+2. **`andPredicate(range, multipleOf)` lost its compound shape.** The
+   `multipleOf` arm routed through `sh:sparql` (since SHACL has no
+   native multipleOf facet), but the parser ignored the SPARQL constraint
+   and only read the `range` arm. The compound predicate degraded to a
+   single-range refinement.
+
+### The fix
+
+| Change | Where | Effect |
+|---|---|---|
+| Added 8 NodeShape-level facet fields (`minInclusive`, `maxInclusive`, `minExclusive`, `maxExclusive`, `minLength`, `maxLength`, `pattern`, `multipleOf`) to `ShaclNodeShape`. | `adapter.ts` descriptor | Spec-valid per W3C REC §4.6 — value-range and string-based constraints attach to NodeShape, not just PropertyShape. |
+| Rewrote `encodeRefinement` to hoist facets onto the parent NodeShape via a new `flattenPredicateToNodeFacets`. | encoder | The facet-bearing NodeShape now matches `simpleType`-derivation style rather than `rdf:value` wrap. |
+| For `multipleOf`: emit both a structural `multipleOf: N` field (so parse can rebuild the predicate) and the `sh:sparql` constraint (so a SHACL validator actually enforces the modulus check). | encoder | Validation honesty + round-trip fidelity, simultaneously. |
+| Added `nodeFacetsToPredicate` to `parseNodeShapeCore`. When a NodeShape has facets, the parser builds `refinement(base, predicate)` instead of `base`. Multiple facets compose left-associatively as `andPredicate`. | parser | pi-prime-41's `andPredicate(range, multipleOf)` is now structurally reconstructible from the round-trip. |
+
+### Results
+
+Three rows lifted ◐ → ✓:
+
+| Row | Before | After | Reviewer prediction? |
+|---|:---:|:---:|---|
+| pi-prime-24 Refinement Intersection | ◐ | ✓ | Yes (predicted ✓ via `sh:and` over base + facet shape; actual mechanism is facet hoisting) |
+| pi-prime-40 Modular / Divisibility | ◐ | ✓ | No (bonus — the multipleOf round-trip was previously losing the divisor) |
+| pi-prime-41 Compound Decidable Predicate | ◐ | ✓ | Yes (predicted ✓; declined in v2 reviewer response; v3 fix resolves it) |
+
+**The v2 decline on pi-prime-41 was wrong.** The v2 response said "SHACL
+has no native `multipleOf` so the compound `range ∧ multipleOf` cannot
+round-trip." The reviewer's claim was that this is a *language-level*
+limitation. The v3 fix shows it was actually an *adapter-level*
+limitation: by carrying the divisor on a structural descriptor field
+and reconstructing the predicate in the parser, the round-trip
+succeeds. SHACL the language still has no `sh:multipleOf` facet, but
+the adapter can faithfully transport the IR's `multipleOf` through the
+RDF representation by combining a SPARQL constraint with a structural
+hint. v2's verdict ("◐ is honest") was unduly pessimistic.
+
+### Response to specific reviewer claims (v3)
+
+| Row | Reviewer | Resolution |
+|---|---|---|
+| pi-prime-24 Refinement Intersection | encoder gap, should lift | **Confirmed and fixed.** |
+| pi-prime-41 Compound Predicate | encoder gap, should lift | **Confirmed and fixed; v2 response retracted.** |
+| pi-prime-43 Intra-Object Cross-Field | encoder gap, should lift | **Still declined as witness gap.** `SP43_CROSS_FIELD` doesn't carry `annotations.crossField`; the criterion checks for that annotation. Both SHACL and XSD adapters get ◐ for the same reason. Fix requires changing the witness, not the SHACL adapter. |
+| pi-prime-67 Path-Navigating Constraint | encoder gap, should lift | **Still declined as witness gap.** `SP67_PATH_CONSTRAINT` uses `extension`, not a SHACL-path-shaped term. The SHACL adapter's `ShaclPath` model supports inverse / alternative / sequence / repetition paths, but the witness doesn't exercise them. Fix requires a new witness or a different witness shape. |
+| Three monotonicity violations on xsd-1-1 (pi-prime-24, -47, -49) | should add monotonicity test | **Claim was wrong, but the test idea is right and already exists.** Direct probe: all three rows are `xsd 1.0 = ✗, xsd-1-1 = ✗`. No regression. The reviewer was comparing against a stale memory of 1.0; the `xsd-core` engine refactor flipped several 1.0 rows ◐ → ✗ in parallel. The monotonicity test (`packages/adapters/xsd-1-1/tests/monotonicity.test.ts`, using `checkMonotonicity` from `@typecarta/core`) was added by a parallel agent and runs on every test invocation. Zero violations enforced. |
+| "Audit SHACL emitter on `sh:and`, `sh:or`, `sh:equals`, `sh:disjoint`, `sh:path`" | the prescription | **Half-done.** `sh:and`/`sh:or` already emit correctly (verified in v2's empty-product-leak fix). `sh:equals`/`sh:disjoint` are still gated on the pi-prime-43 witness shape. SHACL property paths (`sh:inversePath` etc.) are modeled in `ShaclPath` but the SP₆₇ witness doesn't reach them. |
+
+### Where the reviewer's diagnosis was right but understated
+
+The reviewer said *"with those four ✓, SHACL's headline moves from 33%
+to around 39%."* After v3, SHACL is at 26/70 (37.1%). Two of the four
+rows the reviewer predicted (pi-prime-43 and -67) remain at ◐ for the
+witness-gap reasons above. If those witnesses were modernized, SHACL
+would move to 28/70 (40%), matching the reviewer's estimate.
+
+### Where the reviewer's diagnosis was wrong
+
+The reviewer claimed three monotonicity violations on `xsd-1-1 ⊇ xsd 1.0`
+(pi-prime-24, -47, -49 — "xsd-1-1 ✗ vs xsd 1.0 ◐"). Direct probe shows
+all three are `xsd 1.0 = ✗` *and* `xsd-1-1 = ✗`. No regression; the
+reviewer was comparing against a stale snapshot of 1.0 from before the
+`xsd-core` engine migration. The lesson, consistent across all three
+review rounds: **the reviewer makes excellent predictions and weak
+verifications**. Each round's claims need probe-based confirmation
+before fixing anything — and in this round, half the reviewer's
+specific row-level claims survived that test, half did not.

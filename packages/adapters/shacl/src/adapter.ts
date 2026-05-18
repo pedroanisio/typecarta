@@ -35,6 +35,7 @@ import {
 	field,
 	intersection,
 	literal,
+	multipleOfConstraint,
 	nominal,
 	patternConstraint,
 	product,
@@ -174,6 +175,22 @@ export interface ShaclNodeShape {
 	readonly deactivated?: boolean;
 	readonly severity?: ShaclSeverity;
 	readonly message?: string;
+	// NodeShape-level facet constraints. SHACL allows the value-range,
+	// string-based, and pattern constraints to attach directly to a
+	// NodeShape (per W3C REC §4.6/§4.7); the adapter uses them when
+	// encoding a `refinement(base, predicate)` so the round-trip can
+	// reconstruct the refinement structure.
+	readonly minInclusive?: number;
+	readonly maxInclusive?: number;
+	readonly minExclusive?: number;
+	readonly maxExclusive?: number;
+	readonly minLength?: number;
+	readonly maxLength?: number;
+	readonly pattern?: { readonly regex: string; readonly flags?: string };
+	// Custom marker: IR `multipleOf` has no native SHACL facet. Carry the
+	// divisor explicitly so the parser can rebuild the refinement; the
+	// encoder also emits a `sh:sparql` constraint for validation honesty.
+	readonly multipleOf?: number;
 }
 
 /** A reference to a named shape elsewhere in the shapes graph. */
@@ -259,6 +276,67 @@ export class ShaclAdapter implements IRAdapter<Signature, ShaclDescriptor> {
 
 // ─── Parse: ShaclDescriptor → TypeTerm ───────────────────────────────
 
+/** True if the NodeShape carries any of the refinement-encoding facets. */
+function hasNodeShapeFacets(desc: ShaclNodeShape): boolean {
+	return (
+		desc.minInclusive !== undefined ||
+		desc.maxInclusive !== undefined ||
+		desc.minExclusive !== undefined ||
+		desc.maxExclusive !== undefined ||
+		desc.minLength !== undefined ||
+		desc.maxLength !== undefined ||
+		desc.pattern !== undefined ||
+		desc.multipleOf !== undefined
+	);
+}
+
+/**
+ * Reconstruct a refinement predicate from NodeShape-level facets.
+ *
+ * Multiple facets compose as `andPredicate(p1, p2, …)` — left-associated
+ * to match `encodeRefinement`'s `flattenPredicateToNodeFacets`. The
+ * facet → predicate mapping is the inverse of that flattening.
+ *
+ * Returns `undefined` if no facets are present (caller should skip the
+ * refinement wrap).
+ */
+function nodeFacetsToPredicate(desc: ShaclNodeShape): RefinementPredicate | undefined {
+	const predicates: RefinementPredicate[] = [];
+
+	// Value range. Inclusive and exclusive are mutually exclusive arms of
+	// the IR's range predicate, so emit them as separate predicates.
+	if (desc.minInclusive !== undefined || desc.maxInclusive !== undefined) {
+		predicates.push(rangeConstraint(desc.minInclusive, desc.maxInclusive));
+	}
+	if (desc.minExclusive !== undefined || desc.maxExclusive !== undefined) {
+		predicates.push(rangeConstraint(desc.minExclusive, desc.maxExclusive, true));
+	}
+
+	if (desc.pattern !== undefined) {
+		predicates.push(patternConstraint(desc.pattern.regex));
+	}
+
+	if (desc.minLength !== undefined || desc.maxLength !== undefined) {
+		predicates.push({
+			kind: "custom",
+			name: "stringLength",
+			params: {
+				...(desc.minLength !== undefined ? { min: desc.minLength } : {}),
+				...(desc.maxLength !== undefined ? { max: desc.maxLength } : {}),
+			},
+		});
+	}
+
+	if (desc.multipleOf !== undefined) {
+		predicates.push(multipleOfConstraint(desc.multipleOf));
+	}
+
+	return predicates.reduce<RefinementPredicate | undefined>(
+		(acc, p) => (acc === undefined ? p : andPredicate(acc, p)),
+		undefined,
+	);
+}
+
 function parseShacl(desc: ShaclDescriptor): TypeTerm {
 	switch (desc.kind) {
 		case "NodeShape":
@@ -291,6 +369,7 @@ function parseNodeShapeCore(desc: ShaclNodeShape): TypeTerm | undefined {
 	const hasDatatype = desc.datatype !== undefined;
 	const hasClass = desc.class !== undefined && desc.class.length > 0;
 	const hasSparql = desc.sparql !== undefined && desc.sparql.length > 0;
+	const hasFacets = hasNodeShapeFacets(desc);
 	const hasStructuralAnnotations =
 		desc.closed !== undefined ||
 		desc.target !== undefined ||
@@ -310,6 +389,15 @@ function parseNodeShapeCore(desc: ShaclNodeShape): TypeTerm | undefined {
 		return vs.length === 1 ? literal(vs[0]!) : union(vs.map((v) => literal(v)));
 	}
 
+	// Facet-bearing NodeShape (with or without a datatype): reconstruct
+	// `refinement(base, predicate)`. Pi-prime-41 round-trips via this path
+	// when multiple facets are present and compose into an andPredicate.
+	if (hasFacets && !hasProperties && !hasClass && !hasStructuralAnnotations) {
+		const baseTerm: TypeTerm = hasDatatype ? datatypeToBase(desc.datatype!) : top();
+		const predicate = nodeFacetsToPredicate(desc);
+		return predicate !== undefined ? refinement(baseTerm, predicate) : baseTerm;
+	}
+
 	// Pure-datatype NodeShape models "this focus is a literal of type T".
 	if (
 		hasDatatype &&
@@ -318,6 +406,7 @@ function parseNodeShapeCore(desc: ShaclNodeShape): TypeTerm | undefined {
 		!hasInValue &&
 		!hasHasValue &&
 		!hasSparql &&
+		!hasFacets &&
 		!hasStructuralAnnotations
 	) {
 		return datatypeToBase(desc.datatype!);
@@ -861,22 +950,83 @@ function predicateToShaclConstraints(p: RefinementPredicate): Partial<ShaclPrope
 
 function encodeRefinement(term: Extract<TypeTerm, { kind: "refinement" }>): ShaclDescriptor {
 	const baseDesc = encodeToShacl(term.base) as ShaclNodeShape;
-	const constraints = predicateToShaclConstraints(term.predicate);
+	const facets = flattenPredicateToNodeFacets(term.predicate);
+	// Hoist facets onto the NodeShape itself. SHACL allows value-range,
+	// string-length, and pattern constraints to attach to a NodeShape;
+	// keeping them at the shape level (rather than wrapping in an
+	// `rdf:value` PropertyShape) preserves the refinement structure
+	// through round-trip.
 	return {
 		...baseDesc,
-		properties: [
-			...(baseDesc.properties ?? []),
-			...(Object.keys(constraints).length > 0
-				? [
-						{
-							kind: "PropertyShape" as const,
-							path: "rdf:value",
-							...constraints,
-						},
-					]
-				: []),
-		],
+		...facets,
 	};
+}
+
+/**
+ * Flatten a refinement predicate into NodeShape-level facets.
+ *
+ * `andPredicate(p1, p2)` merges both children's facets. `or` and `not`
+ * have no facet equivalent; they fall through to empty (the round-trip
+ * loses them, but that's outside the pi-prime-41 scope).
+ *
+ * Returns a partial shape carrying the facets only. The encoder spreads
+ * it onto a NodeShape; the parser looks for the same facets to rebuild
+ * the refinement.
+ */
+function flattenPredicateToNodeFacets(p: RefinementPredicate): Partial<ShaclNodeShape> {
+	switch (p.kind) {
+		case "range":
+			return {
+				...(p.min !== undefined
+					? p.exclusive
+						? { minExclusive: p.min }
+						: { minInclusive: p.min }
+					: {}),
+				...(p.max !== undefined
+					? p.exclusive
+						? { maxExclusive: p.max }
+						: { maxInclusive: p.max }
+					: {}),
+			};
+		case "pattern":
+			return { pattern: { regex: p.regex } };
+		case "multipleOf":
+			// IR multipleOf has no native SHACL facet. Record the divisor on
+			// the NodeShape so the parser can reconstruct it, AND emit a
+			// `sh:sparql` constraint for validation honesty (the validator
+			// will actually enforce the modulus check at runtime).
+			return {
+				multipleOf: p.divisor,
+				sparql: [
+					{ query: `ASK { FILTER(?value mod ${p.divisor} = 0) }` },
+				],
+			};
+		case "custom":
+			if (p.name === "stringLength" && p.params) {
+				const params = p.params as { min?: number; max?: number };
+				return {
+					...(params.min !== undefined ? { minLength: params.min } : {}),
+					...(params.max !== undefined ? { maxLength: params.max } : {}),
+				};
+			}
+			return {};
+		case "and": {
+			const left = flattenPredicateToNodeFacets(p.left);
+			const right = flattenPredicateToNodeFacets(p.right);
+			// Merge sparql arrays if both arms emitted one.
+			const sparql = [...(left.sparql ?? []), ...(right.sparql ?? [])];
+			return {
+				...left,
+				...right,
+				...(sparql.length > 0 ? { sparql } : {}),
+			};
+		}
+		case "or":
+		case "not":
+			return {};
+		default:
+			return {};
+	}
 }
 
 function encodeNominal(term: Extract<TypeTerm, { kind: "nominal" }>): ShaclDescriptor {
