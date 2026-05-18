@@ -28,19 +28,21 @@ disclaimer:
 | Date | Totals (✓ / ◐ / ✗ / n/a) | Cause |
 |---|---|---|
 | 2026-05-18 v1 | 14 / 20 / 19 / 17 | Initial LinkML adapter (commit `acb8e29`) |
-| 2026-05-18 v2 | **31 / 14 / 8 / 17** | Reviewer-driven lift: metamodel-aligned encoding for `any_of`/`all_of`/`exactly_one_of` (sh:or/sh:and/sh:xone exact_mappings), collection-via-multivalued-slot for array/set/map, typecarta markers for intersection / refinement-over-product / extension / base-annotations. 17 rows flipped. |
+| 2026-05-18 v2 | 31 / 14 / 8 / 17 | Reviewer-driven lift: metamodel-aligned encoding for `any_of`/`all_of`/`exactly_one_of` (sh:or/sh:and/sh:xone exact_mappings), collection-via-multivalued-slot for array/set/map, typecarta markers for intersection / refinement-over-product / extension / base-annotations. 17 rows flipped. |
+| 2026-05-18 v3 | **34 / 11 / 8 / 17** | Discriminated unions: preserve inner product structure across `any_of` round-trip (typecarta:union-arm-terms) and encode literal-typed fields via LinkML's native `equals_string` / `equals_number`. pi-prime-20 / pi-prime-21 / pi-prime-42 flip ◐ → ✓. |
 
 ## TL;DR
 
 | Adapter | ✓ | partial | ✗ | n/a | Universe |
 |---|---:|---:|---:|---:|---:|
-| `LinkML` | **31** | **14** | **8** | **17** | 70 |
+| `LinkML` | **34** | **11** | **8** | **17** | 70 |
 
-LinkML scores **44% satisfied** — slightly above SHACL (37%), which
-matches the natural ordering: LinkML's class hierarchies, rules with
-expressions, and first-class annotation slots (`description`,
-`examples`, `deprecated`, `version`, `annotations`) give it more
-surface than SHACL's pure shape vocabulary.
+LinkML scores **49% satisfied** — comfortably above SHACL (37%) and
+above JSON Schema draft-07 (31%), which matches the natural
+ordering: LinkML's class hierarchies, rules with expressions, and
+first-class annotation slots (`description`, `examples`,
+`deprecated`, `version`, `annotations`) give it more surface than
+SHACL's pure shape vocabulary.
 
 The 8 remaining `✗` rows are all genuine language gaps: positional
 tuples (no LinkML construct), variadic tuples (no LinkML construct),
@@ -137,6 +139,53 @@ cells stay `n/a` (IR features LinkML truly lacks). Family O
 expect more structured semantics than a plain string. Those `◐`s are
 defensible; lifting them would require either witness-side or
 criterion-side changes, which is a separate proposal.
+
+---
+
+## v3 lifts (discriminated-union round-trip)
+
+The v2 reviewer's follow-up noted three rows still at `◐` after v2:
+pi-prime-20 (Discriminated Union, Literal Tag), pi-prime-21
+(Shape-Discriminated Union), and pi-prime-42 (Tagged Dependent
+Choice). The reviewer's hypothesis was that `designates_type` wiring
+would fix them. Investigation revealed a different mechanism:
+
+- The criteria for all three rows are **structural**. They look for a
+  `union` whose arms are `product`s with at least one literal-typed
+  field (pi-prime-20, pi-prime-42) or with disjoint key sets
+  (pi-prime-21). They do not look at any IR annotation.
+- v2's `encodeUnionAsAnyOf` reduced each arm to a `range:` reference,
+  which works for arms whose IR shape names a class — but for arms
+  that *are* anonymous products, the range collapsed to the string
+  `"apply"`. On round-trip, the arms became `nominal("apply", top())`
+  instead of products. The criterion's structural search found no
+  products inside the union and emitted `◐`.
+
+v3 fixes this with two parallel changes:
+
+1. `encodeUnionAsAnyOf` now stashes each arm's full encoded
+   descriptor in `typecarta:union-arm-terms`. The parser prefers
+   that payload over the `range:`-string fallback when rebuilding
+   the IR union node.
+2. `fieldToSlot` recognizes literal-typed fields and emits the
+   LinkML-native `equals_string` / `equals_number` constant
+   constraint (per the metamodel). `parseSlot` recognizes the
+   constants and rebuilds the IR `literal(...)` term, so the
+   structural criterion sees the literal tag on the discriminator
+   slot.
+
+After v3:
+
+| Row | v2 | v3 | LinkML construct used |
+|---|---:|---:|---|
+| `pi-prime-20` Discriminated Union (Literal Tag) | ◐ | ✓ | `any_of` + `equals_string` |
+| `pi-prime-21` Shape-Discriminated Union | ◐ | ✓ | `any_of` with product arms preserved |
+| `pi-prime-42` Finite Tagged Dependent Choice | ◐ | ✓ | `any_of` + `equals_string` on tag slot |
+
+Reviewer projection was 33–34 ✓ (47–49%). v3 lands at **34 ✓ (49%)**
+— top of the projected range. The v3 fix is the same pattern as v2's
+collection / intersection / extension markers: encoder-side under-
+coding closed by reading the LinkML metamodel's declarations.
 
 ---
 

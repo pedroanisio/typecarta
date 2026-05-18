@@ -160,6 +160,9 @@ export interface LinkmlSlot extends LinkmlMetadata {
 	readonly designates_type?: boolean;
 	/** Cross-slot expression constraining this slot's value (LinkML `equals_expression`). */
 	readonly equals_expression?: string;
+	/** Slot value must equal this literal (LinkML `equals_string` / `equals_number`). */
+	readonly equals_string?: string;
+	readonly equals_number?: number;
 	/** Boolean combinators (metamodel exact_mappings: sh:or / sh:and / sh:xone / sh:not). */
 	readonly any_of?: readonly LinkmlExpression[];
 	readonly all_of?: readonly LinkmlExpression[];
@@ -531,7 +534,20 @@ function unwrapCombinator(
 	const armField = combinator as "any_of" | "all_of" | "exactly_one_of" | "none_of";
 	const exprs = (wrapper as LinkmlSlot)[armField];
 	if (exprs === undefined) return undefined;
-	const arms = exprs.map((e) => resolveRange((e as { range?: string }).range, schema));
+	// Prefer the typecarta arm-terms payload (full encoded descriptors) when
+	// present — that preserves inner product / refinement / nested-union
+	// shapes that don't reduce to a single `range:` reference. Fall back to
+	// the LinkML expression list (range strings only) for older payloads.
+	const armPayload = c.annotations?.["typecarta:union-arm-terms"];
+	const arms: TypeTerm[] = Array.isArray(armPayload)
+		? armPayload.map((d) => {
+				const term = parseDescriptor(d as LinkmlDescriptor);
+				// Unwrap let(name, binding, _body) → binding so the inner
+				// structural shape (product / refinement) is visible to the
+				// criterion's tree walk.
+				return term.kind === "let" ? term.binding : term;
+			})
+		: exprs.map((e) => resolveRange((e as { range?: string }).range, schema));
 	const exhaustive = c.annotations?.["typecarta:exhaustive"] === true;
 	const annotations: Record<string, unknown> = exhaustive ? { exhaustive: true } : {};
 	if (combinator === "any_of" || combinator === "exactly_one_of") {
@@ -578,9 +594,24 @@ function unwrapCollection(
 }
 
 function parseSlot(slot: LinkmlSlot, schema: LinkmlSchema | undefined): ReturnType<typeof field> {
-	const rangeTerm = resolveRange(slot.range, schema);
-	const refined = applySlotFacets(rangeTerm, slot);
-	const arrayed = slot.multivalued === true ? array(refined) : refined;
+	// A slot constrained to a single literal value (`equals_string`,
+	// `equals_number`, or the typecarta literal marker for booleans) is
+	// the LinkML encoding of a literal-typed field. Rebuild it as the IR
+	// `literal(...)` term so structural criteria for discriminated unions
+	// (pi-prime-20, pi-prime-42) see the literal tag.
+	const literalAnnotation = slot.annotations?.["typecarta:literal-value"];
+	let typed: TypeTerm;
+	if (slot.equals_string !== undefined) {
+		typed = literal(slot.equals_string);
+	} else if (slot.equals_number !== undefined) {
+		typed = literal(slot.equals_number);
+	} else if (typeof literalAnnotation === "boolean") {
+		typed = literal(literalAnnotation);
+	} else {
+		const rangeTerm = resolveRange(slot.range, schema);
+		const refined = applySlotFacets(rangeTerm, slot);
+		typed = slot.multivalued === true ? array(refined) : refined;
+	}
 	const annotations: Record<string, unknown> = {};
 	if (slot.description !== undefined) annotations.documentation = slot.description;
 	if (slot.slot_uri !== undefined) annotations.slot_uri = slot.slot_uri;
@@ -589,7 +620,7 @@ function parseSlot(slot: LinkmlSlot, schema: LinkmlSchema | undefined): ReturnTy
 	if (slot.inlined_as_list === true) annotations.inlined_as_list = true;
 	if (slot.designates_type === true) annotations.designates_type = true;
 
-	return field(slot.name, arrayed, {
+	return field(slot.name, typed, {
 		...(slot.required === true ? {} : { optional: true }),
 		...(slot.ifabsent !== undefined ? { defaultValue: slot.ifabsent } : {}),
 		...(Object.keys(annotations).length > 0 ? { annotations } : {}),
@@ -910,15 +941,23 @@ function encodeUnionAsAnyOf(
 	term: Extract<TypeTerm, { kind: "apply" }>,
 	operator: "any_of" | "all_of" | "exactly_one_of" | "none_of",
 ): LinkmlDescriptor {
+	// LinkML's any_of slot expressions carry a `range` reference. For arms
+	// whose IR shape doesn't reduce to a single range name (products,
+	// refinements, nested combinators), `rangeNameForTerm` falls back to
+	// the IR kind, which is not a useful LinkML range.
+	//
+	// To make the round-trip preserve the inner IR structure — required
+	// by structural criteria like pi-prime-20 (discriminated union over
+	// products with literal tags), pi-prime-21 (shape-discriminated
+	// union), pi-prime-42 (tagged dependent choice) — also stash each
+	// arm's full encoded descriptor in `typecarta:union-arm-terms`. The
+	// parser prefers that payload over the range-string fallback.
 	const exprs: LinkmlExpression[] = term.args.map((arg) => {
 		const name = rangeNameForTerm(arg);
 		if (name !== undefined) return { range: name };
-		// Sub-arm that has no simple range: encode it and use the resulting
-		// descriptor's name (best-effort). LinkML doesn't have anonymous
-		// expression objects inside any_of in the same way SHACL does, so we
-		// stringify the IR shape.
 		return { range: String(arg.kind) };
 	});
+	const armTerms = term.args.map((arg) => encodeToDescriptor(arg) as unknown);
 	const wrapperSlot: LinkmlSlot = {
 		name: "value",
 		required: true,
@@ -927,6 +966,7 @@ function encodeUnionAsAnyOf(
 	const annotation: Record<string, unknown> = {
 		"typecarta:combinator": operator,
 		"typecarta:arms": term.args.map((a) => rangeNameForTerm(a) ?? a.kind),
+		"typecarta:union-arm-terms": armTerms,
 	};
 	if (term.annotations?.exhaustive === true) {
 		annotation["typecarta:exhaustive"] = true;
@@ -970,6 +1010,42 @@ function fieldToSlot(f: {
 	if (typeTerm.kind === "apply" && typeTerm.constructor === "array") {
 		multivalued = true;
 		typeTerm = typeTerm.args[0]!;
+	}
+	// A literal-typed field (the discriminant of pi-prime-20 / pi-prime-42)
+	// encodes as a string/number slot with the LinkML metamodel's native
+	// `equals_string` / `equals_number` constant constraint. On parse we
+	// rebuild the IR literal so the criterion's structural check finds it.
+	if (typeTerm.kind === "literal") {
+		const v = typeTerm.value;
+		if (typeof v === "string") {
+			return {
+				name: f.name,
+				range: "string",
+				equals_string: v,
+				...(f.optional === true ? {} : { required: true }),
+				...(annotations.designates_type === true ? { designates_type: true } : {}),
+			};
+		}
+		if (typeof v === "number") {
+			return {
+				name: f.name,
+				range: Number.isInteger(v) ? "integer" : "decimal",
+				equals_number: v,
+				...(f.optional === true ? {} : { required: true }),
+				...(annotations.designates_type === true ? { designates_type: true } : {}),
+			};
+		}
+		if (typeof v === "boolean") {
+			return {
+				name: f.name,
+				range: "boolean",
+				// LinkML has no equals_boolean; carry the literal under a
+				// typecarta marker so parse rebuilds the IR literal.
+				annotations: { "typecarta:literal-value": v },
+				...(f.optional === true ? {} : { required: true }),
+				...(annotations.designates_type === true ? { designates_type: true } : {}),
+			};
+		}
 	}
 	const range = rangeNameForTerm(typeTerm);
 	return {

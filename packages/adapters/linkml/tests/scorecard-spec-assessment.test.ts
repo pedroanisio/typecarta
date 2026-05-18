@@ -18,15 +18,16 @@ describe("LinkML full scorecard assessment", () => {
 	it("pins the current adapter full-mode totals", () => {
 		const scorecard = fullScorecard();
 
-		// v2 (post-reviewer-feedback): the LinkML metamodel itself declares
-		// `any_of`/`all_of`/`exactly_one_of`/`none_of` as exact_mappings to
-		// SHACL's sh:or/sh:and/sh:xone/sh:not. The adapter now uses these
-		// for top-level unions/intersections, plus typecarta markers on
-		// class/type descriptors so structural criteria recognize the
-		// round-trip shape. Eleven rows lifted from v1 (14 ✓ → 31 ✓).
+		// v2 lifted 17 rows via metamodel-aligned encoding (any_of, all_of,
+		// multivalued, ifabsent, linkml:Any, rules, identifier,
+		// inlined_as_dict, plus typecarta markers for round-trip fidelity).
+		// v3 (this commit) lifts 3 more by preserving union arms' inner
+		// product structure on round-trip and encoding literal-typed
+		// fields via LinkML's native equals_string / equals_number
+		// constants. pi-prime-20 / -21 / -42 flip from ◐ to ✓.
 		expect(scorecard.totals).toEqual({
-			satisfied: 31,
-			partial: 14,
+			satisfied: 34,
+			partial: 11,
 			notSatisfied: 8,
 			outOfVocabulary: 17,
 		});
@@ -81,20 +82,26 @@ describe("LinkML full scorecard assessment", () => {
 		}
 	});
 
-	it("flipped 11 rows in v2 via metamodel-aligned encoding", () => {
+	it("flipped 17 rows total (14 in v2, 3 more in v3) via metamodel-aligned encoding", () => {
 		const scorecard = fullScorecard();
 		const cells = scorecard.cells;
-		// These rows were ✗ or ◐ in v1 (commit acb8e29) and now ✓ in v2.
-		// Pinned here as a regression guard so a future refactor can't
-		// silently lose the lifts.
+		// These rows were ✗ or ◐ in v1 (commit acb8e29) and now ✓ as of
+		// v3. Pinned here as a regression guard so a future refactor can't
+		// silently lose the lifts. v3 added pi-prime-20/-21/-42 by
+		// preserving union arms' inner product structure on round-trip
+		// (typecarta:union-arm-terms) and encoding literal-typed fields
+		// via LinkML's native equals_string / equals_number constants.
 		const liftedToSatisfied = [
 			"pi-prime-03", // Global Top → linkml:Any class
 			"pi-prime-14", // Default Value → ifabsent slot
 			"pi-prime-19", // Untagged Union → any_of
+			"pi-prime-20", // Discriminated Union (literal tag) → equals_string + any_of   (v3)
+			"pi-prime-21", // Shape-Discriminated Union → any_of with product arms preserved (v3)
 			"pi-prime-22", // Exhaustive Union → any_of + typecarta:exhaustive marker
 			"pi-prime-23", // Record-Merge Intersection → typecarta:intersection marker
 			"pi-prime-24", // Refinement Intersection → typecarta:intersection marker
 			"pi-prime-41", // Compound Decidable Predicate → typecarta:refinement-predicate marker
+			"pi-prime-42", // Tagged Dependent Choice → equals_string on tag slot           (v3)
 			"pi-prime-43", // Cross-Field Constraint → rules + typecarta:refinement-over-product
 			"pi-prime-44", // Foreign Key → typecarta:extension-foreign-key
 			"pi-prime-45", // Array → typecarta:collection=array
