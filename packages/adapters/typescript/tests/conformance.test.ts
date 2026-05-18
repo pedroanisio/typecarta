@@ -1,14 +1,27 @@
 import {
+	andPredicate,
 	array,
 	base,
 	bottom,
+	complement,
+	conditional,
 	field,
 	forall,
 	intersection,
+	keyOf,
+	letBinding,
 	literal,
 	map,
+	mapped,
+	mu,
+	multipleOfConstraint,
+	nominal,
+	patternConstraint,
 	product,
+	rangeConstraint,
+	refinement,
 	tuple,
+	typeVar,
 	union,
 } from "@typecarta/core";
 import { describe, expect, it } from "vitest";
@@ -210,7 +223,10 @@ describe("TypeScriptAdapter", () => {
 		});
 
 		it("returns false for unsupported terms", () => {
-			expect(adapter.isEncodable(forall("T", base("string")))).toBe(false);
+			// After the Tier 2 expansion `forall` is encodable as a TS generic.
+			// `base("date")` is still rejected — TS has no `Date` primitive in
+			// the IR's base-name vocabulary; users should compose `Date` via a
+			// product or use a richer adapter.
 			expect(adapter.isEncodable(base("date"))).toBe(false);
 		});
 	});
@@ -243,6 +259,184 @@ describe("TypeScriptAdapter", () => {
 		it("array covariance", () => {
 			// never[] <: string[]
 			expect(adapter.operationalSubtype(array(bottom()), array(base("string")))).toBe(true);
+		});
+	});
+
+	// Tier 2 regression tests — TypeScript adapter expansion (2026-05-18).
+	// The reviewer's bench:coverage critique flagged TypeScript at 21/70 as
+	// far below the 50+ the language actually supports. The adapter was
+	// under-coded: it declared only `bottom/top/literal/base/apply` in
+	// supportsKind, missing generics, recursion, branded types, type-level
+	// computation, etc. These tests pin the new behaviors before they exist
+	// (fail-first) and protect them after.
+
+	describe("Tier 2 regression: forall (generics)", () => {
+		it("declares `forall` in supportsKind", () => {
+			expect(adapter.supportsKind("forall")).toBe(true);
+		});
+
+		it("encodes rank-1 generic `Λα.α` as a TS generic descriptor", () => {
+			const term = forall("T", typeVar("T"));
+			expect(adapter.isEncodable(term)).toBe(true);
+			const encoded = adapter.encode(term);
+			expect(encoded.type).toBe("generic");
+		});
+
+		it("round-trips a generic identity function shape", () => {
+			const term = forall("T", typeVar("T"));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("forall");
+			if (parsed.kind === "forall") {
+				expect(parsed.var).toBe("T");
+				expect(parsed.body.kind).toBe("var");
+			}
+		});
+
+		it("round-trips a bounded generic `<T extends string>`", () => {
+			const term = forall("T", typeVar("T"), { bound: base("string") });
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("forall");
+			if (parsed.kind === "forall") {
+				expect(parsed.bound?.kind).toBe("base");
+			}
+		});
+
+		it("round-trips a generic with default `<T = number>`", () => {
+			const term = forall("T", typeVar("T"), { default: base("number") });
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("forall");
+			if (parsed.kind === "forall") {
+				expect(parsed.default?.kind).toBe("base");
+			}
+		});
+
+		it("encodes the typeVar inside the body", () => {
+			const term = forall("T", product([field("value", typeVar("T"))]));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("forall");
+		});
+	});
+
+	describe("Tier 2 regression: mu (recursive types)", () => {
+		it("declares `mu` in supportsKind", () => {
+			expect(adapter.supportsKind("mu")).toBe(true);
+		});
+
+		it("round-trips a self-recursive list type `μX. {head: number, tail: X | null}`", () => {
+			const term = mu(
+				"X",
+				product([
+					field("head", base("number")),
+					field("tail", union([typeVar("X"), base("null")])),
+				]),
+			);
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("mu");
+		});
+	});
+
+	describe("Tier 2 regression: nominal (branded types)", () => {
+		it("declares `nominal` in supportsKind", () => {
+			expect(adapter.supportsKind("nominal")).toBe(true);
+		});
+
+		it("encodes nominal as a `brand` descriptor carrying the tag explicitly", () => {
+			// IR `nominal("UserId", base("string"))` corresponds to the TS
+			// idiom `string & { readonly __brand: "UserId" }`. The descriptor
+			// preserves the tag in a dedicated `brand` variant so the
+			// round-trip is exact; a downstream emitter renders the
+			// brand-intersection syntax from this descriptor.
+			const term = nominal("UserId", base("string"));
+			expect(adapter.isEncodable(term)).toBe(true);
+			const encoded = adapter.encode(term);
+			expect(encoded.type).toBe("brand");
+			if (encoded.type === "brand") {
+				expect(encoded.tag).toBe("UserId");
+				expect(encoded.inner.type).toBe("string");
+			}
+		});
+
+		it("round-trips a branded primitive", () => {
+			const term = nominal("UserId", base("string"));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("nominal");
+			if (parsed.kind === "nominal") {
+				expect(parsed.tag).toBe("UserId");
+				expect(parsed.inner.kind).toBe("base");
+			}
+		});
+	});
+
+	describe("Tier 2 regression: refinement (template literals + branded primitives)", () => {
+		it("declares `refinement` in supportsKind", () => {
+			expect(adapter.supportsKind("refinement")).toBe(true);
+		});
+
+		it("encodes a pattern-refined string as a template-literal placeholder", () => {
+			const term = refinement(base("string"), patternConstraint("^\\d+$"));
+			expect(adapter.isEncodable(term)).toBe(true);
+		});
+
+		it("round-trips a range-refined number with predicate intact", () => {
+			const term = refinement(base("number"), rangeConstraint(0, 100));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("refinement");
+		});
+
+		it("preserves compound and(range, multipleOf) refinement", () => {
+			const term = refinement(
+				base("number"),
+				andPredicate(rangeConstraint(0, 100), multipleOfConstraint(5)),
+			);
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("refinement");
+		});
+	});
+
+	describe("Tier 2 regression: keyof / mapped / conditional", () => {
+		it("declares keyof, mapped, conditional in supportsKind", () => {
+			expect(adapter.supportsKind("keyof")).toBe(true);
+			expect(adapter.supportsKind("mapped")).toBe(true);
+			expect(adapter.supportsKind("conditional")).toBe(true);
+		});
+
+		it("round-trips `keyof T` as a keyof descriptor", () => {
+			const term = keyOf(typeVar("T"));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("keyof");
+		});
+
+		it("round-trips `{[K in keyof T]: V}` as a mapped descriptor", () => {
+			const term = mapped(keyOf(typeVar("T")), base("string"));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("mapped");
+		});
+
+		it("round-trips `T extends U ? X : Y` as a conditional descriptor", () => {
+			const term = conditional(typeVar("T"), base("string"), base("number"), base("boolean"));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("conditional");
+		});
+	});
+
+	describe("Tier 2 regression: let / complement / extension", () => {
+		it("declares let, complement, extension in supportsKind", () => {
+			expect(adapter.supportsKind("let")).toBe(true);
+			expect(adapter.supportsKind("complement")).toBe(true);
+			expect(adapter.supportsKind("extension")).toBe(true);
+		});
+
+		it("round-trips a let binding `type Name = T in body` as an alias descriptor", () => {
+			const term = letBinding("UserId", base("string"), typeVar("UserId"));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("let");
+		});
+
+		it("encodes complement as `Exclude<T, U>` shape", () => {
+			const term = complement(base("string"));
+			expect(adapter.isEncodable(term)).toBe(true);
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("complement");
 		});
 	});
 });

@@ -3,23 +3,63 @@
 // Implement IRAdapter<Signature, TSTypeDescriptor> using descriptor objects
 // that represent TypeScript types, not the actual TypeScript compiler API.
 
-import type { IRAdapter, Signature, TypeTerm } from "@typecarta/core";
+import type {
+	IRAdapter,
+	RefinementPredicate,
+	Signature,
+	TypeTerm,
+	Variance,
+} from "@typecarta/core";
 import {
+	andPredicate,
 	array,
 	base,
 	bottom,
+	complement,
+	conditional,
 	createSignature,
+	extension,
 	field,
+	forall,
 	intersection,
+	keyOf,
+	letBinding,
 	literal,
 	map,
+	mapped,
+	mu,
+	multipleOfConstraint,
+	nominal,
+	patternConstraint,
 	product,
+	rangeConstraint,
+	refinement,
 	top,
 	tuple,
+	typeVar,
 	union,
 } from "@typecarta/core";
 
 // ─── Descriptor types — discriminated union of TS type descriptors ──
+
+/**
+ * A refinement check on a TypeScript value, mirroring the kinds of
+ * narrowing TS supports via template-literal types, branded primitives,
+ * and structural intersection guards. Refinement is *not* directly
+ * expressible in TS's type system as a value-range predicate (TS has no
+ * `number where 0 ≤ n ≤ 100`); these checks are carried in the
+ * descriptor so the IR round-trip survives and a downstream emitter can
+ * generate the closest TS approximation (template literal, branded
+ * type, runtime guard).
+ */
+export type TSRefinementCheck =
+	| { kind: "min"; value: number; exclusive?: boolean }
+	| { kind: "max"; value: number; exclusive?: boolean }
+	| { kind: "pattern"; value: string }
+	| { kind: "multipleOf"; value: number }
+	| { kind: "minLength"; value: number }
+	| { kind: "maxLength"; value: number }
+	| { kind: "refine"; name: string; params?: Record<string, unknown> };
 
 /** Represent a TypeScript type as a plain descriptor object. */
 export type TSTypeDescriptor =
@@ -47,7 +87,42 @@ export type TSTypeDescriptor =
 	| { type: "union"; members: TSTypeDescriptor[] }
 	| { type: "intersection"; members: TSTypeDescriptor[] }
 	| { type: "record"; key: TSTypeDescriptor; value: TSTypeDescriptor }
-	| { type: "enum"; members: Record<string, string | number> };
+	| { type: "enum"; members: Record<string, string | number> }
+	/** Type variable reference, e.g. `T` in `<T>(x: T) => T`. */
+	| { type: "typeVar"; name: string }
+	/** Generic type binding, e.g. `<T extends U = D>{body}`. */
+	| {
+			type: "generic";
+			param: string;
+			constraint?: TSTypeDescriptor;
+			default?: TSTypeDescriptor;
+			variance?: "in" | "out" | "in out";
+			body: TSTypeDescriptor;
+	  }
+	/** Recursive type binding, e.g. `type List<T> = { head: T; tail: List<T> | null }`. */
+	| { type: "recursive"; name: string; body: TSTypeDescriptor }
+	/** Branded type — `T & { readonly __brand: "Tag" }`. */
+	| { type: "brand"; tag: string; inner: TSTypeDescriptor; sealed?: boolean }
+	/** Type alias / let binding — `type N = T; body referencing N`. */
+	| { type: "alias"; name: string; binding: TSTypeDescriptor; body: TSTypeDescriptor }
+	/** `Exclude<T, U>` — IR's complement. */
+	| { type: "exclude"; base: TSTypeDescriptor; excluded: TSTypeDescriptor }
+	/** Refinement carrier — a base TS type with one or more refinement checks. */
+	| { type: "refined"; base: TSTypeDescriptor; checks: TSRefinementCheck[] }
+	/** `keyof T`. */
+	| { type: "keyof"; inner: TSTypeDescriptor }
+	/** `{ [K in S]: F<K, S[K]> }` — mapped type. */
+	| { type: "mapped"; keySource: TSTypeDescriptor; valueTransform: TSTypeDescriptor }
+	/** `T extends U ? X : Y` — conditional type. */
+	| {
+			type: "conditional";
+			check: TSTypeDescriptor;
+			extends: TSTypeDescriptor;
+			then: TSTypeDescriptor;
+			else: TSTypeDescriptor;
+	  }
+	/** Opaque extension envelope for IR `extension` nodes that have no TS analogue. */
+	| { type: "opaque"; extensionKind: string; payload: unknown };
 
 // ─── Signature — base sorts and type constructors for the TS adapter ──
 
@@ -80,6 +155,18 @@ const TS_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
 	"literal",
 	"base",
 	"apply",
+	// Tier 2 expansion (2026-05-18): TypeScript natively supports these.
+	"var", // typeVar — generic parameters and bound variables
+	"forall", // generics: <T>, <T extends U>, <T = D>, in/out variance
+	"mu", // recursive types
+	"nominal", // branded primitives
+	"refinement", // template literals, branded primitives carrying predicates
+	"keyof", // keyof T
+	"mapped", // { [K in S]: F<K, S[K]> }
+	"conditional", // T extends U ? X : Y
+	"let", // type aliases
+	"complement", // Exclude<T, U>
+	"extension", // opaque envelope for IR nodes outside TS's vocabulary
 ]);
 
 // ─── Adapter class — IRAdapter implementation for TypeScript descriptors ──
@@ -201,9 +288,119 @@ function parseTSDescriptor(desc: TSTypeDescriptor): TypeTerm {
 			return map(parseTSDescriptor(desc.key), parseTSDescriptor(desc.value));
 		case "enum":
 			return union(Object.values(desc.members).map((v) => literal(v)));
+		case "typeVar":
+			return typeVar(desc.name);
+		case "generic":
+			return forall(desc.param, parseTSDescriptor(desc.body), {
+				...(desc.constraint !== undefined ? { bound: parseTSDescriptor(desc.constraint) } : {}),
+				...(desc.default !== undefined ? { default: parseTSDescriptor(desc.default) } : {}),
+				...(desc.variance !== undefined
+					? { variance: parseTSVariance(desc.variance) }
+					: {}),
+			});
+		case "recursive":
+			return mu(desc.name, parseTSDescriptor(desc.body));
+		case "brand":
+			return nominal(desc.tag, parseTSDescriptor(desc.inner), desc.sealed ?? false);
+		case "alias":
+			return letBinding(desc.name, parseTSDescriptor(desc.binding), parseTSDescriptor(desc.body));
+		case "exclude": {
+			// `Exclude<T, U>` ≈ T ∧ ¬U. We model it as a complement at the IR
+			// layer when the base is `top` (i.e. plain `Exclude<unknown, U>`)
+			// and as an intersection of base + complement otherwise.
+			const inner = parseTSDescriptor(desc.excluded);
+			const baseTerm = parseTSDescriptor(desc.base);
+			if (baseTerm.kind === "top") return complement(inner);
+			return intersection([baseTerm, complement(inner)]);
+		}
+		case "refined": {
+			const baseTerm = parseTSDescriptor(desc.base);
+			const predicate = checksToPredicate(desc.checks);
+			return predicate !== undefined ? refinement(baseTerm, predicate) : baseTerm;
+		}
+		case "keyof":
+			return keyOf(parseTSDescriptor(desc.inner));
+		case "mapped":
+			return mapped(parseTSDescriptor(desc.keySource), parseTSDescriptor(desc.valueTransform));
+		case "conditional":
+			return conditional(
+				parseTSDescriptor(desc.check),
+				parseTSDescriptor(desc.extends),
+				parseTSDescriptor(desc.then),
+				parseTSDescriptor(desc.else),
+			);
+		case "opaque":
+			return extension(desc.extensionKind, desc.payload);
 		default:
 			return top();
 	}
+}
+
+function parseTSVariance(v: "in" | "out" | "in out"): Variance {
+	switch (v) {
+		case "in":
+			return "contravariant";
+		case "out":
+			return "covariant";
+		case "in out":
+			return "invariant";
+	}
+}
+
+/**
+ * Compose an array of TS refinement checks into a single IR predicate.
+ * Multiple checks become a left-associated `andPredicate` tree. Adjacent
+ * min/max collapse to a single `range` predicate.
+ */
+function checksToPredicate(checks: readonly TSRefinementCheck[]): RefinementPredicate | undefined {
+	const predicates: RefinementPredicate[] = [];
+	let rangeMin: { value: number; exclusive: boolean } | undefined;
+	let rangeMax: { value: number; exclusive: boolean } | undefined;
+
+	for (const check of checks) {
+		switch (check.kind) {
+			case "min":
+				rangeMin = { value: check.value, exclusive: check.exclusive === true };
+				break;
+			case "max":
+				rangeMax = { value: check.value, exclusive: check.exclusive === true };
+				break;
+			case "pattern":
+				predicates.push(patternConstraint(check.value));
+				break;
+			case "multipleOf":
+				predicates.push(multipleOfConstraint(check.value));
+				break;
+			case "minLength":
+			case "maxLength":
+				predicates.push({
+					kind: "custom",
+					name: "stringLength",
+					params: {
+						...(check.kind === "minLength" ? { min: check.value } : {}),
+						...(check.kind === "maxLength" ? { max: check.value } : {}),
+					},
+				});
+				break;
+			case "refine":
+				predicates.push({
+					kind: "custom",
+					name: check.name,
+					...(check.params !== undefined ? { params: check.params } : {}),
+				});
+				break;
+		}
+	}
+
+	if (rangeMin !== undefined || rangeMax !== undefined) {
+		const exclusive = (rangeMin?.exclusive ?? false) || (rangeMax?.exclusive ?? false);
+		predicates.unshift(rangeConstraint(rangeMin?.value, rangeMax?.value, exclusive));
+	}
+
+	return predicates.reduce<RefinementPredicate | undefined>(
+		(acc, p) => (acc === undefined ? p : andPredicate(acc, p)),
+		undefined,
+	);
 }
 
 // ─── Encode — convert IR terms back to TS descriptors ──
@@ -239,8 +436,135 @@ function encodeToTSDescriptor(term: TypeTerm): TSTypeDescriptor {
 			}
 		case "apply":
 			return encodeApply(term);
+		case "var":
+			return { type: "typeVar", name: term.name };
+		case "forall":
+			return {
+				type: "generic",
+				param: term.var,
+				...(term.bound !== undefined ? { constraint: encodeToTSDescriptor(term.bound) } : {}),
+				...(term.default !== undefined ? { default: encodeToTSDescriptor(term.default) } : {}),
+				...(term.variance !== undefined ? { variance: encodeTSVariance(term.variance) } : {}),
+				body: encodeToTSDescriptor(term.body),
+			};
+		case "mu":
+			return {
+				type: "recursive",
+				name: term.var,
+				body: encodeToTSDescriptor(term.body),
+			};
+		case "nominal":
+			return {
+				type: "brand",
+				tag: term.tag,
+				inner: encodeToTSDescriptor(term.inner),
+				...(term.sealed ? { sealed: true } : {}),
+			};
+		case "let":
+			return {
+				type: "alias",
+				name: term.name,
+				binding: encodeToTSDescriptor(term.binding),
+				body: encodeToTSDescriptor(term.body),
+			};
+		case "complement":
+			return {
+				type: "exclude",
+				base: { type: "unknown" },
+				excluded: encodeToTSDescriptor(term.inner),
+			};
+		case "refinement": {
+			const baseDesc = encodeToTSDescriptor(term.base);
+			const checks = predicateToChecks(term.predicate);
+			return checks.length === 0 ? baseDesc : { type: "refined", base: baseDesc, checks };
+		}
+		case "keyof":
+			return { type: "keyof", inner: encodeToTSDescriptor(term.inner) };
+		case "mapped":
+			return {
+				type: "mapped",
+				keySource: encodeToTSDescriptor(term.keySource),
+				valueTransform: encodeToTSDescriptor(term.valueTransform),
+			};
+		case "conditional":
+			return {
+				type: "conditional",
+				check: encodeToTSDescriptor(term.check),
+				extends: encodeToTSDescriptor(term.extends),
+				then: encodeToTSDescriptor(term.then),
+				else: encodeToTSDescriptor(term.else),
+			};
+		case "extension":
+			return { type: "opaque", extensionKind: term.extensionKind, payload: term.payload };
 		default:
-			throw new Error(`Cannot encode ${term.kind} to TypeScript`);
+			throw new Error(`Cannot encode ${(term as { kind: string }).kind} to TypeScript`);
+	}
+}
+
+function encodeTSVariance(v: Variance): "in" | "out" | "in out" {
+	switch (v) {
+		case "covariant":
+			return "out";
+		case "contravariant":
+			return "in";
+		case "invariant":
+		case "bivariant":
+			return "in out";
+	}
+}
+
+/**
+ * Flatten an IR refinement predicate into a list of TS-style checks.
+ * `andPredicate(a, b)` concatenates both sub-lists; `or` / `not` lack
+ * a clean TS analogue and fall through to opaque `refine` placeholders
+ * so bytes survive round-trip even when semantics don't.
+ */
+function predicateToChecks(p: RefinementPredicate): TSRefinementCheck[] {
+	switch (p.kind) {
+		case "range": {
+			const out: TSRefinementCheck[] = [];
+			if (p.min !== undefined) {
+				out.push({
+					kind: "min",
+					value: p.min,
+					...(p.exclusive ? { exclusive: true } : {}),
+				});
+			}
+			if (p.max !== undefined) {
+				out.push({
+					kind: "max",
+					value: p.max,
+					...(p.exclusive ? { exclusive: true } : {}),
+				});
+			}
+			return out;
+		}
+		case "pattern":
+			return [{ kind: "pattern", value: p.regex }];
+		case "multipleOf":
+			return [{ kind: "multipleOf", value: p.divisor }];
+		case "and":
+			return [...predicateToChecks(p.left), ...predicateToChecks(p.right)];
+		case "custom":
+			if (p.name === "stringLength" && p.params) {
+				const params = p.params as { min?: number; max?: number };
+				const out: TSRefinementCheck[] = [];
+				if (params.min !== undefined) out.push({ kind: "minLength", value: params.min });
+				if (params.max !== undefined) out.push({ kind: "maxLength", value: params.max });
+				return out;
+			}
+			return [
+				{
+					kind: "refine",
+					name: p.name,
+					...(p.params !== undefined ? { params: p.params } : {}),
+				},
+			];
+		case "or":
+		case "not":
+			return [{ kind: "refine", name: p.kind }];
+		default:
+			return [];
 	}
 }
 
@@ -319,8 +643,74 @@ function checkInhabitation(value: unknown, term: TypeTerm): boolean {
 			}
 		case "apply":
 			return checkApplyInhabitation(value, term);
+		case "refinement":
+			return (
+				checkInhabitation(value, term.base) && checkPredicateInhabitation(value, term.predicate)
+			);
+		case "nominal":
+			// Branded types are structurally compatible at runtime — the brand
+			// is a compile-time-only ghost field, so any value of the inner
+			// type inhabits the nominal one.
+			return checkInhabitation(value, term.inner);
+		case "complement":
+			return !checkInhabitation(value, term.inner);
+		case "mu":
+			// Approximate: check the body once with `term` substituted as itself
+			// via a one-step unfold. Sufficient for shallow values; deep
+			// recursive values would need a fixpoint check.
+			return checkInhabitation(value, term.body);
+		case "var":
+		case "forall":
+		case "keyof":
+		case "mapped":
+		case "conditional":
+		case "extension":
+			// Type-level constructs have no first-class runtime inhabitation
+			// in TypeScript. Accept conservatively — these terms are emitted
+			// at compile time, not validated at runtime.
+			return true;
+		case "let":
+			return checkInhabitation(value, term.body);
 		default:
 			return false;
+	}
+}
+
+function checkPredicateInhabitation(value: unknown, p: RefinementPredicate): boolean {
+	switch (p.kind) {
+		case "range":
+			if (typeof value !== "number") return false;
+			if (p.min !== undefined) {
+				if (p.exclusive ? value <= p.min : value < p.min) return false;
+			}
+			if (p.max !== undefined) {
+				if (p.exclusive ? value >= p.max : value > p.max) return false;
+			}
+			return true;
+		case "pattern":
+			return typeof value === "string" && new RegExp(p.regex).test(value);
+		case "multipleOf":
+			return typeof value === "number" && value % p.divisor === 0;
+		case "and":
+			return (
+				checkPredicateInhabitation(value, p.left) && checkPredicateInhabitation(value, p.right)
+			);
+		case "or":
+			return (
+				checkPredicateInhabitation(value, p.left) || checkPredicateInhabitation(value, p.right)
+			);
+		case "not":
+			return !checkPredicateInhabitation(value, p.inner);
+		case "custom":
+			if (p.name === "stringLength" && p.params && typeof value === "string") {
+				const params = p.params as { min?: number; max?: number };
+				if (params.min !== undefined && value.length < params.min) return false;
+				if (params.max !== undefined && value.length > params.max) return false;
+				return true;
+			}
+			return true;
+		default:
+			return true;
 	}
 }
 
