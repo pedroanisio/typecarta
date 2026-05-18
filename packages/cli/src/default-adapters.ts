@@ -7,6 +7,7 @@ import { AvroAdapter } from "@typecarta/adapter-avro";
 import { EffectSchemaAdapter } from "@typecarta/adapter-effect-schema";
 import { GraphQLAdapter } from "@typecarta/adapter-graphql";
 import { JsonSchemaAdapter } from "@typecarta/adapter-json-schema";
+import { LinkmlAdapter } from "@typecarta/adapter-linkml";
 import { ProtobufAdapter } from "@typecarta/adapter-protobuf";
 import { ShaclAdapter } from "@typecarta/adapter-shacl";
 import { TypeScriptAdapter } from "@typecarta/adapter-typescript";
@@ -27,6 +28,7 @@ export const DEFAULT_ADAPTERS: readonly IRAdapter[] = [
 	new EffectSchemaAdapter(),
 	new AvroAdapter(),
 	new ShaclAdapter(),
+	new LinkmlAdapter(),
 ] as const;
 
 /** Map adapter name to the npm package that provides it. */
@@ -41,6 +43,7 @@ export const DEFAULT_ADAPTER_PACKAGES: ReadonlyMap<string, string> = new Map([
 	["Effect Schema", "@typecarta/adapter-effect-schema"],
 	["Apache Avro", "@typecarta/adapter-avro"],
 	["shacl-1-0", "@typecarta/adapter-shacl"],
+	["LinkML", "@typecarta/adapter-linkml"],
 ]);
 
 /** Register all adapters that ship as CLI defaults. */

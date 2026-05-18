@@ -179,12 +179,77 @@ SPECS: tuple[AdapterSpec, ...] = (
     AdapterSpec(
         adapter_key="linkml",
         name="LinkML",
-        spec_version="current",
+        spec_version="1.11",
+        # The previous single-page vendoring grabbed only the navigation
+        # index. The normative content is split across two surfaces:
+        #
+        #   - The metamodel itself (meta.yaml) — the LinkML schema that
+        #     describes every LinkML construct. Pinned to the v1.11.0 tag
+        #     for reproducible vendoring.
+        #   - The Sphinx-rendered prose docs at linkml.io/linkml/schemas/
+        #     — one HTML page per language feature. These are not
+        #     versioned by URL but the SHA-256 in `_meta.json` pins the
+        #     bytes at fetch time.
         files=(
             SpecFile(
-                url="https://linkml.io/linkml/specifications/linkml-spec.html",
-                filename="linkml-spec.html",
-                description="LinkML formal specification, published documentation page",
+                url="https://raw.githubusercontent.com/linkml/linkml-model/v1.11.0/linkml_model/model/schema/meta.yaml",
+                filename="meta.yaml",
+                description="LinkML metamodel, self-describing (meta.yaml from linkml/linkml-model v1.11.0)",
+            ),
+            SpecFile(
+                url="https://linkml.io/linkml/schemas/models.html",
+                filename="schemas-models.html",
+                description="LinkML schema models — classes, slots, types overview",
+            ),
+            SpecFile(
+                url="https://linkml.io/linkml/schemas/slots.html",
+                filename="schemas-slots.html",
+                description="LinkML slots — attributes, multivalued, required",
+            ),
+            SpecFile(
+                url="https://linkml.io/linkml/schemas/inheritance.html",
+                filename="schemas-inheritance.html",
+                description="LinkML inheritance — is_a, mixins, abstract",
+            ),
+            SpecFile(
+                url="https://linkml.io/linkml/schemas/constraints.html",
+                filename="schemas-constraints.html",
+                description="LinkML constraints and rules",
+            ),
+            SpecFile(
+                url="https://linkml.io/linkml/schemas/enums.html",
+                filename="schemas-enums.html",
+                description="LinkML semantic enumerations",
+            ),
+            SpecFile(
+                url="https://linkml.io/linkml/schemas/imports.html",
+                filename="schemas-imports.html",
+                description="LinkML imports and schema composition",
+            ),
+            SpecFile(
+                url="https://linkml.io/linkml/schemas/uris-and-mappings.html",
+                filename="schemas-uris-and-mappings.html",
+                description="LinkML URIs and external mappings",
+            ),
+            SpecFile(
+                url="https://linkml.io/linkml/schemas/inlining.html",
+                filename="schemas-inlining.html",
+                description="LinkML inlining vs. referencing",
+            ),
+            SpecFile(
+                url="https://linkml.io/linkml/schemas/arrays.html",
+                filename="schemas-arrays.html",
+                description="LinkML multidimensional arrays",
+            ),
+            SpecFile(
+                url="https://linkml.io/linkml/schemas/type-designators.html",
+                filename="schemas-type-designators.html",
+                description="LinkML type designators (class hierarchy discriminators)",
+            ),
+            SpecFile(
+                url="https://linkml.io/linkml/schemas/subsets.html",
+                filename="schemas-subsets.html",
+                description="LinkML subsets (tagged groupings of schema elements)",
             ),
         ),
     ),

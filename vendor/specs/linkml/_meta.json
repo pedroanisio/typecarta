@@ -1,16 +1,115 @@
 {
   "adapter_key": "linkml",
   "name": "LinkML",
-  "spec_version": "current",
+  "spec_version": "1.11",
   "files": [
     {
-      "filename": "linkml-spec.html",
-      "url": "https://linkml.io/linkml/specifications/linkml-spec.html",
-      "description": "LinkML formal specification, published documentation page",
-      "fetched_at": "2026-05-18T16:33:11+00:00",
+      "filename": "meta.yaml",
+      "url": "https://raw.githubusercontent.com/linkml/linkml-model/v1.11.0/linkml_model/model/schema/meta.yaml",
+      "description": "LinkML metamodel, self-describing (meta.yaml from linkml/linkml-model v1.11.0)",
+      "fetched_at": "2026-05-18T17:43:27+00:00",
+      "content_type": "text/plain; charset=utf-8",
+      "bytes": 99888,
+      "sha256": "00bf58ab4fd81c775d996db6bd49c48d7d23627ced6ff38b6d5eea289ac1e6db"
+    },
+    {
+      "filename": "schemas-models.html",
+      "url": "https://linkml.io/linkml/schemas/models.html",
+      "description": "LinkML schema models \u2014 classes, slots, types overview",
+      "fetched_at": "2026-05-18T17:43:27+00:00",
       "content_type": "text/html; charset=utf-8",
-      "bytes": 35697,
-      "sha256": "465bdd0fcd59fbde16952fb49f0bf4e00c1af0f01ea7d583a550b2872df055a4"
+      "bytes": 63398,
+      "sha256": "66aa888a5c1942827919644d8b13b7db9fa8fd29d3897edc124786f6ddf3aa90"
+    },
+    {
+      "filename": "schemas-slots.html",
+      "url": "https://linkml.io/linkml/schemas/slots.html",
+      "description": "LinkML slots \u2014 attributes, multivalued, required",
+      "fetched_at": "2026-05-18T17:43:27+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 63122,
+      "sha256": "13806fea642192740fe9a8c6054cac097b0ff1a808065df70b182da3f0551ddf"
+    },
+    {
+      "filename": "schemas-inheritance.html",
+      "url": "https://linkml.io/linkml/schemas/inheritance.html",
+      "description": "LinkML inheritance \u2014 is_a, mixins, abstract",
+      "fetched_at": "2026-05-18T17:43:27+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 47390,
+      "sha256": "9f3aae59870c37facb19cda7b3cd763fe27ecd490d784adaa23338c27b282e8d"
+    },
+    {
+      "filename": "schemas-constraints.html",
+      "url": "https://linkml.io/linkml/schemas/constraints.html",
+      "description": "LinkML constraints and rules",
+      "fetched_at": "2026-05-18T17:43:27+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 45352,
+      "sha256": "96ee72cdb5051e721998b06f99995d8cb15d0e6ee026af3f86318c5d673e5606"
+    },
+    {
+      "filename": "schemas-enums.html",
+      "url": "https://linkml.io/linkml/schemas/enums.html",
+      "description": "LinkML semantic enumerations",
+      "fetched_at": "2026-05-18T17:43:28+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 51490,
+      "sha256": "f2a8036b3119ed2e54faad928ed8a447f35255944f5a6b530be466d5140499e2"
+    },
+    {
+      "filename": "schemas-imports.html",
+      "url": "https://linkml.io/linkml/schemas/imports.html",
+      "description": "LinkML imports and schema composition",
+      "fetched_at": "2026-05-18T17:43:28+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 38775,
+      "sha256": "67384cbe683dc262d1c0b78f99bd8777202c024715b94103db56137e6ce36f62"
+    },
+    {
+      "filename": "schemas-uris-and-mappings.html",
+      "url": "https://linkml.io/linkml/schemas/uris-and-mappings.html",
+      "description": "LinkML URIs and external mappings",
+      "fetched_at": "2026-05-18T17:43:28+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 53922,
+      "sha256": "8ec0f20ea2ef27f525939a052116849fed4c230b7b9843ea7145e58d5c447077"
+    },
+    {
+      "filename": "schemas-inlining.html",
+      "url": "https://linkml.io/linkml/schemas/inlining.html",
+      "description": "LinkML inlining vs. referencing",
+      "fetched_at": "2026-05-18T17:43:28+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 58077,
+      "sha256": "27fba523ae0319d32626d432a6ac1ee9bc2d64c5efb06a499273aba9e24ed0a1"
+    },
+    {
+      "filename": "schemas-arrays.html",
+      "url": "https://linkml.io/linkml/schemas/arrays.html",
+      "description": "LinkML multidimensional arrays",
+      "fetched_at": "2026-05-18T17:43:28+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 467146,
+      "sha256": "e6a73b51dd8860e771860faf01f8b70c33446f759c3796790e087b48cfc7e644"
+    },
+    {
+      "filename": "schemas-type-designators.html",
+      "url": "https://linkml.io/linkml/schemas/type-designators.html",
+      "description": "LinkML type designators (class hierarchy discriminators)",
+      "fetched_at": "2026-05-18T17:43:28+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 38368,
+      "sha256": "8c01b2648198cd4a194f4edbd0e672f36439e07a2b8b28314981281b7b3d3c9e"
+    },
+    {
+      "filename": "schemas-subsets.html",
+      "url": "https://linkml.io/linkml/schemas/subsets.html",
+      "description": "LinkML subsets (tagged groupings of schema elements)",
+      "fetched_at": "2026-05-18T17:43:29+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 35633,
+      "sha256": "a441f10cc713592c6d0c3725b5c7522fcbd8e4e5c1666329515c0f9d9aa4a90b"
     }
   ]
 }

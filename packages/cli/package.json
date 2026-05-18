@@ -18,6 +18,7 @@
 		"@typecarta/adapter-effect-schema": "workspace:*",
 		"@typecarta/adapter-graphql": "workspace:*",
 		"@typecarta/adapter-json-schema": "workspace:*",
+		"@typecarta/adapter-linkml": "workspace:*",
 		"@typecarta/adapter-protobuf": "workspace:*",
 		"@typecarta/adapter-shacl": "workspace:*",
 		"@typecarta/adapter-typescript": "workspace:*",
