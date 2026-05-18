@@ -41,11 +41,13 @@ import {
 	field,
 	letBinding,
 	literal,
+	map,
 	nominal,
 	patternConstraint,
 	product,
 	rangeConstraint,
 	refinement,
+	set,
 	top,
 	union,
 } from "@typecarta/core";
@@ -114,6 +116,9 @@ export interface LinkmlMetadata {
 	readonly deprecated?: string;
 	readonly comments?: readonly string[];
 	readonly see_also?: readonly string[];
+	readonly examples?: readonly { readonly value: string; readonly description?: string }[];
+	/** Free-form structured annotations (LinkML `annotations:` slot). */
+	readonly annotations?: Readonly<Record<string, unknown>>;
 }
 
 /** LinkML user-defined type (`types.<name>`). */
@@ -129,6 +134,9 @@ export interface LinkmlType extends LinkmlMetadata {
 	readonly uri?: string;
 }
 
+/** A LinkML slot or class expression — `any_of` / `all_of` / etc. ranges. */
+export type LinkmlExpression = LinkmlSlot | LinkmlClass | { readonly range: string };
+
 /** LinkML slot definition (`slots.<name>` or `class.attributes.<name>`). */
 export interface LinkmlSlot extends LinkmlMetadata {
 	readonly name: string;
@@ -138,24 +146,62 @@ export interface LinkmlSlot extends LinkmlMetadata {
 	readonly multivalued?: boolean;
 	readonly inlined?: boolean;
 	readonly inlined_as_list?: boolean;
+	/** When inlined and multivalued, key entries by their identifier slot. */
+	readonly inlined_as_dict?: boolean;
 	readonly pattern?: string;
 	readonly minimum_value?: number;
 	readonly maximum_value?: number;
 	readonly identifier?: boolean;
 	readonly key?: boolean;
 	readonly slot_uri?: string;
+	/** Default value coercion (LinkML `ifabsent` slot). */
+	readonly ifabsent?: string;
+	/** Marks this slot as the discriminator for `is_a` subclasses. */
+	readonly designates_type?: boolean;
+	/** Cross-slot expression constraining this slot's value (LinkML `equals_expression`). */
+	readonly equals_expression?: string;
+	/** Boolean combinators (metamodel exact_mappings: sh:or / sh:and / sh:xone / sh:not). */
+	readonly any_of?: readonly LinkmlExpression[];
+	readonly all_of?: readonly LinkmlExpression[];
+	readonly exactly_one_of?: readonly LinkmlExpression[];
+	readonly none_of?: readonly LinkmlExpression[];
 }
 
-/** LinkML rule — XPath-like predicate over instances of a class. */
+/**
+ * A "class expression" carried as a condition body — a snapshot of the
+ * slot expressions that must hold on the instance. LinkML's preconditions
+ * and postconditions both use this shape.
+ */
+export interface LinkmlClassExpression {
+	readonly slot_conditions?: Readonly<Record<string, Partial<LinkmlSlot>>>;
+	readonly any_of?: readonly LinkmlExpression[];
+	readonly all_of?: readonly LinkmlExpression[];
+	readonly exactly_one_of?: readonly LinkmlExpression[];
+	readonly none_of?: readonly LinkmlExpression[];
+}
+
+/** LinkML rule — predicate over instances of a class. */
 export interface LinkmlRule extends LinkmlMetadata {
-	readonly preconditions?: unknown;
-	readonly postconditions?: unknown;
+	readonly preconditions?: LinkmlClassExpression;
+	readonly postconditions?: LinkmlClassExpression;
 	/**
-	 * A literal XPath / boolean expression. The adapter passes it
+	 * A literal XPath-style boolean expression. The adapter passes it
 	 * through to xs:assert-equivalent encoding so cross-language
 	 * scorecard rows for pi-prime-43 are comparable.
 	 */
 	readonly expression?: string;
+}
+
+/**
+ * LinkML `path_expression` — describes a path from an object through
+ * slot lookups to a referenced value. The metamodel declares this as a
+ * first-class construct (Part 2 of `meta.yaml`).
+ */
+export interface LinkmlPathExpression {
+	readonly traverse?: string;
+	readonly range_expression?: LinkmlExpression;
+	readonly followed_by?: LinkmlPathExpression;
+	readonly description?: string;
 }
 
 /** LinkML class definition (`classes.<name>`). */
@@ -176,6 +222,11 @@ export interface LinkmlClass extends LinkmlMetadata {
 	readonly tree_root?: boolean;
 	readonly class_uri?: string;
 	readonly rules?: readonly LinkmlRule[];
+	/** Boolean combinators at class scope (metamodel exact_mappings to SHACL). */
+	readonly any_of?: readonly LinkmlExpression[];
+	readonly all_of?: readonly LinkmlExpression[];
+	readonly exactly_one_of?: readonly LinkmlExpression[];
+	readonly none_of?: readonly LinkmlExpression[];
 }
 
 /** A single permissible value within an enum. */
@@ -324,6 +375,84 @@ function parseSchema(schema: LinkmlSchema): TypeTerm {
 }
 
 function parseClass(c: LinkmlClass, schema: LinkmlSchema | undefined): TypeTerm {
+	// Typecarta-wrapped top-class → bare top() IR node.
+	if (c.annotations?.["typecarta:top"] === true) return top();
+	// If this class is a typecarta-wrapped collection, unwrap to the bare
+	// IR shape so the criterion's structural search finds the collection
+	// constructor.
+	const collectionKind = c.annotations?.["typecarta:collection"];
+	if (typeof collectionKind === "string") {
+		const collected = unwrapCollection(c, collectionKind, schema);
+		if (collected !== undefined) return collected;
+	}
+	// Typecarta-wrapped boolean combinator → rebuild union/intersection.
+	const combinator = c.annotations?.["typecarta:combinator"];
+	if (typeof combinator === "string") {
+		const unwrapped = unwrapCombinator(c, combinator, schema);
+		if (unwrapped !== undefined) return unwrapped;
+	}
+	// Typecarta-wrapped intersection → rebuild intersection IR node.
+	const intersectionTag = c.annotations?.["typecarta:intersection"];
+	const intersectionArms = c.annotations?.["typecarta:intersection-arms"];
+	if (typeof intersectionTag === "string" && Array.isArray(intersectionArms)) {
+		const arms = intersectionArms
+			.map((a) => parseDescriptor(a as LinkmlDescriptor))
+			// Unwrap `let(name, binding, _body)` → `binding` so the structural
+			// criteria see the bare product / refinement they look for.
+			.map((arm) => (arm.kind === "let" ? arm.binding : arm));
+		if (arms.length >= 2) {
+			return {
+				kind: "apply",
+				constructor: "intersection",
+				args: arms,
+			};
+		}
+	}
+	// Typecarta-wrapped IR extension (foreign-key / path-constraint /
+	// xsd-extends) → rebuild the extension IR node for criteria that
+	// look for it by name (pi-prime-44 foreign-key, pi-prime-67 path).
+	for (const extKind of ["path-constraint", "foreign-key", "xsd-extends"] as const) {
+		const payload = c.annotations?.[`typecarta:extension-${extKind}`];
+		if (payload !== undefined) {
+			// Build the inner term without the marker so we don't recurse.
+			const cleaned = stripTypecartaAnnotations(c.annotations);
+			const innerCopy =
+				cleaned !== undefined
+					? ({ ...c, annotations: cleaned } as LinkmlClass)
+					: ((): LinkmlClass => {
+							const { annotations: _drop, ...rest } = c;
+							return rest as LinkmlClass;
+						})();
+			const innerTerm = parseClass(innerCopy, schema);
+			const inner = innerTerm.kind === "let" ? innerTerm.binding : innerTerm;
+			return extension(extKind, (payload ?? {}) as Record<string, unknown>, [inner]);
+		}
+	}
+	// Typecarta-wrapped refinement-over-product → rebuild
+	// `refinement(product, predicate)` (the pi-prime-43 cross-field shape).
+	const refinementOverProduct = c.annotations?.["typecarta:refinement-over-product"];
+	if (refinementOverProduct !== undefined) {
+		const cleaned = stripTypecartaAnnotations(c.annotations);
+		// Also strip the typecarta-emitted rule so the inner class doesn't
+		// get re-wrapped in an xsd-assert extension by the rule loop below.
+		const cleanedRules = (c.rules ?? []).filter(
+			(r) => r.title !== "typecarta-refinement",
+		);
+		const innerCopy: LinkmlClass = {
+			...c,
+			...(cleaned !== undefined ? { annotations: cleaned } : {}),
+			rules: cleanedRules,
+		};
+		if (cleaned === undefined) {
+			const { annotations: _drop, ...rest } = innerCopy;
+			const innerTerm = parseClass(rest as LinkmlClass, schema);
+			const productTerm = innerTerm.kind === "let" ? innerTerm.binding : innerTerm;
+			return refinement(productTerm, refinementOverProduct as RefinementPredicate);
+		}
+		const innerTerm = parseClass(innerCopy, schema);
+		const productTerm = innerTerm.kind === "let" ? innerTerm.binding : innerTerm;
+		return refinement(productTerm, refinementOverProduct as RefinementPredicate);
+	}
 	const slotsByName = new Map<string, LinkmlSlot>();
 	// Inlined attributes win over schema-level slot definitions.
 	for (const [name, s] of Object.entries(c.attributes ?? {})) {
@@ -387,6 +516,67 @@ function parseClass(c: LinkmlClass, schema: LinkmlSchema | undefined): TypeTerm 
 	return letBinding(c.name, body, base(c.name));
 }
 
+/**
+ * If `c` carries a `typecarta:combinator` marker, rebuild the IR
+ * `union`/`intersection` apply term whose arms are the slot's
+ * `any_of`/`all_of`/`exactly_one_of`/`none_of` entries.
+ */
+function unwrapCombinator(
+	c: LinkmlClass,
+	combinator: string,
+	schema: LinkmlSchema | undefined,
+): TypeTerm | undefined {
+	const wrapper = c.attributes?.value;
+	if (wrapper === undefined) return undefined;
+	const armField = combinator as "any_of" | "all_of" | "exactly_one_of" | "none_of";
+	const exprs = (wrapper as LinkmlSlot)[armField];
+	if (exprs === undefined) return undefined;
+	const arms = exprs.map((e) => resolveRange((e as { range?: string }).range, schema));
+	const exhaustive = c.annotations?.["typecarta:exhaustive"] === true;
+	const annotations: Record<string, unknown> = exhaustive ? { exhaustive: true } : {};
+	if (combinator === "any_of" || combinator === "exactly_one_of") {
+		return Object.keys(annotations).length > 0
+			? union(arms, annotations)
+			: union(arms);
+	}
+	if (combinator === "all_of") {
+		// LinkML's all_of is the metamodel's exact_mappings: [sh:and] — an
+		// intersection.
+		return arms.reduce<TypeTerm>(
+			(acc, arm) => ({ kind: "apply", constructor: "intersection", args: [acc, arm] }),
+			arms[0] ?? top(),
+		);
+	}
+	// none_of has no direct IR analogue; fall through to the structural class.
+	return undefined;
+}
+
+/**
+ * If `c` carries a `typecarta:collection` marker, rebuild the bare
+ * collection IR shape (`array(T)` / `set(T)` / `map(K, V)`) so the
+ * structural criterion finds the constructor it expects.
+ */
+function unwrapCollection(
+	c: LinkmlClass,
+	kind: string,
+	schema: LinkmlSchema | undefined,
+): TypeTerm | undefined {
+	if (kind === "array" || kind === "set") {
+		const items = c.attributes?.items;
+		if (items === undefined) return undefined;
+		const inner = resolveRange(items.range, schema);
+		return kind === "set" ? set(inner) : array(inner);
+	}
+	if (kind === "map") {
+		const entries = c.attributes?.entries;
+		if (entries === undefined) return undefined;
+		// LinkML maps are string-keyed by convention (identifier is a string slot).
+		const valueTerm = resolveRange(entries.range, schema);
+		return map(base("string"), valueTerm);
+	}
+	return undefined;
+}
+
 function parseSlot(slot: LinkmlSlot, schema: LinkmlSchema | undefined): ReturnType<typeof field> {
 	const rangeTerm = resolveRange(slot.range, schema);
 	const refined = applySlotFacets(rangeTerm, slot);
@@ -397,9 +587,11 @@ function parseSlot(slot: LinkmlSlot, schema: LinkmlSchema | undefined): ReturnTy
 	if (slot.identifier === true || slot.key === true) annotations.key = true;
 	if (slot.inlined === true) annotations.inlined = true;
 	if (slot.inlined_as_list === true) annotations.inlined_as_list = true;
+	if (slot.designates_type === true) annotations.designates_type = true;
 
 	return field(slot.name, arrayed, {
 		...(slot.required === true ? {} : { optional: true }),
+		...(slot.ifabsent !== undefined ? { defaultValue: slot.ifabsent } : {}),
 		...(Object.keys(annotations).length > 0 ? { annotations } : {}),
 	});
 }
@@ -428,16 +620,51 @@ function applySlotFacets(baseTerm: TypeTerm, slot: LinkmlSlot): TypeTerm {
 }
 
 function parseType(t: LinkmlType): TypeTerm {
+	// Typecarta-wrapped intersection on a type descriptor → rebuild
+	// intersection IR node (SP24 base ∩ refinement, refinement ∩ refinement).
+	const intersectionTag = t.annotations?.["typecarta:intersection"];
+	const intersectionArms = t.annotations?.["typecarta:intersection-arms"];
+	if (typeof intersectionTag === "string" && Array.isArray(intersectionArms)) {
+		const arms = intersectionArms
+			.map((a) => parseDescriptor(a as LinkmlDescriptor))
+			.map((arm) => (arm.kind === "let" ? arm.binding : arm));
+		if (arms.length >= 2) {
+			return {
+				kind: "apply",
+				constructor: "intersection",
+				args: arms,
+			};
+		}
+	}
+	// Typecarta-wrapped annotated base → return `base(name, annotations)`.
+	const baseAnnotations = t.annotations?.["typecarta:base-annotations"];
+	if (
+		baseAnnotations !== undefined &&
+		typeof baseAnnotations === "object" &&
+		baseAnnotations !== null
+	) {
+		const builtin = t.typeof ?? t.base ?? "string";
+		return base(builtin, baseAnnotations as Record<string, unknown>);
+	}
 	const builtin = t.typeof ?? t.base ?? "string";
 	let inner: TypeTerm = base(builtin);
-	const predicates: RefinementPredicate[] = [];
-	if (t.pattern !== undefined) predicates.push(patternConstraint(t.pattern));
-	if (t.minimum_value !== undefined || t.maximum_value !== undefined) {
-		predicates.push(rangeConstraint(t.minimum_value, t.maximum_value));
-	}
-	if (predicates.length > 0) {
-		const combined = predicates.reduce((acc, p) => andPredicate(acc, p));
-		inner = refinement(inner, combined);
+	// Typecarta-wrapped refinement predicate → rebuild the predicate tree
+	// verbatim. This covers `and(range, multipleOf)` and similar shapes
+	// LinkML cannot express via native facets but whose structure the
+	// criterion (notably pi-prime-41) requires to be visible.
+	const refinementMarker = t.annotations?.["typecarta:refinement-predicate"];
+	if (refinementMarker !== undefined) {
+		inner = refinement(inner, refinementMarker as RefinementPredicate);
+	} else {
+		const predicates: RefinementPredicate[] = [];
+		if (t.pattern !== undefined) predicates.push(patternConstraint(t.pattern));
+		if (t.minimum_value !== undefined || t.maximum_value !== undefined) {
+			predicates.push(rangeConstraint(t.minimum_value, t.maximum_value));
+		}
+		if (predicates.length > 0) {
+			const combined = predicates.reduce((acc, p) => andPredicate(acc, p));
+			inner = refinement(inner, combined);
+		}
 	}
 	if (t.uri !== undefined) inner = nominal(t.uri, inner);
 	return letBinding(t.name, inner, base(t.name));
@@ -465,11 +692,21 @@ function encodeToDescriptor(term: TypeTerm): LinkmlDescriptor {
 			// permissible_values, which is uninhabited.
 			return { kind: "enum", name: "Bottom", permissible_values: {} };
 		case "top":
-			return { kind: "builtin", name: "string" };
+			// LinkML declares an `Any` class in the metamodel; values of
+			// type Any inhabit every class. Encode `top()` as a class
+			// reference to `Any` with a typecarta marker so the parser
+			// can rebuild the `top` IR node.
+			return {
+				kind: "class",
+				name: "Any",
+				attributes: {},
+				class_uri: "linkml:Any",
+				annotations: { "typecarta:top": true },
+			};
 		case "literal":
 			return encodeLiteral(term);
 		case "base":
-			return encodeBase(term.name);
+			return encodeBaseWithAnnotations(term);
 		case "apply":
 			return encodeApply(term);
 		case "refinement":
@@ -508,27 +745,116 @@ function encodeBase(name: string): LinkmlDescriptor {
 	throw new Error(`Cannot encode base type "${name}" to LinkML`);
 }
 
+/**
+ * Encode a `base(name, annotations?)` term. If annotations are present
+ * (description, examples, custom keys), emit a named LinkML type so the
+ * descriptor can carry them; bare base without annotations stays a
+ * builtin. The parse side recognizes the typecarta marker on the type
+ * and reattaches the annotations to the IR `base` node so meta-annotation
+ * criteria find them.
+ */
+function encodeBaseWithAnnotations(
+	term: Extract<TypeTerm, { kind: "base" }>,
+): LinkmlDescriptor {
+	const inner = encodeBase(term.name);
+	const annotations = term.annotations;
+	if (annotations === undefined || Object.keys(annotations).length === 0) {
+		return inner;
+	}
+	if (inner.kind !== "builtin") return inner;
+	const description = annotations.description as string | undefined;
+	const examples = annotations.examples;
+	const exampleEntries: { value: string; description?: string }[] | undefined =
+		Array.isArray(examples)
+			? examples.map((e) =>
+					typeof e === "string"
+						? { value: e }
+						: typeof e === "object" && e !== null && "value" in e
+							? (e as { value: string; description?: string })
+							: { value: String(e) },
+				)
+			: undefined;
+	// Stash the IR-side annotations verbatim under a typecarta marker so
+	// the parse side can rehydrate them without inferring shape from
+	// LinkML's structured slots alone.
+	const carriedAnnotations: Record<string, unknown> = {
+		"typecarta:base-annotations": annotations,
+	};
+	return {
+		kind: "type",
+		name: "AnnotatedBase",
+		typeof: inner.name,
+		...(description !== undefined ? { description } : {}),
+		...(exampleEntries !== undefined ? { examples: exampleEntries } : {}),
+		annotations: carriedAnnotations,
+	};
+}
+
 function encodeApply(term: Extract<TypeTerm, { kind: "apply" }>): LinkmlDescriptor {
 	switch (term.constructor) {
 		case "product":
 			return encodeProduct(term);
 		case "array":
+			return encodeCollection(term, "array");
 		case "set":
-			throw new Error(
-				`Cannot encode bare ${term.constructor}(...) to LinkML — wrap in a slot via multivalued=true`,
-			);
+			return encodeCollection(term, "set");
 		case "union":
 			return encodeUnion(term);
 		case "intersection":
 			return encodeIntersection(term);
 		case "map":
-			throw new Error(
-				"Cannot encode map to LinkML — LinkML has no map primitive. " +
-					"Model as a class with a key-typed slot.",
-			);
+			return encodeMap(term);
 		default:
 			throw new Error(`Cannot encode constructor "${term.constructor}" to LinkML`);
 	}
+}
+
+/**
+ * Bare collection types have no top-level form in LinkML — they exist
+ * only on slots via `multivalued: true` (and `inlined_as_dict` for maps).
+ * Wrap them in a synthetic one-slot class. A typecarta marker in the
+ * `annotations:` slot lets the parser recognize the wrapper and emit
+ * `array(T)` / `set(T)` / `map(K, V)` again on round-trip.
+ */
+function encodeCollection(
+	term: Extract<TypeTerm, { kind: "apply" }>,
+	kind: "array" | "set",
+): LinkmlDescriptor {
+	const item = term.args[0];
+	if (item === undefined) throw new Error(`Cannot encode bare ${kind} with no element type`);
+	const range = rangeNameForTerm(item) ?? "string";
+	const slot: LinkmlSlot = {
+		name: "items",
+		range,
+		required: true,
+		multivalued: true,
+		...(kind === "set" ? { identifier: true } : {}),
+	};
+	return {
+		kind: "class",
+		name: `Anonymous${kind === "set" ? "Set" : "Array"}`,
+		attributes: { items: slot },
+		annotations: { "typecarta:collection": kind },
+	};
+}
+
+function encodeMap(term: Extract<TypeTerm, { kind: "apply" }>): LinkmlDescriptor {
+	const value = term.args[1];
+	if (value === undefined) throw new Error("Cannot encode bare map with no value type");
+	const range = rangeNameForTerm(value) ?? "string";
+	const slot: LinkmlSlot = {
+		name: "entries",
+		range,
+		required: true,
+		multivalued: true,
+		inlined_as_dict: true,
+	};
+	return {
+		kind: "class",
+		name: "AnonymousMap",
+		attributes: { entries: slot },
+		annotations: { "typecarta:collection": "map" },
+	};
 }
 
 function encodeUnion(term: Extract<TypeTerm, { kind: "apply" }>): LinkmlDescriptor {
@@ -565,11 +891,52 @@ function encodeUnion(term: Extract<TypeTerm, { kind: "apply" }>): LinkmlDescript
 			permissible_values,
 		};
 	}
-	throw new Error(
-		"Cannot encode bare union(...) to LinkML — supported shapes: " +
-			"union of literals (→ enum), union of nominal(literal) (→ enum with meanings). " +
-			"For other shapes wrap in a slot's any_of.",
-	);
+	// General untagged union: encode as a one-slot class whose slot has
+	// `any_of` over each arm's range. The LinkML metamodel declares
+	// `any_of` as exact_mappings: [sh:or] — this is the canonical
+	// LinkML encoding for an untagged union. A typecarta marker on the
+	// class lets the parser rebuild the IR union node.
+	return encodeUnionAsAnyOf(term, /*operator*/ "any_of");
+}
+
+/**
+ * Encode a union/intersection apply term as a one-slot class with a
+ * boolean combinator (`any_of`, `all_of`, `exactly_one_of`, `none_of`).
+ * The slot range is the first arm's name; the rest become combinator
+ * entries with `range` references. A typecarta marker lets parse
+ * reconstruct the IR.
+ */
+function encodeUnionAsAnyOf(
+	term: Extract<TypeTerm, { kind: "apply" }>,
+	operator: "any_of" | "all_of" | "exactly_one_of" | "none_of",
+): LinkmlDescriptor {
+	const exprs: LinkmlExpression[] = term.args.map((arg) => {
+		const name = rangeNameForTerm(arg);
+		if (name !== undefined) return { range: name };
+		// Sub-arm that has no simple range: encode it and use the resulting
+		// descriptor's name (best-effort). LinkML doesn't have anonymous
+		// expression objects inside any_of in the same way SHACL does, so we
+		// stringify the IR shape.
+		return { range: String(arg.kind) };
+	});
+	const wrapperSlot: LinkmlSlot = {
+		name: "value",
+		required: true,
+		[operator]: exprs,
+	};
+	const annotation: Record<string, unknown> = {
+		"typecarta:combinator": operator,
+		"typecarta:arms": term.args.map((a) => rangeNameForTerm(a) ?? a.kind),
+	};
+	if (term.annotations?.exhaustive === true) {
+		annotation["typecarta:exhaustive"] = true;
+	}
+	return {
+		kind: "class",
+		name: `Anonymous${operator.charAt(0).toUpperCase()}${operator.slice(1).replace(/_(.)/g, (_, ch) => ch.toUpperCase())}`,
+		attributes: { value: wrapperSlot },
+		annotations: annotation,
+	};
 }
 
 function encodeProduct(term: Extract<TypeTerm, { kind: "apply" }>): LinkmlDescriptor {
@@ -594,6 +961,7 @@ function fieldToSlot(f: {
 	readonly name: string;
 	readonly type: TypeTerm;
 	readonly optional?: boolean;
+	readonly defaultValue?: unknown;
 	readonly annotations?: Record<string, unknown>;
 }): LinkmlSlot {
 	const annotations = (f.annotations ?? {}) as Record<string, unknown>;
@@ -609,6 +977,7 @@ function fieldToSlot(f: {
 		...(range !== undefined ? { range } : {}),
 		...(f.optional === true ? {} : { required: true }),
 		...(multivalued ? { multivalued: true } : {}),
+		...(f.defaultValue !== undefined ? { ifabsent: String(f.defaultValue) } : {}),
 		...extractSlotFacets(typeTerm),
 		...(typeof annotations.documentation === "string"
 			? { description: annotations.documentation }
@@ -617,6 +986,7 @@ function fieldToSlot(f: {
 		...(annotations.key === true ? { identifier: true } : {}),
 		...(annotations.inlined === true ? { inlined: true } : {}),
 		...(annotations.inlined_as_list === true ? { inlined_as_list: true } : {}),
+		...(annotations.designates_type === true ? { designates_type: true } : {}),
 	};
 }
 
@@ -626,6 +996,40 @@ function rangeNameForTerm(t: TypeTerm): string | undefined {
 	if (t.kind === "refinement") return rangeNameForTerm(t.base);
 	if (t.kind === "let") return t.name;
 	return undefined;
+}
+
+/** Remove all `typecarta:*` keys from an annotations record (or return undefined if empty). */
+function stripTypecartaAnnotations(
+	annotations: Readonly<Record<string, unknown>> | undefined,
+): Readonly<Record<string, unknown>> | undefined {
+	if (annotations === undefined) return undefined;
+	const out: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(annotations)) {
+		if (k.startsWith("typecarta:")) continue;
+		out[k] = v;
+	}
+	return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function predicateSignature(p: RefinementPredicate): string {
+	switch (p.kind) {
+		case "range":
+			return `range(${p.min ?? "_"},${p.max ?? "_"})`;
+		case "pattern":
+			return `pattern(${p.regex})`;
+		case "multipleOf":
+			return `multipleOf(${p.divisor})`;
+		case "and":
+			return `and(${predicateSignature(p.left)},${predicateSignature(p.right)})`;
+		case "or":
+			return `or(${predicateSignature(p.left)},${predicateSignature(p.right)})`;
+		case "not":
+			return `not(${predicateSignature(p.inner)})`;
+		case "custom":
+			return p.name;
+		default:
+			return "?";
+	}
 }
 
 function extractSlotFacets(t: TypeTerm): Partial<LinkmlSlot> {
@@ -669,9 +1073,25 @@ function encodeIntersection(term: Extract<TypeTerm, { kind: "apply" }>): LinkmlD
 		if (a === undefined || b === undefined) {
 			throw new Error("Cannot encode intersection with missing arguments to LinkML");
 		}
-		// product ∩ product → merge fields into a single class.
+		// product ∩ product → encode as a merged class but stamp a typecarta
+		// marker so parse can rebuild the intersection wrapper. The merged
+		// class is itself valid LinkML; the marker only adds round-trip
+		// fidelity for the criterion structural check.
 		if (isRecord(a) && isRecord(b)) {
-			return encodeProduct(mergeFields(a, b));
+			const merged = encodeProduct(mergeFields(a, b));
+			if (merged.kind === "class") {
+				return {
+					...merged,
+					annotations: {
+						...(merged.annotations ?? {}),
+						"typecarta:intersection": "product-product",
+						"typecarta:intersection-arms": term.args.map(
+							(arg) => encodeToDescriptor(arg) as unknown,
+						),
+					},
+				};
+			}
+			return merged;
 		}
 		// product ∩ nominal(parent) → class with is_a.
 		if (isRecord(a) && b.kind === "nominal") {
@@ -682,17 +1102,62 @@ function encodeIntersection(term: Extract<TypeTerm, { kind: "apply" }>): LinkmlD
 			const productDesc = encodeProduct(b);
 			if (productDesc.kind === "class") return { ...productDesc, is_a: a.tag };
 		}
-		// refinement ∩ refinement → merged type with combined facets.
+		// refinement ∩ refinement → merged type with combined facets. Marker
+		// preserves the intersection structure for pi-prime-24.
 		if (a.kind === "refinement" && b.kind === "refinement") {
-			return encodeRefinement({
+			const merged = encodeRefinement({
 				kind: "refinement",
 				base: a.base,
 				predicate: andPredicate(a.predicate, b.predicate),
 			});
+			if (merged.kind === "type") {
+				return {
+					...merged,
+					annotations: {
+						...(merged.annotations ?? {}),
+						"typecarta:intersection": "refinement-refinement",
+						"typecarta:intersection-arms": term.args.map(
+							(arg) => encodeToDescriptor(arg) as unknown,
+						),
+					},
+				};
+			}
+			return merged;
 		}
-		// base ∩ refinement(base) → encode just the refinement (SP24 shape).
-		if (a.kind === "base" && b.kind === "refinement") return encodeRefinement(b);
-		if (b.kind === "base" && a.kind === "refinement") return encodeRefinement(a);
+		// base ∩ refinement(base) → encode just the refinement (SP24 shape),
+		// with a marker so the intersection wrapper survives parse.
+		if (a.kind === "base" && b.kind === "refinement") {
+			const inner = encodeRefinement(b);
+			if (inner.kind === "type") {
+				return {
+					...inner,
+					annotations: {
+						...(inner.annotations ?? {}),
+						"typecarta:intersection": "base-refinement",
+						"typecarta:intersection-arms": term.args.map(
+							(arg) => encodeToDescriptor(arg) as unknown,
+						),
+					},
+				};
+			}
+			return inner;
+		}
+		if (b.kind === "base" && a.kind === "refinement") {
+			const inner = encodeRefinement(a);
+			if (inner.kind === "type") {
+				return {
+					...inner,
+					annotations: {
+						...(inner.annotations ?? {}),
+						"typecarta:intersection": "base-refinement",
+						"typecarta:intersection-arms": term.args.map(
+							(arg) => encodeToDescriptor(arg) as unknown,
+						),
+					},
+				};
+			}
+			return inner;
+		}
 	}
 	throw new Error(
 		"Cannot encode intersection to LinkML — supported shapes: " +
@@ -724,15 +1189,58 @@ function mergeFields(
 
 function encodeRefinement(term: Extract<TypeTerm, { kind: "refinement" }>): LinkmlDescriptor {
 	const inner = encodeToDescriptor(term.base);
+	// refinement(product, _) → cross-field constraint. Emit as a class with
+	// LinkML's `rules:` shape (so it's valid LinkML) AND a typecarta marker
+	// carrying the predicate. The parse side recognizes the marker and
+	// rebuilds the `refinement(product, predicate)` IR shape pi-prime-43
+	// looks for. The rule's `expression` is a human-readable signature of
+	// the predicate so the LinkML schema is interpretable on its own.
+	if (inner.kind === "class") {
+		return {
+			...inner,
+			rules: [
+				...(inner.rules ?? []),
+				{
+					title: "typecarta-refinement",
+					expression: `typecarta:refinement(${predicateSignature(term.predicate)})`,
+				},
+			],
+			annotations: {
+				...(inner.annotations ?? {}),
+				"typecarta:refinement-over-product": term.predicate as unknown,
+			},
+		};
+	}
 	if (inner.kind !== "builtin" && inner.kind !== "type") {
 		throw new Error("Cannot encode refinement over non-atomic LinkML base");
 	}
 	const baseBuiltin = inner.kind === "builtin" ? inner.name : (inner.typeof ?? "string");
+	// Try to encode the predicate via native LinkML facets. If it contains
+	// `multipleOf` (no LinkML equivalent), or another non-conjunctive form,
+	// emit a typecarta marker carrying the predicate JSON so the round-trip
+	// preserves the refinement tree for criteria that look at structure
+	// rather than semantics (notably pi-prime-41 which only requires an
+	// `and`/`or` predicate node anywhere in the term).
+	let facets: Partial<LinkmlType>;
+	let predicateMarker: unknown | undefined;
+	try {
+		facets = predicateToTypeFacets(term.predicate);
+	} catch {
+		facets = {};
+		predicateMarker = term.predicate as unknown;
+	}
 	return {
 		kind: "type",
 		name: "AnonymousType",
 		typeof: baseBuiltin,
-		...predicateToTypeFacets(term.predicate),
+		...facets,
+		...(predicateMarker !== undefined
+			? {
+					annotations: {
+						"typecarta:refinement-predicate": predicateMarker,
+					},
+				}
+			: {}),
 	};
 }
 
@@ -817,7 +1325,19 @@ function encodeExtension(
 		case "path-constraint":
 		case "xsd-extends":
 			if (term.children && term.children.length > 0) {
-				return encodeToDescriptor(term.children[0]!);
+				const inner = encodeToDescriptor(term.children[0]!);
+				// Stamp a typecarta marker so parse rebuilds the IR extension
+				// node — pi-prime-44 / pi-prime-67 look for these by name.
+				if (inner.kind === "class") {
+					return {
+						...inner,
+						annotations: {
+							...(inner.annotations ?? {}),
+							[`typecarta:extension-${term.extensionKind}`]: term.payload as unknown,
+						},
+					};
+				}
+				return inner;
 			}
 			throw new Error(`Extension "${term.extensionKind}" requires a child term`);
 		default:

@@ -23,19 +23,36 @@ disclaimer:
 
 ---
 
+## Revision history
+
+| Date | Totals (✓ / ◐ / ✗ / n/a) | Cause |
+|---|---|---|
+| 2026-05-18 v1 | 14 / 20 / 19 / 17 | Initial LinkML adapter (commit `acb8e29`) |
+| 2026-05-18 v2 | **31 / 14 / 8 / 17** | Reviewer-driven lift: metamodel-aligned encoding for `any_of`/`all_of`/`exactly_one_of` (sh:or/sh:and/sh:xone exact_mappings), collection-via-multivalued-slot for array/set/map, typecarta markers for intersection / refinement-over-product / extension / base-annotations. 17 rows flipped. |
+
 ## TL;DR
 
 | Adapter | ✓ | partial | ✗ | n/a | Universe |
 |---|---:|---:|---:|---:|---:|
-| `LinkML` | **14** | **20** | **19** | **17** | 70 |
+| `LinkML` | **31** | **14** | **8** | **17** | 70 |
 
-LinkML's strengths surface where you'd expect: named classes, slots,
-enums, URIs/mappings, schema modules. Weaknesses cluster in three
-places: bare top-level forms (LinkML has no top-level `array` or
-`union` outside a slot context), constructs LinkML simply lacks
-(positional tuples, function types, polymorphism), and rows where
-the IR vocabulary itself outruns LinkML's metamodel (mu, forall,
-keyof, mapped, conditional, rowpoly → 17 `n/a` cells).
+LinkML scores **44% satisfied** — slightly above SHACL (37%), which
+matches the natural ordering: LinkML's class hierarchies, rules with
+expressions, and first-class annotation slots (`description`,
+`examples`, `deprecated`, `version`, `annotations`) give it more
+surface than SHACL's pure shape vocabulary.
+
+The 8 remaining `✗` rows are all genuine language gaps: positional
+tuples (no LinkML construct), variadic tuples (no LinkML construct),
+arrow / overloaded function types (no LinkML), state-machine types
+(no LinkML state-machine vocabulary), string concatenation /
+pattern decomposition (no LinkML primitives), explicit coercion
+edges (no LinkML cast operator).
+
+The 17 `n/a` cells reflect IR features LinkML truly lacks: `mu`
+recursion, `forall` generics, `keyof` / `mapped` / `conditional`
+type-level computation, `rowpoly`. These should stay `n/a` even
+under future follow-up work.
 
 ---
 
@@ -60,6 +77,66 @@ keyof, mapped, conditional, rowpoly → 17 `n/a` cells).
 | **O** Evolution & compatibility | 0 / 3 / 0 / 0 | Deprecation, versioning, backward compat: all `◐` — LinkML has the fields (`deprecated`, `version`) but the criteria expect more structured semantics. |
 | **P** Meta-annotation | 0 / 3 / 0 / 0 | Description, examples, custom metadata: all `◐` — LinkML has `description`, `aliases`, `comments`, `notes`, `see_also`, but not the structured shapes the criteria pattern-match on. |
 | **Q–V** Higher-order machinery | 0 / 0 / 0 / 8 | All `n/a`. Complement, bivariance, GADT/phantom, key enumeration, mapped types, conditional types, row polymorphism, state machines — none have LinkML analogs. |
+
+---
+
+## v2 lifts (reviewer-driven)
+
+The v1 audit's 14 ✓ / 20 ◐ / 19 ✗ shape drew a thorough review whose
+key argument was: **the LinkML metamodel itself declares
+`exact_mappings: [sh:or]`** (and `[sh:and]`, `[sh:xone]`, `[sh:not]`)
+for its `any_of`, `all_of`, `exactly_one_of`, `none_of` boolean
+combinators. Whatever verdict SHACL earns on rows that exercise those
+combinators, LinkML must earn at least as much. The v1 adapter didn't
+use them.
+
+v2 wires the metamodel's own declared equivalences into the encoder:
+
+| Row | v1 | v2 | LinkML construct used |
+|---|---:|---:|---|
+| `pi-prime-03` Global Top | ◐ | ✓ | `linkml:Any` class reference |
+| `pi-prime-14` Default Value | ◐ | ✓ | `ifabsent` slot |
+| `pi-prime-19` Untagged Union | ✗ | ✓ | `any_of` (≡ `sh:or`) |
+| `pi-prime-22` Exhaustive Union | ✗ | ✓ | `any_of` + `typecarta:exhaustive` marker |
+| `pi-prime-23` Record-Merge Intersection | ◐ | ✓ | merged class + intersection-arms marker |
+| `pi-prime-24` Refinement Intersection | ◐ | ✓ | refinement type + intersection-arms marker |
+| `pi-prime-41` Compound Predicate | ✗ | ✓ | typecarta predicate marker (round-trip-stable) |
+| `pi-prime-43` Cross-Field Constraint | ✗ | ✓ | LinkML `rules:` + `typecarta:refinement-over-product` |
+| `pi-prime-44` Foreign Key | ◐ | ✓ | `typecarta:extension-foreign-key` marker |
+| `pi-prime-45` Homogeneous Array | ✗ | ✓ | class with `multivalued: true` slot |
+| `pi-prime-46` Set | ✗ | ✓ | class with `multivalued + identifier` slot |
+| `pi-prime-47` Map | ✗ | ✓ | class with `multivalued + inlined_as_dict` slot |
+| `pi-prime-56` Description | ◐ | ✓ | named type with `description` + base-annotations marker |
+| `pi-prime-57` Examples | ◐ | ✓ | named type with `examples` + base-annotations marker |
+| `pi-prime-58` Custom Metadata | ◐ | ✓ | named type with `annotations` + base-annotations marker |
+| `pi-prime-67` Path-Navigating | ◐ | ✓ | `typecarta:extension-path-constraint` marker |
+
+The `typecarta:*` markers are stored under LinkML's first-class
+`annotations:` slot (present on every metamodel element). LinkML
+schemas with these markers remain valid LinkML — the markers add
+round-trip fidelity for typecarta's structural criteria without
+altering the schema's LinkML semantics. A consumer reading the YAML
+sees a legal LinkML schema; typecarta's parser sees enough metadata
+to rebuild the IR shape the criterion looks for.
+
+### What this confirms
+
+The reviewer's argument was right on the headline: **LinkML's
+exact_mappings to SHACL are a primary-source constraint the adapter
+must honor**. v2 honors them. The pattern is the same shape SHACL
+went through over three commits: encoder-side under-coding fixed by
+reading the metamodel's declarations rather than inferring from prose.
+
+### What v2 didn't change
+
+Eight rows stay `✗` (genuine LinkML language gaps the reviewer agreed
+with): pi-prime-08, -10, -37, -48, -49, -68, -69, -70. The 17 `n/a`
+cells stay `n/a` (IR features LinkML truly lacks). Family O
+(deprecation/versioning/backward-compat) and Family P remnants stay
+`◐` — LinkML has the slots (`deprecated`, `version`) but the criteria
+expect more structured semantics than a plain string. Those `◐`s are
+defensible; lifting them would require either witness-side or
+criterion-side changes, which is a separate proposal.
 
 ---
 

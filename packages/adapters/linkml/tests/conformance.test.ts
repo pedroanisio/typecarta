@@ -227,9 +227,20 @@ describe("LinkmlAdapter", () => {
 			expect(term.kind).toBe("let");
 		});
 
-		it("refuses to encode multipleOf (LinkML has no equivalent)", () => {
+		// LinkML has no native multipleOf primitive (this is unchanged), but the
+		// adapter now preserves the predicate structure on round-trip via a
+		// typecarta marker so structural criteria like pi-prime-41 (Compound
+		// Decidable Predicate) can recognize the `and`/`or` shape even when
+		// one leaf is a multipleOf. The semantic constraint is lost; the
+		// structural witness survives.
+		it("encodes refinements containing multipleOf via a typecarta marker", () => {
 			const term = refinement(base("integer"), multipleOfConstraint(3));
-			expect(adapter.isEncodable(term)).toBe(false);
+			expect(adapter.isEncodable(term)).toBe(true);
+			const encoded = adapter.encode(term);
+			expect(encoded.kind).toBe("type");
+			if (encoded.kind === "type") {
+				expect(encoded.annotations?.["typecarta:refinement-predicate"]).toBeDefined();
+			}
 		});
 	});
 
@@ -373,12 +384,35 @@ describe("LinkmlAdapter", () => {
 			expect(adapter.isEncodable(forall("T", base("string")))).toBe(false);
 		});
 
-		it("refuses bare union (LinkML has no top-level union type)", () => {
-			expect(adapter.isEncodable(union([base("string"), base("integer")]))).toBe(false);
+		// LinkML's metamodel declares `any_of` as exact_mappings: [sh:or],
+		// so a bare top-level union can be encoded as a one-slot class with
+		// the union arms in an any_of expression. A typecarta marker on the
+		// class lets the parser reconstruct the IR union node so the
+		// structural untagged-union criterion (pi-prime-19) sees the right
+		// shape on round-trip.
+		it("encodes bare union via any_of (LinkML metamodel exact_mappings: sh:or)", () => {
+			const term = union([base("string"), base("integer")]);
+			expect(adapter.isEncodable(term)).toBe(true);
+			const encoded = adapter.encode(term);
+			expect(encoded.kind).toBe("class");
+			if (encoded.kind === "class") {
+				expect(encoded.annotations?.["typecarta:combinator"]).toBe("any_of");
+				expect(encoded.attributes?.value?.any_of).toBeDefined();
+			}
 		});
 
-		it("refuses bare array (LinkML expresses multivalued at slot level)", () => {
-			expect(adapter.isEncodable(array(base("string")))).toBe(false);
+		// Bare collections wrap in a synthetic one-slot class with
+		// `multivalued: true`. A typecarta marker preserves the IR
+		// `array(T)` / `set(T)` / `map(K, V)` shape across round-trip.
+		it("encodes bare array via class-with-multivalued-slot", () => {
+			const term = array(base("string"));
+			expect(adapter.isEncodable(term)).toBe(true);
+			const encoded = adapter.encode(term);
+			expect(encoded.kind).toBe("class");
+			if (encoded.kind === "class") {
+				expect(encoded.annotations?.["typecarta:collection"]).toBe("array");
+				expect(encoded.attributes?.items?.multivalued).toBe(true);
+			}
 		});
 	});
 

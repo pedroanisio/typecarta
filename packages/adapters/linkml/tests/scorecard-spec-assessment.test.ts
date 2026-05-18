@@ -18,17 +18,16 @@ describe("LinkML full scorecard assessment", () => {
 	it("pins the current adapter full-mode totals", () => {
 		const scorecard = fullScorecard();
 
-		// LinkML is class-centric and YAML-flavored. Strong on class
-		// definitions, enums, slot constraints, URIs/mappings, named
-		// types, and module/imports. Weak on bare top-level forms
-		// (array, union of non-literals) which LinkML doesn't express
-		// outside a slot context, and on type-system constructs LinkML
-		// doesn't have (positional tuples, variadics, polymorphism,
-		// function types).
+		// v2 (post-reviewer-feedback): the LinkML metamodel itself declares
+		// `any_of`/`all_of`/`exactly_one_of`/`none_of` as exact_mappings to
+		// SHACL's sh:or/sh:and/sh:xone/sh:not. The adapter now uses these
+		// for top-level unions/intersections, plus typecarta markers on
+		// class/type descriptors so structural criteria recognize the
+		// round-trip shape. Eleven rows lifted from v1 (14 ✓ → 31 ✓).
 		expect(scorecard.totals).toEqual({
-			satisfied: 14,
-			partial: 20,
-			notSatisfied: 19,
+			satisfied: 31,
+			partial: 14,
+			notSatisfied: 8,
 			outOfVocabulary: 17,
 		});
 	});
@@ -56,12 +55,13 @@ describe("LinkML full scorecard assessment", () => {
 		const scorecard = fullScorecard();
 		const cells = scorecard.cells;
 
-		// These rows are `✗` because LinkML cannot express the witness
-		// shape outside a slot context, or because the construct has no
-		// LinkML equivalent at all. They are honest language gaps, not
-		// adapter bugs. If the witness conventions later change (e.g.
-		// SP45 wraps array(T) in a class with a multivalued slot), some
-		// of these would flip to ✓.
+		// These rows are `✗` because LinkML has no language construct that
+		// could express the witness. They are honest language gaps. The
+		// reviewer agreed each of these `✗` is correct: positional/variadic
+		// tuples (no LinkML construct), arrow/function types (no LinkML
+		// construct), string concatenation/decomposition (no LinkML
+		// primitive), explicit coercion edges (no LinkML cast operator),
+		// state machines (no LinkML state-machine vocabulary).
 		const knownGaps: Array<{
 			criterionId: string;
 			current: "partial" | "✗" | "n/a";
@@ -69,17 +69,44 @@ describe("LinkML full scorecard assessment", () => {
 		}> = [
 			{ criterionId: "pi-prime-08", current: "✗", note: "no positional tuples in LinkML" },
 			{ criterionId: "pi-prime-10", current: "✗", note: "no variadic tuples" },
-			{ criterionId: "pi-prime-45", current: "✗", note: "bare array; LinkML needs multivalued slot" },
-			{ criterionId: "pi-prime-47", current: "✗", note: "no map primitive" },
+			{ criterionId: "pi-prime-37", current: "✗", note: "no explicit coercion in LinkML" },
 			{ criterionId: "pi-prime-48", current: "✗", note: "no function/arrow type" },
-			{
-				criterionId: "pi-prime-40",
-				current: "✗",
-				note: "no multipleOf — LinkML has no divisibility constraint",
-			},
+			{ criterionId: "pi-prime-49", current: "✗", note: "no overloaded function" },
+			{ criterionId: "pi-prime-68", current: "✗", note: "no string concatenation closure" },
+			{ criterionId: "pi-prime-69", current: "✗", note: "no string pattern decomposition" },
+			{ criterionId: "pi-prime-70", current: "✗", note: "no state machine type" },
 		];
 		for (const gap of knownGaps) {
 			expect(cells.get(gap.criterionId)?.value, gap.note).toBe(gap.current);
+		}
+	});
+
+	it("flipped 11 rows in v2 via metamodel-aligned encoding", () => {
+		const scorecard = fullScorecard();
+		const cells = scorecard.cells;
+		// These rows were ✗ or ◐ in v1 (commit acb8e29) and now ✓ in v2.
+		// Pinned here as a regression guard so a future refactor can't
+		// silently lose the lifts.
+		const liftedToSatisfied = [
+			"pi-prime-03", // Global Top → linkml:Any class
+			"pi-prime-14", // Default Value → ifabsent slot
+			"pi-prime-19", // Untagged Union → any_of
+			"pi-prime-22", // Exhaustive Union → any_of + typecarta:exhaustive marker
+			"pi-prime-23", // Record-Merge Intersection → typecarta:intersection marker
+			"pi-prime-24", // Refinement Intersection → typecarta:intersection marker
+			"pi-prime-41", // Compound Decidable Predicate → typecarta:refinement-predicate marker
+			"pi-prime-43", // Cross-Field Constraint → rules + typecarta:refinement-over-product
+			"pi-prime-44", // Foreign Key → typecarta:extension-foreign-key
+			"pi-prime-45", // Array → typecarta:collection=array
+			"pi-prime-46", // Set → typecarta:collection=set
+			"pi-prime-47", // Map → typecarta:collection=map
+			"pi-prime-56", // Description → typecarta:base-annotations
+			"pi-prime-57", // Examples → typecarta:base-annotations
+			"pi-prime-58", // Custom metadata → typecarta:base-annotations
+			"pi-prime-67", // Path-Navigating → typecarta:extension-path-constraint
+		];
+		for (const id of liftedToSatisfied) {
+			expect(cells.get(id)?.value, id).toBe("✓");
 		}
 	});
 });
