@@ -198,4 +198,45 @@ describe("GraphQLAdapter", () => {
 			expect(adapter.isEncodable(forall("T", base("String")))).toBe(false);
 		});
 	});
+
+	// Regression for the encode/inhabits case-mismatch bug surfaced by the
+	// bench:fidelity reviewer (2026-05-18). The encoder wrote IR-canonical
+	// lowercase names (`string`, `number`) into `{type: "ref", name: …}`;
+	// inhabits only matched the GraphQL-canonical names (`String`, `Int`,
+	// `Float`). Round-tripped terms inhabits-checked as false for every
+	// value — including the legitimate ones — surfacing as the
+	// `product-person Sound=no` cell in the fidelity bench.
+	describe("regression: encode/inhabits agree on base names", () => {
+		it("IR-canonical base names normalize to GraphQL names through encode", () => {
+			expect(adapter.encode(base("string"))).toEqual({ type: "scalar", name: "String" });
+			expect(adapter.encode(base("number"))).toEqual({ type: "scalar", name: "Float" });
+			expect(adapter.encode(base("integer"))).toEqual({ type: "scalar", name: "Int" });
+			expect(adapter.encode(base("boolean"))).toEqual({ type: "scalar", name: "Boolean" });
+		});
+
+		it("GraphQL-canonical scalars parse back to IR-canonical base names", () => {
+			expect(adapter.parse({ type: "scalar", name: "String" })).toEqual(base("string"));
+			expect(adapter.parse({ type: "scalar", name: "Float" })).toEqual(base("number"));
+			expect(adapter.parse({ type: "scalar", name: "Int" })).toEqual(base("integer"));
+			expect(adapter.parse({ type: "scalar", name: "Boolean" })).toEqual(base("boolean"));
+		});
+
+		it("inhabits accepts the round-tripped product (Sound check)", () => {
+			const term = product([field("name", base("string")), field("age", base("number"))]);
+			const parsed = adapter.parse(adapter.encode(term));
+			// The legitimate value MUST inhabit the round-tripped term.
+			expect(adapter.inhabits({ name: "Alice", age: 30 }, parsed)).toBe(true);
+			// A wrong-typed value must still be rejected (not over-accepting).
+			expect(adapter.inhabits({ name: 42, age: 30 }, parsed)).toBe(false);
+		});
+
+		it("inhabits accepts both name conventions defensively", () => {
+			// A caller who constructs base("String") (capitalized) shouldn't be
+			// surprised either — same semantic, both spellings work.
+			expect(adapter.inhabits("hello", base("String"))).toBe(true);
+			expect(adapter.inhabits("hello", base("string"))).toBe(true);
+			expect(adapter.inhabits(42, base("Int"))).toBe(true);
+			expect(adapter.inhabits(42, base("integer"))).toBe(true);
+		});
+	});
 });

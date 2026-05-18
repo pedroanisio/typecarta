@@ -112,10 +112,31 @@ export class GraphQLAdapter implements IRAdapter<Signature, GraphQLTypeDescripto
 
 // ─── Parse ─────────────────────────────────────────────────────────
 
+/**
+ * Map GraphQL-canonical scalar names back to IR-canonical base names so
+ * round-tripped terms can be compared structurally against the original
+ * IR term. The inverse of `normalizeIrBaseToGraphQL`.
+ */
+function normalizeGraphQLBaseToIr(name: string): string {
+	switch (name) {
+		case "String":
+			return "string";
+		case "Int":
+			return "integer";
+		case "Float":
+			return "number";
+		case "Boolean":
+			return "boolean";
+		// `ID` and `JSON` (top placeholder) have no IR equivalent; keep verbatim.
+		default:
+			return name;
+	}
+}
+
 function parseGraphQLDescriptor(desc: GraphQLTypeDescriptor): TypeTerm {
 	switch (desc.type) {
 		case "scalar":
-			return base(desc.name);
+			return base(normalizeGraphQLBaseToIr(desc.name));
 		case "object":
 		case "input":
 		case "interface": {
@@ -135,7 +156,7 @@ function parseGraphQLDescriptor(desc: GraphQLTypeDescriptor): TypeTerm {
 		case "enum":
 			return union(desc.values.map((v) => literal(v)));
 		case "ref":
-			return base(desc.name);
+			return base(normalizeGraphQLBaseToIr(desc.name));
 		default:
 			return top();
 	}
@@ -165,10 +186,43 @@ function encodeToGraphQLDescriptor(term: TypeTerm): GraphQLTypeDescriptor {
 	}
 }
 
+/**
+ * Map IR-canonical base names (lowercase, JSON-Schema-flavored) to the
+ * GraphQL-canonical scalar names. Returns `undefined` for non-GraphQL
+ * primitives so the caller can fall through to the `ref` path.
+ *
+ * The IR convention is `string` / `number` / `integer` / `boolean`; the
+ * GraphQL convention is `String` / `Float` / `Int` / `Boolean` / `ID`.
+ * Without this normalization, encode emits `ref` (treating IR names as
+ * user types) and `inhabits` later fails to recognize the round-tripped
+ * `base("string")` term — the case-mismatch bug the bench:fidelity
+ * reviewer flagged on the `product-person` row.
+ */
+function normalizeIrBaseToGraphQL(name: string): string | undefined {
+	switch (name) {
+		case "String":
+		case "Int":
+		case "Float":
+		case "Boolean":
+		case "ID":
+			return name;
+		case "string":
+			return "String";
+		case "integer":
+			return "Int";
+		case "number":
+			return "Float";
+		case "boolean":
+			return "Boolean";
+		default:
+			return undefined;
+	}
+}
+
 function encodeBaseToGraphQL(name: string): GraphQLTypeDescriptor {
-	const builtins = new Set(["String", "Int", "Float", "Boolean", "ID"]);
-	if (builtins.has(name)) {
-		return { type: "scalar", name };
+	const normalized = normalizeIrBaseToGraphQL(name);
+	if (normalized !== undefined) {
+		return { type: "scalar", name: normalized };
 	}
 	// Non-builtin base types become references
 	return { type: "ref", name };
@@ -212,14 +266,23 @@ function checkInhabitation(value: unknown, term: TypeTerm): boolean {
 		case "literal":
 			return value === term.value;
 		case "base":
+			// Accept both GraphQL-canonical (String/Int/Float/Boolean) and
+			// IR-canonical (string/integer/number/boolean) names so callers
+			// can construct terms in either convention. The encoder + parser
+			// normalize to IR-canonical, but defensive matching here avoids
+			// strict ordering assumptions on construction.
 			switch (term.name) {
 				case "String":
+				case "string":
 					return typeof value === "string";
 				case "Int":
+				case "integer":
 					return typeof value === "number" && Number.isInteger(value);
 				case "Float":
+				case "number":
 					return typeof value === "number";
 				case "Boolean":
+				case "boolean":
 					return typeof value === "boolean";
 				case "ID":
 					return typeof value === "string" || typeof value === "number";

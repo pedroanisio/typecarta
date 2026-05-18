@@ -1,17 +1,35 @@
 /**
  * Benchmark: Criterion coverage per adapter across all adapters.
  *
- * For each registered adapter, runs all 70 CRITERIA against the witness
- * corpus and reports family (A..V) coverage. Then prints a comparison
- * row showing each adapter's overall pass / partial / fail counts.
+ * For each registered adapter, runs `evaluateScorecard` against the full
+ * 70-criterion set with the full witness corpus, then aggregates per-family
+ * by the cell taxonomy that the scorecard layer produces: ✓ (satisfied),
+ * ◐ (partial), ✗ (not satisfied), n/a (adapter does not model the IR kind
+ * the witness uses).
  *
- * Skip policy: per-witness encode/parse failures within an adapter are
- * silently treated as "not satisfied for this witness" (the existing
- * behavior — see `evaluateCoverage`). A whole-adapter throw is caught
- * and surfaced in the comparison table as `ERROR`.
+ * History: an earlier version of this benchmark called
+ * `criterion.evaluate(roundTripped)` directly and counted ✗ if the result
+ * status wasn't `satisfied`. That bypassed `evaluateScorecard` and
+ * collapsed three distinct cell values — ◐ (round-trip-lost-info), ✗
+ * (real language gap), n/a (adapter-hole) — into a single "Fail" column.
+ * The Partial column was therefore always zero, hiding exactly the
+ * regression class that audits depend on. Surfaced by the bench:fidelity
+ * reviewer (2026-05-18).
+ *
+ * Skip policy: a whole-adapter throw is caught and surfaced in the
+ * comparison table as `ERROR`. Per-witness encode/parse failures are
+ * already handled by `evaluateScorecard` (they become ✗ or ◐ cells with
+ * a justification).
  */
 
-import { CRITERIA, type Criterion, type CriterionFamily, type IRAdapter } from "@typecarta/core";
+import {
+	CRITERIA,
+	type CriterionFamily,
+	type IRAdapter,
+	type ScorecardResult,
+	type WitnessEntry,
+	evaluateScorecard,
+} from "@typecarta/core";
 import { ALL_WITNESSES, type WitnessSchema } from "@typecarta/witnesses";
 import { buildAllAdapters } from "../adapters.js";
 
@@ -21,6 +39,7 @@ interface FamilyCoverage {
 	satisfied: number;
 	partial: number;
 	notSatisfied: number;
+	outOfVocabulary: number;
 	coveragePercent: number;
 }
 
@@ -31,72 +50,75 @@ interface AdapterCoverage {
 	totalSatisfied: number;
 	totalPartial: number;
 	totalNotSatisfied: number;
+	totalOutOfVocabulary: number;
 	error?: string;
 }
 
+/**
+ * Run the scorecard against the full criterion set and bucket cells by
+ * their family. The cell `value` taxonomy survives intact.
+ */
 function evaluateCoverage(
 	adapter: IRAdapter,
 	witnesses: readonly WitnessSchema[],
 ): FamilyCoverage[] {
-	const byFamily = new Map<CriterionFamily, Criterion[]>();
+	const witnessEntries: WitnessEntry[] = witnesses.map((w) => ({
+		criterionId: w.id,
+		schema: w.schema,
+		name: w.name,
+	}));
+	const scorecard: ScorecardResult = evaluateScorecard(adapter, witnessEntries, CRITERIA);
+
+	const familyOf = new Map<string, CriterionFamily>(CRITERIA.map((c) => [c.id, c.family]));
+
+	const byFamily = new Map<CriterionFamily, FamilyCoverage>();
 	for (const criterion of CRITERIA) {
-		const group = byFamily.get(criterion.family) ?? [];
-		group.push(criterion);
-		byFamily.set(criterion.family, group);
+		if (!byFamily.has(criterion.family)) {
+			byFamily.set(criterion.family, {
+				family: criterion.family,
+				total: 0,
+				satisfied: 0,
+				partial: 0,
+				notSatisfied: 0,
+				outOfVocabulary: 0,
+				coveragePercent: 0,
+			});
+		}
+		const entry = byFamily.get(criterion.family)!;
+		// FamilyCoverage is readonly in interface form, but we're building
+		// it; cast through unknown to mutate during accumulation.
+		(entry as { total: number }).total++;
+	}
+
+	for (const [id, cell] of scorecard.cells) {
+		const family = familyOf.get(id);
+		if (!family) continue;
+		const entry = byFamily.get(family);
+		if (!entry) continue;
+		switch (cell.value) {
+			case "✓":
+				(entry as { satisfied: number }).satisfied++;
+				break;
+			case "partial":
+				(entry as { partial: number }).partial++;
+				break;
+			case "✗":
+				(entry as { notSatisfied: number }).notSatisfied++;
+				break;
+			case "n/a":
+				(entry as { outOfVocabulary: number }).outOfVocabulary++;
+				break;
+		}
 	}
 
 	const coverages: FamilyCoverage[] = [];
-
-	for (const [family, criteria] of byFamily) {
-		let satisfied = 0;
-		let partial = 0;
-		let notSatisfied = 0;
-
-		for (const criterion of criteria) {
-			let bestStatus: "satisfied" | "not-satisfied" | "undecidable" = "not-satisfied";
-
-			for (const witness of witnesses) {
-				if (!adapter.isEncodable(witness.schema)) continue;
-				try {
-					const encoded = adapter.encode(witness.schema);
-					const roundTripped = adapter.parse(encoded);
-					const result = criterion.evaluate(roundTripped);
-					if (result.status === "satisfied") {
-						bestStatus = "satisfied";
-						break;
-					}
-					if (result.status === "undecidable" && bestStatus !== "satisfied") {
-						bestStatus = "undecidable";
-					}
-				} catch {
-					// per-witness failure; try next
-				}
-			}
-
-			switch (bestStatus) {
-				case "satisfied":
-					satisfied++;
-					break;
-				case "undecidable":
-					partial++;
-					break;
-				case "not-satisfied":
-					notSatisfied++;
-					break;
-			}
-		}
-
-		const total = criteria.length;
-		coverages.push({
-			family,
-			total,
-			satisfied,
-			partial,
-			notSatisfied,
-			coveragePercent: total > 0 ? (satisfied / total) * 100 : 0,
-		});
+	for (const f of byFamily.values()) {
+		const cov: FamilyCoverage = {
+			...f,
+			coveragePercent: f.total > 0 ? (f.satisfied / f.total) * 100 : 0,
+		};
+		coverages.push(cov);
 	}
-
 	coverages.sort((a, b) => a.family.localeCompare(b.family));
 	return coverages;
 }
@@ -111,6 +133,7 @@ function benchmarkAdapter(
 		const totalSatisfied = families.reduce((sum, f) => sum + f.satisfied, 0);
 		const totalPartial = families.reduce((sum, f) => sum + f.partial, 0);
 		const totalNotSatisfied = families.reduce((sum, f) => sum + f.notSatisfied, 0);
+		const totalOutOfVocabulary = families.reduce((sum, f) => sum + f.outOfVocabulary, 0);
 		return {
 			adapter: adapter.name,
 			families,
@@ -118,6 +141,7 @@ function benchmarkAdapter(
 			totalSatisfied,
 			totalPartial,
 			totalNotSatisfied,
+			totalOutOfVocabulary,
 		};
 	} catch (err) {
 		return {
@@ -127,6 +151,7 @@ function benchmarkAdapter(
 			totalSatisfied: 0,
 			totalPartial: 0,
 			totalNotSatisfied: 0,
+			totalOutOfVocabulary: 0,
 			error: err instanceof Error ? err.message : String(err),
 		};
 	}
@@ -145,9 +170,10 @@ function printPerAdapter(cov: AdapterCoverage): void {
 			"Pass".padStart(6) +
 			"Partial".padStart(8) +
 			"Fail".padStart(6) +
+			"N/A".padStart(6) +
 			"Coverage".padStart(10),
 	);
-	console.log("-".repeat(44));
+	console.log("-".repeat(50));
 
 	for (const f of cov.families) {
 		console.log(
@@ -156,11 +182,12 @@ function printPerAdapter(cov: AdapterCoverage): void {
 				`${f.satisfied}`.padStart(6) +
 				`${f.partial}`.padStart(8) +
 				`${f.notSatisfied}`.padStart(6) +
+				`${f.outOfVocabulary}`.padStart(6) +
 				`${f.coveragePercent.toFixed(1)}%`.padStart(10),
 		);
 	}
 
-	console.log("-".repeat(44));
+	console.log("-".repeat(50));
 	const overall = cov.totalCriteria > 0 ? (cov.totalSatisfied / cov.totalCriteria) * 100 : 0;
 	console.log(
 		"Total".padEnd(8) +
@@ -168,6 +195,7 @@ function printPerAdapter(cov: AdapterCoverage): void {
 			`${cov.totalSatisfied}`.padStart(6) +
 			`${cov.totalPartial}`.padStart(8) +
 			`${cov.totalNotSatisfied}`.padStart(6) +
+			`${cov.totalOutOfVocabulary}`.padStart(6) +
 			`${overall.toFixed(1)}%`.padStart(10),
 	);
 	console.log();
@@ -187,9 +215,10 @@ function printComparison(coverages: readonly AdapterCoverage[]): void {
 			"Pass".padStart(8) +
 			"Partial".padStart(10) +
 			"Fail".padStart(8) +
+			"N/A".padStart(8) +
 			"Coverage".padStart(12),
 	);
-	console.log("-".repeat(adapterWidth + 8 + 10 + 8 + 12));
+	console.log("-".repeat(adapterWidth + 8 + 10 + 8 + 8 + 12));
 	for (const c of sorted) {
 		const pct = c.totalCriteria > 0 ? (c.totalSatisfied / c.totalCriteria) * 100 : 0;
 		console.log(
@@ -197,6 +226,7 @@ function printComparison(coverages: readonly AdapterCoverage[]): void {
 				`${c.totalSatisfied}/${c.totalCriteria}`.padStart(8) +
 				`${c.totalPartial}`.padStart(10) +
 				`${c.totalNotSatisfied}`.padStart(8) +
+				`${c.totalOutOfVocabulary}`.padStart(8) +
 				`${pct.toFixed(1)}%`.padStart(12),
 		);
 	}
@@ -215,6 +245,12 @@ function main(): void {
 	console.log(`Total criteria: ${CRITERIA.length}`);
 	console.log(`Witnesses:      ${ALL_WITNESSES.length}`);
 	console.log(`Adapters:       ${adapters.length}`);
+	console.log();
+	console.log("Columns:");
+	console.log("  Pass     — round-trip + criterion predicate both satisfied (✓)");
+	console.log("  Partial  — encoding exists but round-trip is lossy (◐)");
+	console.log("  Fail     — IR kind in vocabulary but encoding fails (✗ — real language gap)");
+	console.log("  N/A      — adapter does not model the IR kind (·  — adapter hole)");
 	console.log();
 
 	const results: AdapterCoverage[] = [];

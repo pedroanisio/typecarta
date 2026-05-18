@@ -220,6 +220,19 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@25.5.0)(tsx@4.21.0)(yaml@2.8.2)
 
+  packages/adapters/linkml:
+    dependencies:
+      '@typecarta/core':
+        specifier: workspace:*
+        version: link:../../core
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@25.5.0)(tsx@4.21.0)(yaml@2.8.2)
+
   packages/adapters/protobuf:
     dependencies:
       '@typecarta/core':
@@ -284,6 +297,9 @@ importers:
         specifier: workspace:*
         version: link:../../core
     devDependencies:
+      '@typecarta/adapter-xsd':
+        specifier: workspace:*
+        version: link:../xsd
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
@@ -331,6 +347,9 @@ importers:
       '@typecarta/adapter-json-schema':
         specifier: workspace:*
         version: link:../adapters/json-schema
+      '@typecarta/adapter-linkml':
+        specifier: workspace:*
+        version: link:../adapters/linkml
       '@typecarta/adapter-protobuf':
         specifier: workspace:*
         version: link:../adapters/protobuf

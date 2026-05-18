@@ -1,11 +1,16 @@
 import {
+	andPredicate,
 	array,
 	base,
 	bottom,
 	field,
 	forall,
 	literal,
+	multipleOfConstraint,
+	patternConstraint,
 	product,
+	rangeConstraint,
+	refinement,
 	tuple,
 	union,
 } from "@typecarta/core";
@@ -206,6 +211,69 @@ describe("ZodAdapter", () => {
 		it("returns false for unsupported terms", () => {
 			expect(adapter.isEncodable(forall("T", base("string")))).toBe(false);
 			expect(adapter.isEncodable(base("symbol"))).toBe(false);
+		});
+	});
+
+	// Regression for the Zod adapter's missing refinement support, flagged
+	// by the bench:fidelity reviewer (2026-05-18). Zod 3 natively has
+	// `.min(n)`, `.max(n)`, `.regex(re)`, `.multipleOf(d)`, and `.refine(fn)`;
+	// the adapter previously rejected every IR `refinement` term.
+	describe("regression: refinement support", () => {
+		it("declares `refinement` in supportsKind", () => {
+			expect(adapter.supportsKind("refinement")).toBe(true);
+		});
+
+		it("encodes refinement(number, range) as `{type: refined, …}`", () => {
+			const term = refinement(base("number"), rangeConstraint(0, 100));
+			expect(adapter.isEncodable(term)).toBe(true);
+			const encoded = adapter.encode(term);
+			expect(encoded.type).toBe("refined");
+		});
+
+		it("round-trips refinement(number, range) faithfully", () => {
+			const term = refinement(base("number"), rangeConstraint(0, 100));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("refinement");
+			if (parsed.kind === "refinement") {
+				expect(parsed.predicate.kind).toBe("range");
+			}
+		});
+
+		it("round-trips refinement(string, pattern) faithfully", () => {
+			const term = refinement(base("string"), patternConstraint("^[a-z]+$"));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("refinement");
+			if (parsed.kind === "refinement") {
+				expect(parsed.predicate.kind).toBe("pattern");
+			}
+		});
+
+		it("round-trips refinement(number, multipleOf) faithfully", () => {
+			const term = refinement(base("number"), multipleOfConstraint(5));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("refinement");
+			if (parsed.kind === "refinement") {
+				expect(parsed.predicate.kind).toBe("multipleOf");
+			}
+		});
+
+		it("composes compound predicates (and(range, multipleOf)) via stacked checks", () => {
+			const term = refinement(
+				base("number"),
+				andPredicate(rangeConstraint(0, 100), multipleOfConstraint(5)),
+			);
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("refinement");
+			if (parsed.kind === "refinement") {
+				expect(parsed.predicate.kind).toBe("and");
+			}
+		});
+
+		it("inhabits checks the base type AND the predicate", () => {
+			const term = refinement(base("number"), rangeConstraint(0, 100));
+			expect(adapter.inhabits(50, term)).toBe(true);
+			expect(adapter.inhabits(150, term)).toBe(false); // out of range
+			expect(adapter.inhabits("50", term)).toBe(false); // wrong base type
 		});
 	});
 });
