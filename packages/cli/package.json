@@ -14,6 +14,14 @@
 		"clean": "rm -rf dist"
 	},
 	"dependencies": {
+		"@typecarta/adapter-avro": "workspace:*",
+		"@typecarta/adapter-effect-schema": "workspace:*",
+		"@typecarta/adapter-graphql": "workspace:*",
+		"@typecarta/adapter-json-schema": "workspace:*",
+		"@typecarta/adapter-protobuf": "workspace:*",
+		"@typecarta/adapter-typescript": "workspace:*",
+		"@typecarta/adapter-xsd": "workspace:*",
+		"@typecarta/adapter-zod": "workspace:*",
 		"@typecarta/core": "workspace:*",
 		"@typecarta/witnesses": "workspace:*"
 	},

@@ -75,6 +75,12 @@ pnpm check
 
 # Generate API docs (output: docs/api/)
 pnpm docs
+
+# Run the worked examples
+pnpm run examples:smoke
+
+# Run the benchmark suite
+pnpm run bench:all
 ```
 
 ## CLI Usage
@@ -115,6 +121,7 @@ typecarta check-encoding --source json-schema --target zod
 | `@typecarta/adapter-avro` | Avro adapter | core |
 | `@typecarta/adapter-graphql` | GraphQL adapter | core |
 | `@typecarta/adapter-effect-schema` | Effect Schema adapter | core |
+| `@typecarta/adapter-xsd` | XML Schema Definition adapter | core |
 
 ## Architecture
 
@@ -141,6 +148,7 @@ typecarta/
 │   │   ├── avro/                   Avro
 │   │   ├── graphql/                GraphQL
 │   │   ├── effect-schema/          Effect Schema
+│   │   ├── xsd/                    XML Schema Definition
 │   │   └── _template/              Adapter scaffold for new IRs
 │   ├── encoding-check/             Encoding-check runner and report
 │   └── cli/                        Command-line interface
@@ -152,13 +160,13 @@ typecarta/
 │   ├── faq.md                      Frequently asked questions
 │   ├── glossary.md                 Term/symbol quick reference (from §14)
 │   └── architecture.md             High-level architecture overview
-├── examples/                       Runnable example projects
+├── examples/                       Runnable example projects; see examples/README.md
 │   ├── basic-scorecard/            Score an IR with minimal setup
 │   ├── ci-compatibility-gate/      Use TypeCarta as a CI gate
 │   ├── custom-ir/                  Build and register a custom adapter
 │   ├── llm-integration/            Feed scorecard output to an LLM
 │   └── schema-migration/           Detect expressiveness loss during migration
-├── benchmarks/                     Performance benchmarks
+├── benchmarks/                     Benchmark scripts; see benchmarks/README.md
 │   ├── adapter-coverage/
 │   ├── encoding-fidelity/
 │   └── scorecard-perf/

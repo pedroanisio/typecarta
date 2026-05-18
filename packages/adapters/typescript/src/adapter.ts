@@ -170,8 +170,8 @@ function parseTSDescriptor(desc: TSTypeDescriptor): TypeTerm {
 		case "object": {
 			const fields = Object.entries(desc.properties).map(([name, prop]) =>
 				field(name, parseTSDescriptor(prop.type), {
-					optional: prop.optional,
-					readonly: prop.readonly,
+					...(prop.optional !== undefined ? { optional: prop.optional } : {}),
+					...(prop.readonly !== undefined ? { readonly: prop.readonly } : {}),
 				}),
 			);
 			return product(fields);
@@ -363,9 +363,9 @@ function checkStructuralAssignability(a: TypeTerm, b: TypeTerm): boolean {
 	// everything is subtype of top
 	if (b.kind === "top") return true;
 	// top is not subtype of anything except top
-	if (a.kind === "top") return b.kind === "top";
+	if (a.kind === "top") return false;
 	// bottom is supertype of nothing except bottom
-	if (b.kind === "bottom") return a.kind === "bottom";
+	if (b.kind === "bottom") return false;
 
 	// same literal
 	if (a.kind === "literal" && b.kind === "literal") return a.value === b.value;

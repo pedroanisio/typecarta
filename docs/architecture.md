@@ -31,6 +31,7 @@ typecarta/
 │   │   ├── graphql/          @typecarta/adapter-graphql
 │   │   ├── effect-schema/    @typecarta/adapter-effect-schema
 │   │   ├── avro/             @typecarta/adapter-avro
+│   │   ├── xsd/              @typecarta/adapter-xsd
 │   │   └── _template/        Scaffold for new adapters
 │   │
 │   ├── encoding-check/       @typecarta/encoding-check
@@ -44,9 +45,9 @@ typecarta/
 │
 ├── spec/                     Formal specification (CC-BY-SA-4.0)
 ├── docs/                     Documentation
-├── benchmarks/               Performance benchmarks
+├── benchmarks/               Benchmark package; real adapter runs over fixed fixtures
 ├── bin/                      Repo-maintenance scripts
-└── examples/                 Worked examples
+└── examples/                 Worked examples, one package per scenario
 ```
 
 ## Design Principles
@@ -56,6 +57,8 @@ typecarta/
 2. **Core is adapter-agnostic** — `@typecarta/core` has zero runtime dependencies and knows nothing about specific schema languages. Adapters bridge the gap.
 
 3. **Witnesses are data, not code** — Witness schemas are declarative TypeTerm values, not procedural test logic. They can be serialized, diffed, and composed.
+
+4. **Examples and benchmarks are validation surfaces** — Root scripts keep demos and benchmark entrypoints runnable, but they are not substitutes for package tests. Examples demonstrate workflows; benchmarks measure fixed corpora and must document whether an adapter is real or synthetic.
 
 ## Data Flow
 

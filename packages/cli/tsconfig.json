@@ -5,5 +5,5 @@
 		"rootDir": "./src"
 	},
 	"include": ["src/**/*.ts"],
-	"references": [{ "path": "../core" }, { "path": "../witnesses" }]
+	"references": [{ "path": "../core" }, { "path": "../witnesses" }, { "path": "../adapters/xsd" }]
 }

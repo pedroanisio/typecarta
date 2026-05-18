@@ -69,21 +69,25 @@ const userSchemaV1: WitnessEntry[] = [
 	},
 ];
 
-// V2: a breaking change - removed refinement on age, loosened types
+// V2 safe by default. Set TYPECARTA_DEMO_REGRESSION=1 to demonstrate a failing gate.
+const demoRegression = process.env.TYPECARTA_DEMO_REGRESSION === "1";
 const userSchemaV2: WitnessEntry[] = [
 	{
 		criterionId: "pi-04",
 		name: "User (product)",
 		schema: product([
 			field("name", base("string")),
-			field("age", base("number")), // Lost: range refinement
+			field(
+				"age",
+				demoRegression ? base("number") : refinement(base("number"), rangeConstraint(0, 150)),
+			),
 			field("email", base("string")),
 		]),
 	},
 	{
 		criterionId: "pi-10",
 		name: "User age (refinement)",
-		schema: base("number"), // Lost: was refined, now bare number
+		schema: demoRegression ? base("number") : refinement(base("number"), rangeConstraint(0, 150)),
 	},
 	{
 		criterionId: "pi-05",
@@ -119,6 +123,7 @@ function main(): void {
 	const adapter = new JsonSchemaAdapter();
 
 	console.log("=== CI Compatibility Gate ===\n");
+	console.log(`Regression demo: ${demoRegression ? "enabled" : "disabled"}\n`);
 	console.log("Comparing schema versions for regressions...\n");
 
 	const beforeScorecard = evaluateScorecard(adapter, userSchemaV1);

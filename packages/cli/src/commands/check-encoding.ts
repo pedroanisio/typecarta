@@ -4,17 +4,17 @@ import {
 	type Encoding,
 	type EncodingCheckWitnessPair,
 	type IRAdapter,
+	type TypeTerm,
 	apply,
 	array,
 	base,
 	createEncoding,
 	createEvaluator,
+	createExtension,
 	field,
-	forall,
 	getAdapter,
 	product,
 	runEncodingChecks,
-	typeVar,
 } from "@typecarta/core";
 
 /** Build the default witness pairs for width, depth, and generic encoding checks. */
@@ -67,17 +67,19 @@ export async function run(args: string[]): Promise<void> {
 	}
 
 	// Create encoding: source → target
-	const encoding: Encoding = createEncoding((term) => {
-		try {
-			const native = sourceAdapter.encode(term);
-			// Re-parse through target
-			return targetAdapter.parse(native as never);
-		} catch {
-			return term; // fallback: identity
-		}
-	});
-
-	const evaluator = createEvaluator((value, term) => targetAdapter.inhabits(value, term));
+	const encoding: Encoding = createEncoding(
+		sourceAdapter.name,
+		targetAdapter.name,
+		(term: TypeTerm) => {
+			try {
+				const native = sourceAdapter.encode(term);
+				// Re-parse through target
+				return targetAdapter.parse(native as never);
+			} catch {
+				return term; // fallback: identity
+			}
+		},
+	);
 	const testValues = [
 		null,
 		true,
@@ -95,6 +97,9 @@ export async function run(args: string[]): Promise<void> {
 		{},
 		{ name: "x" },
 	];
+	const evaluator = createEvaluator((term) =>
+		createExtension((value) => targetAdapter.inhabits(value, term), testValues),
+	);
 
 	const pairs = getDefaultPairs();
 	const suite = runEncodingChecks(pairs, encoding, evaluator, testValues);

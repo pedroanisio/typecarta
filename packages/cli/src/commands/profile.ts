@@ -2,7 +2,6 @@
 
 import {
 	type CriterionResult,
-	PI_CRITERIA,
 	PI_IDS,
 	PI_PRIME_CRITERIA,
 	PI_PRIME_IDS,

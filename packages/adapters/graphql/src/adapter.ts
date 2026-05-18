@@ -5,17 +5,7 @@
 // library at runtime.
 
 import type { IRAdapter, Signature, TypeTerm } from "@typecarta/core";
-import {
-	array,
-	base,
-	bottom,
-	createSignature,
-	field,
-	literal,
-	product,
-	top,
-	union,
-} from "@typecarta/core";
+import { array, base, createSignature, field, literal, product, top, union } from "@typecarta/core";
 
 // ─── Descriptor types ──────────────────────────────────────────────
 

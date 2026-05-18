@@ -3,11 +3,15 @@
 // @typecarta/cli — Command-line interface.
 // Parse argv and dispatch to the appropriate subcommand handler.
 
+import { registerDefaultAdapters } from "./default-adapters.js";
+
 const args = process.argv.slice(2);
 const command = args[0];
 
 /** Dispatch the CLI subcommand derived from argv. */
 async function main(): Promise<void> {
+	registerDefaultAdapters();
+
 	switch (command) {
 		case "scorecard":
 			await import("./commands/scorecard.js").then((m) => m.run(args.slice(1)));
@@ -24,6 +28,9 @@ async function main(): Promise<void> {
 		case "check-encoding":
 			await import("./commands/check-encoding.js").then((m) => m.run(args.slice(1)));
 			break;
+		case "adapters":
+			await import("./commands/adapters.js").then((m) => m.run(args.slice(1)));
+			break;
 		default:
 			printUsage();
 	}
@@ -35,11 +42,15 @@ function printUsage(): void {
 typecarta — Schema IR Expressiveness Toolkit
 
 Usage:
+  typecarta adapters [--output table|markdown|json]
   typecarta scorecard --adapter <name>
   typecarta compare --left <adapter> --right <adapter> [--output table|json]
   typecarta witness --criterion <pi-NN>
   typecarta profile --schema <file>
   typecarta check-encoding --source <adapter> --target <adapter>
+
+Tip:
+  Run \`typecarta adapters\` to see registered adapter names.
 
 Options:
   --help    Show this help message

@@ -1,5 +1,7 @@
 packages:
   - "packages/*"
   - "packages/adapters/*"
+  - "!packages/adapters/_template"
+  - "benchmarks"
   - "benchmarks/*"
   - "examples/*"

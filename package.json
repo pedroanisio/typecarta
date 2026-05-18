@@ -9,7 +9,9 @@
 		"test": "turbo run test",
 		"check": "biome check .",
 		"clean": "turbo run clean",
-		"docs": "typedoc"
+		"docs": "typedoc",
+		"bench:all": "pnpm --filter @typecarta/benchmarks run bench:all",
+		"examples:smoke": "pnpm --filter @typecarta/example-basic-scorecard run smoke && pnpm --filter @typecarta/example-ci-compatibility-gate run smoke && pnpm --filter @typecarta/example-custom-ir run smoke && pnpm --filter @typecarta/example-llm-integration run smoke && pnpm --filter @typecarta/example-schema-migration run smoke"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.0",

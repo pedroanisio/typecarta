@@ -2,27 +2,11 @@
  * Benchmark: Wall-clock scorecard evaluation
  *
  * Measures the time to evaluate a scorecard for the JSON Schema adapter
- * across all 15 base criteria. Runs multiple iterations and reports
- * mean and standard deviation.
+ * across the 15 base criteria and the fixed witness corpus.
  */
 
-import {
-	type IRAdapter,
-	PI_CRITERIA,
-	type Signature,
-	type TypeTerm,
-	array,
-	base,
-	bottom,
-	clearAdapters,
-	createSignature,
-	evaluateScorecard,
-	field,
-	product,
-	registerAdapter,
-	top,
-	union,
-} from "@typecarta/core";
+import { JsonSchemaAdapter } from "@typecarta/adapter-json-schema";
+import { PI_CRITERIA, evaluateScorecard } from "@typecarta/core";
 import type { WitnessEntry } from "@typecarta/core";
 import { DIVERSE_SCHEMAS, type WitnessSchema } from "@typecarta/witnesses";
 
@@ -39,42 +23,13 @@ function toWitnessEntries(schemas: readonly WitnessSchema[]): WitnessEntry[] {
 	}));
 }
 
-// ── Mock adapter for benchmarking ──────────────────────────────────
-const MOCK_SIGNATURE: Signature = createSignature(
-	["string", "number", "boolean", "null"],
-	[
-		{ name: "product", arity: 1 },
-		{ name: "array", arity: 1 },
-		{ name: "union", arity: 2 },
-	],
-);
-
-const mockAdapter: IRAdapter = {
-	name: "Mock Adapter (benchmark)",
-	signature: MOCK_SIGNATURE,
-
-	parse(_source: unknown): TypeTerm {
-		return top();
-	},
-
-	encode(term: TypeTerm): unknown {
-		return { encoded: term.kind };
-	},
-
-	isEncodable(_term: TypeTerm): boolean {
-		return true;
-	},
-
-	inhabits(_value: unknown, _term: TypeTerm): boolean {
-		return true;
-	},
-};
-
 // ── Benchmark runner ───────────────────────────────────────────────
 function runBenchmark(): void {
+	const adapter = new JsonSchemaAdapter();
 	const witnesses = toWitnessEntries(DIVERSE_SCHEMAS);
 
 	console.log("=== Scorecard Performance Benchmark ===");
+	console.log(`Adapter:        ${adapter.name}`);
 	console.log(`Criteria count: ${PI_CRITERIA.length}`);
 	console.log(`Witness count:  ${witnesses.length}`);
 	console.log(`Iterations:     ${ITERATIONS} (+ ${WARMUP_ITERATIONS} warmup)`);
@@ -82,14 +37,14 @@ function runBenchmark(): void {
 
 	// Warmup
 	for (let i = 0; i < WARMUP_ITERATIONS; i++) {
-		evaluateScorecard(mockAdapter, witnesses);
+		evaluateScorecard(adapter, witnesses);
 	}
 
 	// Timed runs
 	const timings: number[] = [];
 	for (let i = 0; i < ITERATIONS; i++) {
 		const start = performance.now();
-		evaluateScorecard(mockAdapter, witnesses);
+		evaluateScorecard(adapter, witnesses);
 		const elapsed = performance.now() - start;
 		timings.push(elapsed);
 	}

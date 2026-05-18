@@ -132,7 +132,9 @@ function parseEffectSchemaDescriptor(desc: EffectSchemaDescriptor): TypeTerm {
 			return base("undefined");
 		case "struct": {
 			const fields = Object.entries(desc.fields).map(([name, f]) =>
-				field(name, parseEffectSchemaDescriptor(f.schema), { optional: f.optional }),
+				field(name, parseEffectSchemaDescriptor(f.schema), {
+					...(f.optional !== undefined ? { optional: f.optional } : {}),
+				}),
 			);
 			return product(fields);
 		}

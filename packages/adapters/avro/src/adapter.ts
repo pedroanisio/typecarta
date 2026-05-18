@@ -274,12 +274,14 @@ function checkApplyInhabitation(
 			}
 			return true;
 		}
-		case "array":
+		case "array": {
+			const elementType = term.args[0];
 			return (
 				Array.isArray(value) &&
-				term.args[0] !== undefined &&
-				value.every((v) => checkInhabitation(v, term.args[0]))
+				elementType !== undefined &&
+				value.every((v) => checkInhabitation(v, elementType))
 			);
+		}
 		case "union":
 			return term.args.some((a) => checkInhabitation(value, a));
 		case "map": {

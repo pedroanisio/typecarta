@@ -8,7 +8,6 @@ import type { IRAdapter, Signature, TypeTerm } from "@typecarta/core";
 import {
 	array,
 	base,
-	bottom,
 	createSignature,
 	field,
 	literal,
@@ -163,7 +162,9 @@ function parseProtobufDescriptor(desc: ProtobufDescriptor): TypeTerm {
 			return base(scalarToBase(desc.scalar));
 		case "message": {
 			const fields = desc.fields.map((f) =>
-				field(f.name, parseProtobufDescriptor(f.type), { optional: f.optional }),
+				field(f.name, parseProtobufDescriptor(f.type), {
+					...(f.optional !== undefined ? { optional: f.optional } : {}),
+				}),
 			);
 			return product(fields);
 		}

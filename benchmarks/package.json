@@ -4,10 +4,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"bench:scorecard": "npx tsx scorecard-perf/index.ts",
-		"bench:coverage": "npx tsx adapter-coverage/index.ts",
-		"bench:fidelity": "npx tsx encoding-fidelity/index.ts",
-		"bench:all": "npm run bench:scorecard && npm run bench:coverage && npm run bench:fidelity"
+		"bench:scorecard": "tsx scorecard-perf/index.ts",
+		"bench:coverage": "tsx adapter-coverage/index.ts",
+		"bench:fidelity": "tsx encoding-fidelity/index.ts",
+		"bench:all": "pnpm run bench:scorecard && pnpm run bench:coverage && pnpm run bench:fidelity",
+		"smoke": "pnpm run bench:all"
 	},
 	"dependencies": {
 		"@typecarta/core": "workspace:*",
