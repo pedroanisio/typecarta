@@ -21,8 +21,8 @@ import {
 	FAMILY_T,
 	FAMILY_U,
 	FAMILY_V,
-	PI_PRIME_CRITERIA,
-	PI_PRIME_IDS,
+	CRITERIA,
+	CRITERION_IDS,
 	andPredicate,
 	array,
 	arrow,
@@ -34,8 +34,8 @@ import {
 	extension,
 	field,
 	forall,
-	getPiPrimeCriterion,
-	getPiPrimeRegistry,
+	getCriterion,
+	getCriterionRegistry,
 	intersection,
 	keyOf,
 	letBinding,
@@ -46,7 +46,7 @@ import {
 	multipleOfConstraint,
 	nominal,
 	patternConstraint,
-	piPrimeRegistrySize,
+	criterionRegistrySize,
 	product,
 	rangeConstraint,
 	refinement,
@@ -62,30 +62,30 @@ import { describe, expect, it } from "vitest";
 
 describe("Π' expanded criterion set", () => {
 	it("has exactly 70 criteria registered", () => {
-		expect(PI_PRIME_CRITERIA.length).toBe(70);
-		expect(piPrimeRegistrySize()).toBe(70);
+		expect(CRITERIA.length).toBe(70);
+		expect(criterionRegistrySize()).toBe(70);
 	});
 
 	it("has 70 unique IDs", () => {
-		const ids = PI_PRIME_CRITERIA.map((c) => c.id);
+		const ids = CRITERIA.map((c) => c.id);
 		expect(new Set(ids).size).toBe(70);
 	});
 
-	it("all IDs are valid PI_PRIME_IDS", () => {
-		for (const c of PI_PRIME_CRITERIA) {
-			expect(PI_PRIME_IDS).toContain(c.id);
+	it("all IDs are valid CRITERION_IDS", () => {
+		for (const c of CRITERIA) {
+			expect(CRITERION_IDS).toContain(c.id);
 		}
 	});
 
 	it("registry lookup works", () => {
-		const c = getPiPrimeCriterion("pi-prime-01");
+		const c = getCriterion("pi-prime-01");
 		expect(c).toBeDefined();
 		expect(c!.name).toBe("Syntactic Bottom");
 		expect(c!.family).toBe("A");
 	});
 
-	it("getPiPrimeRegistry returns all 70", () => {
-		const reg = getPiPrimeRegistry();
+	it("getCriterionRegistry returns all 70", () => {
+		const reg = getCriterionRegistry();
 		expect(reg.size).toBe(70);
 	});
 });

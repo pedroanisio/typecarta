@@ -1,9 +1,9 @@
 import { collect } from "../../ast/traversal.js";
 /** Family R — Unsound / Bivariant (π'₆₀). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_R: readonly PiPrimeCriterion[] = [
+export const FAMILY_R: readonly Criterion[] = [
 	{
 		id: "pi-prime-60",
 		name: "Unsound Bivariant Type",

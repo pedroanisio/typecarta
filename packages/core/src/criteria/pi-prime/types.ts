@@ -1,12 +1,27 @@
 /**
- * Expanded criterion set Π' — 70 criteria across 22 families (§12).
+ * Criterion types — the unified 70-criterion set Π (spec §8.5, §12).
+ *
+ * The `core: true` flag identifies the 15-criterion canonical subset Π_core (spec §9).
+ *
+ * Identifier strings retain the `pi-prime-NN` form for stability per ADR-006;
+ * the `-prime-` infix is historical and no longer denotes a distinct set.
  */
 
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { MetaTag } from "../types.js";
 
-/** All Π' criterion IDs. */
-export const PI_PRIME_IDS = [
+/**
+ * Tag a criterion that requires enriched semantics beyond standard denotation.
+ *
+ * @remarks
+ * Criteria tagged with a MetaTag depend on adapter capabilities outside
+ * the core ⟦τ⟧ ⊆ V model: operational subtyping (meta-op), implicit
+ * coercion (meta-coerce), multi-schema (meta-multi), or annotation
+ * preservation (meta-annot).
+ */
+export type MetaTag = "meta-op" | "meta-coerce" | "meta-multi" | "meta-annot";
+
+/** All criterion IDs (70 total). */
+export const CRITERION_IDS = [
 	"pi-prime-01",
 	"pi-prime-02",
 	"pi-prime-03",
@@ -79,10 +94,10 @@ export const PI_PRIME_IDS = [
 	"pi-prime-70",
 ] as const;
 
-/** A Π' criterion identifier. */
-export type PiPrimeId = (typeof PI_PRIME_IDS)[number];
+/** A criterion identifier. */
+export type CriterionId = (typeof CRITERION_IDS)[number];
 
-/** Family identifiers for Π' criteria. */
+/** Family identifiers (22 families A–V). */
 export type CriterionFamily =
 	| "A"
 	| "B"
@@ -107,24 +122,24 @@ export type CriterionFamily =
 	| "U"
 	| "V";
 
-/** Result of evaluating a Π' criterion. */
-export type PiPrimeCriterionResult =
+/** Result of evaluating a criterion against a type term. */
+export type CriterionResult =
 	| { readonly status: "satisfied"; readonly witness?: TypeTerm }
 	| { readonly status: "not-satisfied"; readonly reason?: string }
 	| { readonly status: "undecidable"; readonly reason: string };
 
-/** A Π' criterion predicate. */
-export interface PiPrimeCriterion {
-	readonly id: PiPrimeId;
+/** A criterion predicate (spec Def. 8.1). */
+export interface Criterion {
+	readonly id: CriterionId;
 	readonly name: string;
 	readonly description: string;
 	readonly family: CriterionFamily;
 	readonly meta?: MetaTag;
-	/** The base Π criterion this refines, if any. */
-	readonly refines?: string;
+	/** Marks the canonical core subset Π_core (15 criteria). Filtered by `--filter core` on the CLI. */
+	readonly core?: boolean;
 	/** Evaluate the criterion against a type term. */
-	evaluate(term: TypeTerm): PiPrimeCriterionResult;
+	evaluate(term: TypeTerm): CriterionResult;
 }
 
-/** Registry mapping Π' IDs to criterion predicates. */
-export type PiPrimeRegistry = ReadonlyMap<PiPrimeId, PiPrimeCriterion>;
+/** Registry mapping criterion IDs to predicates. */
+export type CriterionRegistry = ReadonlyMap<CriterionId, Criterion>;

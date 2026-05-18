@@ -1,12 +1,13 @@
 // Terminal output formatter — render scorecards as colored, family-grouped tables.
 
 import type { CellValue, ScorecardComparison, ScorecardResult } from "@typecarta/core";
-import { PI_CRITERIA, PI_PRIME_CRITERIA } from "@typecarta/core";
+import { CRITERIA } from "@typecarta/core";
 
 const RESET = "\x1b[0m";
 const GREEN = "\x1b[32m";
 const YELLOW = "\x1b[33m";
 const RED = "\x1b[31m";
+const GRAY = "\x1b[90m";
 const BOLD = "\x1b[1m";
 const DIM = "\x1b[2m";
 
@@ -16,12 +17,11 @@ interface CriterionMeta {
 	readonly family?: string;
 }
 
-const CRITERIA_BY_ID: ReadonlyMap<string, CriterionMeta> = new Map([
-	...PI_CRITERIA.map((c) => [c.id, { id: c.id, name: c.name }] as const),
-	...PI_PRIME_CRITERIA.map(
+const CRITERIA_BY_ID: ReadonlyMap<string, CriterionMeta> = new Map(
+	CRITERIA.map(
 		(c) => [c.id, { id: c.id, name: c.name, family: c.family }] as const,
 	),
-]);
+);
 
 const FAMILY_TITLES: ReadonlyMap<string, string> = new Map([
 	["A", "Cardinality and Base-Set Structure"],
@@ -48,8 +48,6 @@ const FAMILY_TITLES: ReadonlyMap<string, string> = new Map([
 	["V", "Temporal / Stateful"],
 ]);
 
-const CORE_GROUP_LABEL = "Π core (15 criteria)";
-
 function colorize(value: CellValue): string {
 	switch (value) {
 		case "✓":
@@ -58,6 +56,8 @@ function colorize(value: CellValue): string {
 			return `${YELLOW}◐${RESET}`;
 		case "✗":
 			return `${RED}✗${RESET}`;
+		case "n/a":
+			return `${GRAY}·${RESET}`;
 	}
 }
 
@@ -84,7 +84,7 @@ function buildRows(result: ScorecardResult): readonly Row[] {
 		const family = meta?.family;
 		const group = family
 			? `Family ${family} · ${FAMILY_TITLES.get(family) ?? ""}`.trimEnd()
-			: CORE_GROUP_LABEL;
+			: "Uncategorized";
 		rows.push({
 			id,
 			name: meta?.name ?? "",
@@ -106,16 +106,24 @@ function groupBy(rows: readonly Row[]): ReadonlyMap<string, readonly Row[]> {
 	return groups;
 }
 
-function progressBar(satisfied: number, partial: number, missing: number, width = 30): string {
-	const total = satisfied + partial + missing;
+function progressBar(
+	satisfied: number,
+	partial: number,
+	missing: number,
+	outOfVocabulary: number,
+	width = 30,
+): string {
+	const total = satisfied + partial + missing + outOfVocabulary;
 	if (total === 0) return "";
 	const sCount = Math.round((satisfied / total) * width);
 	const pCount = Math.round((partial / total) * width);
-	const mCount = Math.max(0, width - sCount - pCount);
+	const mCount = Math.round((missing / total) * width);
+	const nCount = Math.max(0, width - sCount - pCount - mCount);
 	return (
 		`${GREEN}${"✓".repeat(sCount)}${RESET}` +
 		`${YELLOW}${"◐".repeat(pCount)}${RESET}` +
-		`${RED}${"✗".repeat(mCount)}${RESET}`
+		`${RED}${"✗".repeat(mCount)}${RESET}` +
+		`${GRAY}${"·".repeat(nCount)}${RESET}`
 	);
 }
 
@@ -124,16 +132,30 @@ function percent(numerator: number, total: number): string {
 	return `${Math.round((numerator / total) * 100)}%`;
 }
 
-function renderSummary(result: ScorecardResult, modeLabel: string): string[] {
-	const { satisfied, partial, notSatisfied } = result.totals;
-	const total = satisfied + partial + notSatisfied;
+function renderSummary(result: ScorecardResult, scopeLabel: string): string[] {
+	const { satisfied, partial, notSatisfied, outOfVocabulary } = result.totals;
+	const total = satisfied + partial + notSatisfied + outOfVocabulary;
 	const lines: string[] = [];
-	lines.push(`${BOLD}Scorecard: ${result.adapterName}${RESET}   ${DIM}[${modeLabel} · ${total} criteria]${RESET}`);
-	lines.push("");
-	lines.push(`  ${DIM}Coverage${RESET}   ${progressBar(satisfied, partial, notSatisfied)}`);
 	lines.push(
-		`  ${BOLD}Totals:${RESET}   ${GREEN}✓ ${satisfied}${RESET}  ${YELLOW}◐ ${partial}${RESET}  ${RED}✗ ${notSatisfied}${RESET}` +
-			`   ${DIM}→  ${percent(satisfied, total)} satisfied · ${percent(partial, total)} partial · ${percent(notSatisfied, total)} missing${RESET}`,
+		`${BOLD}Scorecard: ${result.adapterName}${RESET}   ${DIM}[${scopeLabel}]${RESET}`,
+	);
+	if (result.provenance) {
+		const { typecartaVersion, commitHash, generatedAt } = result.provenance;
+		lines.push(
+			`${DIM}typecarta ${typecartaVersion} · commit ${commitHash} · generated ${generatedAt}${RESET}`,
+		);
+	}
+	lines.push("");
+	lines.push(
+		`  ${DIM}Coverage${RESET}   ${progressBar(satisfied, partial, notSatisfied, outOfVocabulary)}`,
+	);
+	const naSegment =
+		outOfVocabulary > 0 ? `  ${GRAY}· ${outOfVocabulary}${RESET}` : "";
+	const naPercentSegment =
+		outOfVocabulary > 0 ? ` · ${percent(outOfVocabulary, total)} n/a` : "";
+	lines.push(
+		`  ${BOLD}Totals:${RESET}   ${GREEN}✓ ${satisfied}${RESET}  ${YELLOW}◐ ${partial}${RESET}  ${RED}✗ ${notSatisfied}${RESET}${naSegment}` +
+			`   ${DIM}→  ${percent(satisfied, total)} satisfied · ${percent(partial, total)} partial · ${percent(notSatisfied, total)} missing${naPercentSegment}${RESET}`,
 	);
 	return lines;
 }
@@ -142,22 +164,33 @@ function tallyGroup(group: readonly Row[]): {
 	readonly satisfied: number;
 	readonly partial: number;
 	readonly missing: number;
+	readonly outOfVocabulary: number;
 } {
 	let satisfied = 0;
 	let partial = 0;
 	let missing = 0;
+	let outOfVocabulary = 0;
 	for (const row of group) {
 		if (row.value === "✓") satisfied++;
 		else if (row.value === "partial") partial++;
+		else if (row.value === "n/a") outOfVocabulary++;
 		else missing++;
 	}
-	return { satisfied, partial, missing };
+	return { satisfied, partial, missing, outOfVocabulary };
 }
 
-function renderGroup(title: string, rows: readonly Row[], idWidth: number, nameWidth: number): string[] {
+function renderGroup(
+	title: string,
+	rows: readonly Row[],
+	idWidth: number,
+	nameWidth: number,
+): string[] {
 	const lines: string[] = [];
 	const tally = tallyGroup(rows);
-	const tallyStr = `${tally.satisfied}/${tally.partial}/${tally.missing}`;
+	const tallyStr =
+		tally.outOfVocabulary > 0
+			? `${tally.satisfied}/${tally.partial}/${tally.missing}/${tally.outOfVocabulary}`
+			: `${tally.satisfied}/${tally.partial}/${tally.missing}`;
 	const header = `── ${title} `;
 	const filler = "─".repeat(Math.max(2, 70 - header.length - tallyStr.length - 2));
 	lines.push("");
@@ -179,13 +212,15 @@ function renderGroup(title: string, rows: readonly Row[], idWidth: number, nameW
 export function renderTerminal(result: ScorecardResult): string {
 	const rows = buildRows(result);
 	const total = result.totals.satisfied + result.totals.partial + result.totals.notSatisfied;
-	const modeLabel = total > 15 ? "full mode" : "core mode";
+	const universe = CRITERIA.length;
+	const scopeLabel =
+		total < universe ? `${total} of ${universe} · core subset` : `${universe} criteria`;
 
 	const idWidth = Math.max(2, ...rows.map((r) => r.id.length));
 	const nameWidth = Math.max(4, ...rows.map((r) => r.name.length));
 
 	const lines: string[] = [];
-	lines.push(...renderSummary(result, modeLabel));
+	lines.push(...renderSummary(result, scopeLabel));
 
 	const groups = groupBy(rows);
 	for (const [title, groupRows] of groups) {
@@ -193,7 +228,9 @@ export function renderTerminal(result: ScorecardResult): string {
 	}
 
 	lines.push("");
-	lines.push(`${DIM}Legend: ✓ satisfied · ◐ partial · ✗ missing · totals shown per group as ✓/◐/✗${RESET}`);
+	lines.push(
+		`${DIM}Legend: ✓ satisfied · ◐ partial · ✗ missing · · n/a (adapter does not model IR kind) · totals shown per group as ✓/◐/✗ (/·)${RESET}`,
+	);
 	return lines.join("\n");
 }
 
@@ -209,10 +246,7 @@ export function renderTerminalComparison(comparison: ScorecardComparison): strin
 
 	const ids = [...new Set([...comparison.left.cells.keys(), ...comparison.right.cells.keys()])];
 	const idWidth = Math.max(2, ...ids.map((id) => id.length));
-	const nameWidth = Math.max(
-		4,
-		...ids.map((id) => (CRITERIA_BY_ID.get(id)?.name ?? "").length),
-	);
+	const nameWidth = Math.max(4, ...ids.map((id) => (CRITERIA_BY_ID.get(id)?.name ?? "").length));
 	const colWidth = Math.max(leftName.length, rightName.length, 6);
 
 	const lines: string[] = [];

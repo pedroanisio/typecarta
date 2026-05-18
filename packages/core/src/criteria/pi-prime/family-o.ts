@@ -1,9 +1,9 @@
 import { collect } from "../../ast/traversal.js";
 /** Family O — Evolution & Compatibility [meta-annot] (π'₅₃–π'₅₅). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_O: readonly PiPrimeCriterion[] = [
+export const FAMILY_O: readonly Criterion[] = [
 	{
 		id: "pi-prime-53",
 		name: "Deprecation Annotation",

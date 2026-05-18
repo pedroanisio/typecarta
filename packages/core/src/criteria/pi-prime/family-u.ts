@@ -1,9 +1,9 @@
 import { collect } from "../../ast/traversal.js";
 /** Family U — Row Polymorphism (π'₆₆). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_U: readonly PiPrimeCriterion[] = [
+export const FAMILY_U: readonly Criterion[] = [
 	{
 		id: "pi-prime-66",
 		name: "Row-Polymorphic Record",

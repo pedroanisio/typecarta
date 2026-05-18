@@ -1,12 +1,9 @@
-// profile — Analyze a schema and report which base and expanded criteria it exercises.
+// profile — Analyze a schema and report which criteria it exercises.
 
 import {
+	CRITERIA,
+	CRITERION_IDS,
 	type CriterionResult,
-	PI_IDS,
-	PI_PRIME_CRITERIA,
-	PI_PRIME_IDS,
-	PI_REGISTRY,
-	type PiPrimeCriterionResult,
 	getAdapter,
 	printTerm,
 } from "@typecarta/core";
@@ -29,7 +26,6 @@ export async function run(args: string[]): Promise<void> {
 	const schemaPath = args[schemaIdx + 1]!;
 	const adapterName = adapterIdx !== -1 ? args[adapterIdx + 1] : undefined;
 
-	// Load schema file
 	const fs = await import("node:fs");
 	if (!fs.existsSync(schemaPath)) {
 		console.error(`File not found: ${schemaPath}`);
@@ -46,7 +42,6 @@ export async function run(args: string[]): Promise<void> {
 		return;
 	}
 
-	// Parse via adapter if provided
 	const adapter = adapterName ? getAdapter(adapterName) : undefined;
 	if (adapterName && !adapter) {
 		console.error(`Adapter "${adapterName}" not found.`);
@@ -64,29 +59,22 @@ export async function run(args: string[]): Promise<void> {
 	console.log(`AST:    ${printTerm(term)}`);
 	console.log("");
 
-	// Evaluate base criteria Π
-	console.log("## Base Criteria (Π)");
+	console.log("## Criteria");
 	console.log("");
-	let piSatisfied = 0;
-	for (const id of PI_IDS) {
-		const criterion = PI_REGISTRY.get(id);
-		if (!criterion) continue;
+	let satisfied = 0;
+	let coreSatisfied = 0;
+	let coreTotal = 0;
+	for (const criterion of CRITERIA) {
 		const result: CriterionResult = criterion.evaluate(term);
 		const icon = result.status === "satisfied" ? "✓" : result.status === "undecidable" ? "?" : "✗";
-		if (result.status === "satisfied") piSatisfied++;
-		console.log(`  ${icon} ${id} ${criterion.name}`);
+		const coreTag = criterion.core ? " [core]" : "";
+		if (result.status === "satisfied") satisfied++;
+		if (criterion.core) {
+			coreTotal++;
+			if (result.status === "satisfied") coreSatisfied++;
+		}
+		console.log(`  ${icon} ${criterion.id} ${criterion.name} [${criterion.family}]${coreTag}`);
 	}
-	console.log(`\n  ${piSatisfied}/${PI_IDS.length} base criteria satisfied.\n`);
-
-	// Evaluate expanded criteria Π'
-	console.log("## Expanded Criteria (Π')");
 	console.log("");
-	let ppSatisfied = 0;
-	for (const criterion of PI_PRIME_CRITERIA) {
-		const result: PiPrimeCriterionResult = criterion.evaluate(term);
-		const icon = result.status === "satisfied" ? "✓" : result.status === "undecidable" ? "?" : "✗";
-		if (result.status === "satisfied") ppSatisfied++;
-		console.log(`  ${icon} ${criterion.id} ${criterion.name} [${criterion.family}]`);
-	}
-	console.log(`\n  ${ppSatisfied}/${PI_PRIME_IDS.length} expanded criteria satisfied.`);
+	console.log(`  ${satisfied}/${CRITERION_IDS.length} criteria satisfied (${coreSatisfied}/${coreTotal} core).`);
 }

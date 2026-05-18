@@ -5,19 +5,20 @@
  */
 
 export {
-	PI_PRIME_IDS,
-	type PiPrimeId,
+	CRITERION_IDS,
+	type CriterionId,
 	type CriterionFamily,
-	type PiPrimeCriterionResult,
-	type PiPrimeCriterion,
-	type PiPrimeRegistry,
+	type CriterionResult,
+	type Criterion,
+	type CriterionRegistry,
+	type MetaTag,
 } from "./types.js";
 
 export {
-	registerPiPrimeCriterion,
-	getPiPrimeRegistry,
-	getPiPrimeCriterion,
-	piPrimeRegistrySize,
+	registerCriterion,
+	getCriterionRegistry,
+	getCriterion,
+	criterionRegistrySize,
 } from "./registry.js";
 
 import { FAMILY_A } from "./family-a.js";
@@ -43,10 +44,10 @@ import { FAMILY_T } from "./family-t.js";
 import { FAMILY_U } from "./family-u.js";
 import { FAMILY_V } from "./family-v.js";
 // ─── Import and register all 22 families ───────────────────────────
-import { registerPiPrimeCriterion } from "./registry.js";
+import { registerCriterion } from "./registry.js";
 
-/** All 70 Π' criteria in one flat array (ordered by family then ID). */
-export const PI_PRIME_CRITERIA = [
+/** All 70 criteria in one flat array (ordered by family then ID). */
+export const CRITERIA = [
 	...FAMILY_A,
 	...FAMILY_B,
 	...FAMILY_C,
@@ -71,9 +72,15 @@ export const PI_PRIME_CRITERIA = [
 	...FAMILY_V,
 ] as const;
 
+/** The 15-criterion canonical core subset (formerly Π). */
+export const CORE_CRITERIA = CRITERIA.filter((c) => c.core === true);
+
+/** Identifiers of the 15-criterion canonical core subset. */
+export const CORE_IDS = CORE_CRITERIA.map((c) => c.id);
+
 // Auto-register all criteria
-for (const criterion of PI_PRIME_CRITERIA) {
-	registerPiPrimeCriterion(criterion);
+for (const criterion of CRITERIA) {
+	registerCriterion(criterion);
 }
 
 export {

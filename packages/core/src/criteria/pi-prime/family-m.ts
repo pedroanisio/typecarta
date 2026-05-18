@@ -1,9 +1,9 @@
 import { collect } from "../../ast/traversal.js";
 /** Family M — Computation Types (π'₄₈–π'₄₉). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_M: readonly PiPrimeCriterion[] = [
+export const FAMILY_M: readonly Criterion[] = [
 	{
 		id: "pi-prime-48",
 		name: "Function / Arrow Type",

@@ -1,26 +1,10 @@
 // witnesses
-// Barrel export for all witness schema families: pi, pi-prime, and encoding-check.
+// Barrel export for witness schemas: the unified Π' set, the 15-criterion
+// core subset, and encoding-check pairs.
 
-export { DIVERSE_SCHEMAS, type WitnessSchema } from "./pi/index.js";
-export {
-	S01_BOTTOM,
-	S02_TOP,
-	S03_UNIT,
-	S04_PRODUCT,
-	S05_SUM,
-	S06_INTERSECTION,
-	S07_DIRECT_REC,
-	S08_MUTUAL_REC,
-	S09_PARAMETRIC,
-	S10_REFINEMENT,
-	S11_OPTIONALITY,
-	S12_NOMINAL,
-	S13_OPEN_SHAPE,
-	S14_DEPENDENT,
-	S15_HKT,
-} from "./pi/index.js";
+export { ALL_WITNESSES, type WitnessSchema } from "./pi-prime/index.js";
+export { CORE_SCHEMAS, type CoreWitnessSchema } from "./core/index.js";
 
-export { DIVERSE_PRIME_SCHEMAS, type WitnessPrimeSchema } from "./pi-prime/index.js";
 export {
 	SP01_SYNTACTIC_BOTTOM,
 	SP02_SEMANTIC_EMPTINESS,

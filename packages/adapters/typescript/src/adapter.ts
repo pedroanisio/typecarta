@@ -74,6 +74,14 @@ const TS_SIGNATURE: Signature = createSignature(
 	],
 );
 
+const TS_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
+	"bottom",
+	"top",
+	"literal",
+	"base",
+	"apply",
+]);
+
 // ─── Adapter class — IRAdapter implementation for TypeScript descriptors ──
 
 /** Adapt TypeScript type descriptors to and from the typecarta IR. */
@@ -115,6 +123,10 @@ export class TypeScriptAdapter implements IRAdapter<Signature, TSTypeDescriptor>
 		} catch {
 			return false;
 		}
+	}
+
+	supportsKind(kind: TypeTerm["kind"]): boolean {
+		return TS_SUPPORTED_KINDS.has(kind);
 	}
 
 	/**

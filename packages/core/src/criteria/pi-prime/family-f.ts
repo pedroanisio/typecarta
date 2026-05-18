@@ -1,14 +1,14 @@
 import { collect } from "../../ast/traversal.js";
 /** Family F — Intersection (π'₂₃–π'₂₄). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_F: readonly PiPrimeCriterion[] = [
+export const FAMILY_F: readonly Criterion[] = [
 	{
 		id: "pi-prime-23",
+		core: true,
 		name: "Record-Merge Intersection",
 		family: "F",
-		refines: "pi-06",
 		description: "Intersection where both operands contribute structural fields",
 		evaluate(term: TypeTerm) {
 			function isRecordMerge(n: TypeTerm): boolean {

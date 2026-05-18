@@ -120,33 +120,24 @@ export type {
 } from "./semantics/denotation.js";
 export { denote } from "./semantics/denotation.js";
 
-// -- § 3  Criteria -- criterion predicates and the Pi registry --
+// -- § 3  Criteria -- unified criterion set Π (spec §8.5), with `core` subset flag --
 export type {
-	PiId,
 	CriterionId,
-	MetaTag,
-	CriterionResult,
-	CriterionPredicate,
-	CriterionRegistry,
-} from "./criteria/types.js";
-export { PI_IDS } from "./criteria/types.js";
-export { PI_CRITERIA, PI_REGISTRY } from "./criteria/pi/index.js";
-
-// -- § 4  Criteria Pi-Prime -- expanded criterion families and registry --
-export type {
-	PiPrimeId,
 	CriterionFamily,
-	PiPrimeCriterionResult,
-	PiPrimeCriterion,
-	PiPrimeRegistry,
+	CriterionResult,
+	Criterion,
+	CriterionRegistry,
+	MetaTag,
 } from "./criteria/pi-prime/index.js";
 export {
-	PI_PRIME_IDS,
-	PI_PRIME_CRITERIA,
-	registerPiPrimeCriterion,
-	getPiPrimeRegistry,
-	getPiPrimeCriterion,
-	piPrimeRegistrySize,
+	CRITERION_IDS,
+	CRITERIA,
+	CORE_CRITERIA,
+	CORE_IDS,
+	registerCriterion,
+	getCriterionRegistry,
+	getCriterion,
+	criterionRegistrySize,
 	FAMILY_A,
 	FAMILY_B,
 	FAMILY_C,
@@ -194,13 +185,15 @@ export type {
 	ScorecardCell,
 	ScorecardResult,
 	ScorecardTotals,
+	ScorecardProvenance,
 	ScorecardComparison,
 	ScorecardDiff,
 } from "./scorecard/types.js";
-export { evaluateScorecard, evaluatePrimeScorecard } from "./scorecard/evaluate.js";
+export { evaluateScorecard } from "./scorecard/evaluate.js";
 export type { WitnessEntry } from "./scorecard/evaluate.js";
 export { compareScorecards } from "./scorecard/compare.js";
 export { renderMarkdown, renderJSON, renderComparisonMarkdown } from "./scorecard/render.js";
+export { createProvenance } from "./scorecard/provenance.js";
 
 // -- § 7  Encoding-Check -- width, depth, and generic preservation checks --
 export type { EncodingCheckPropertyId, EncodingCheckResult } from "./encoding-check/types.js";

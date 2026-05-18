@@ -56,6 +56,14 @@ const EFFECT_SCHEMA_SIGNATURE: Signature = createSignature(
 	],
 );
 
+const EFFECT_SCHEMA_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
+	"bottom",
+	"top",
+	"literal",
+	"base",
+	"apply",
+]);
+
 // ─── Adapter class ─────────────────────────────────────────────────
 
 /** Convert between Effect Schema descriptors and the typecarta IR. */
@@ -93,6 +101,10 @@ export class EffectSchemaAdapter implements IRAdapter<Signature, EffectSchemaDes
 		} catch {
 			return false;
 		}
+	}
+
+	supportsKind(kind: TypeTerm["kind"]): boolean {
+		return EFFECT_SCHEMA_SUPPORTED_KINDS.has(kind);
 	}
 
 	/**

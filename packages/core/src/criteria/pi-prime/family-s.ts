@@ -2,9 +2,9 @@ import { freeVars } from "../../ast/free-vars.js";
 import { collect } from "../../ast/traversal.js";
 /** Family S — Phantom & Indexed (π'₆₁–π'₆₂). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_S: readonly PiPrimeCriterion[] = [
+export const FAMILY_S: readonly Criterion[] = [
 	{
 		id: "pi-prime-61",
 		name: "Phantom Type Parameter",

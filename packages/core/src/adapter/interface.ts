@@ -23,6 +23,16 @@ export interface IRAdapter<Sig extends Signature = Signature, Native = unknown> 
 	isEncodable(term: TypeTerm): boolean;
 
 	/**
+	 * Declare which IR `TypeTerm` kinds this adapter's encoder models at all.
+	 *
+	 * Returning `false` means "the adapter has no path to encode this kind" —
+	 * distinct from "encoded but the target language can't preserve it." The
+	 * scorecard uses this to separate adapter holes from genuine language
+	 * gaps. When omitted, every kind is assumed supported.
+	 */
+	supportsKind?(kind: TypeTerm["kind"]): boolean;
+
+	/**
 	 * Semantic evaluator: does value v inhabit type term τ?
 	 * Used for extension-equality checking.
 	 */

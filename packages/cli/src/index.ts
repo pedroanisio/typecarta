@@ -43,14 +43,16 @@ typecarta — Schema IR Expressiveness Toolkit
 
 Usage:
   typecarta adapters [--output table|markdown|json]
-  typecarta scorecard --adapter <name>
+  typecarta scorecard --adapter <name> [--filter core|all] [--output table|markdown|json]
   typecarta compare --left <adapter> --right <adapter> [--output table|json]
-  typecarta witness --criterion <pi-NN>
-  typecarta profile --schema <file>
+  typecarta witness --criterion <pi-prime-NN>
+  typecarta profile --schema <file> [--adapter <name>]
   typecarta check-encoding --source <adapter> --target <adapter>
 
 Tip:
   Run \`typecarta adapters\` to see registered adapter names.
+  --filter core (15 criteria) is the default; --filter all evaluates all 70.
+  --mode is a legacy alias: --mode core/full == --filter core/all.
 
 Options:
   --help    Show this help message

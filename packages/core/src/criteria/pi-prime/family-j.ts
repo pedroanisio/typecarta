@@ -1,14 +1,14 @@
 import { collect } from "../../ast/traversal.js";
 /** Family J — Refinement & Predicates (π'₃₈–π'₄₁, π'₆₈–π'₆₉). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_J: readonly PiPrimeCriterion[] = [
+export const FAMILY_J: readonly Criterion[] = [
 	{
 		id: "pi-prime-38",
+		core: true,
 		name: "Range / Bound Constraint",
 		family: "J",
-		refines: "pi-10",
 		description: "{v:τ | min ≤ v ≤ max} — refinement with a range predicate",
 		evaluate(term: TypeTerm) {
 			const isRange = (n: TypeTerm) => n.kind === "refinement" && n.predicate.kind === "range";
@@ -52,7 +52,6 @@ export const FAMILY_J: readonly PiPrimeCriterion[] = [
 		id: "pi-prime-41",
 		name: "Compound Decidable Predicate",
 		family: "J",
-		refines: "pi-10",
 		description: "Refinement with compound (and/or) predicate composition",
 		evaluate(term: TypeTerm) {
 			const isCompound = (n: TypeTerm) =>

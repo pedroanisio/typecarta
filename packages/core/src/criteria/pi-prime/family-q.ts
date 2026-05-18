@@ -1,9 +1,9 @@
 import { collect } from "../../ast/traversal.js";
 /** Family Q — Type-Level Negation (π'₅₉). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_Q: readonly PiPrimeCriterion[] = [
+export const FAMILY_Q: readonly Criterion[] = [
 	{
 		id: "pi-prime-59",
 		name: "Type-Level Complement",

@@ -1,14 +1,14 @@
 import { collect } from "../../ast/traversal.js";
 /** Family H — Parametricity & HKT (π'₂₈–π'₃₃). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_H: readonly PiPrimeCriterion[] = [
+export const FAMILY_H: readonly Criterion[] = [
 	{
 		id: "pi-prime-28",
+		core: true,
 		name: "Rank-1 Generics",
 		family: "H",
-		refines: "pi-09",
 		description: "Λα.τ — universal quantifier at the outermost level",
 		evaluate(term: TypeTerm) {
 			if (term.kind === "forall") return { status: "satisfied", witness: term };
@@ -66,9 +66,9 @@ export const FAMILY_H: readonly PiPrimeCriterion[] = [
 	},
 	{
 		id: "pi-prime-32",
+		core: true,
 		name: "Higher-Kinded Type Parameter",
 		family: "H",
-		refines: "pi-15",
 		description: "Type parameter that is itself a type constructor (HKT)",
 		evaluate(term: TypeTerm) {
 			const isHKT = (n: TypeTerm) => {

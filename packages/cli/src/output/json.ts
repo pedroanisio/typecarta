@@ -19,6 +19,7 @@ export function renderJSON(result: ScorecardResult): string {
 	return JSON.stringify(
 		{
 			adapter: result.adapterName,
+			...(result.provenance ? { provenance: result.provenance } : {}),
 			cells,
 			totals: result.totals,
 		},
@@ -43,11 +44,13 @@ export function renderComparisonJSON(comparison: ScorecardComparison): string {
 		{
 			left: {
 				adapter: comparison.left.adapterName,
+				...(comparison.left.provenance ? { provenance: comparison.left.provenance } : {}),
 				cells: leftCells,
 				totals: comparison.left.totals,
 			},
 			right: {
 				adapter: comparison.right.adapterName,
+				...(comparison.right.provenance ? { provenance: comparison.right.provenance } : {}),
 				cells: rightCells,
 				totals: comparison.right.totals,
 			},

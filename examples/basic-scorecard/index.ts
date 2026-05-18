@@ -15,7 +15,7 @@ import {
 	renderJSON,
 	renderMarkdown,
 } from "@typecarta/core";
-import { DIVERSE_SCHEMAS, type WitnessSchema } from "@typecarta/witnesses";
+import { CORE_SCHEMAS, type CoreWitnessSchema } from "@typecarta/witnesses";
 
 // ── Setup ──────────────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ const adapter = new JsonSchemaAdapter();
 registerAdapter(adapter);
 
 // Convert witness schemas to witness entries expected by the scorecard
-const witnesses: WitnessEntry[] = DIVERSE_SCHEMAS.map((ws: WitnessSchema) => ({
+const witnesses: WitnessEntry[] = CORE_SCHEMAS.map((ws: CoreWitnessSchema) => ({
 	criterionId: ws.id,
 	schema: ws.schema,
 	name: ws.name,

@@ -55,6 +55,14 @@ const ZOD_SIGNATURE: Signature = createSignature(
 	],
 );
 
+const ZOD_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
+	"bottom",
+	"top",
+	"literal",
+	"base",
+	"apply",
+]);
+
 // ─── Adapter class ─────────────────────────────────────────────────
 
 /** Convert between Zod schema descriptors and typecarta IR type terms. */
@@ -96,6 +104,10 @@ export class ZodAdapter implements IRAdapter<Signature, ZodDescriptor> {
 		} catch {
 			return false;
 		}
+	}
+
+	supportsKind(kind: TypeTerm["kind"]): boolean {
+		return ZOD_SUPPORTED_KINDS.has(kind);
 	}
 
 	/**

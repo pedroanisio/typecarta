@@ -25,7 +25,7 @@ import {
 	renderMarkdown,
 	top,
 } from "@typecarta/core";
-import { DIVERSE_SCHEMAS, type WitnessSchema } from "@typecarta/witnesses";
+import { CORE_SCHEMAS, type CoreWitnessSchema } from "@typecarta/witnesses";
 
 // ── CSV Schema native format ───────────────────────────────────────
 
@@ -112,7 +112,7 @@ function main(): void {
 	const adapter = new CsvSchemaAdapter();
 	registerAdapter(adapter);
 
-	const witnesses: WitnessEntry[] = DIVERSE_SCHEMAS.map((ws: WitnessSchema) => ({
+	const witnesses: WitnessEntry[] = CORE_SCHEMAS.map((ws: CoreWitnessSchema) => ({
 		criterionId: ws.id,
 		schema: ws.schema,
 		name: ws.name,

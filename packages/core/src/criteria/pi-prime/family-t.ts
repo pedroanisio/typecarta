@@ -1,9 +1,9 @@
 import { collect } from "../../ast/traversal.js";
 /** Family T — Type-Level Computation (π'₆₃–π'₆₅). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_T: readonly PiPrimeCriterion[] = [
+export const FAMILY_T: readonly Criterion[] = [
 	{
 		id: "pi-prime-63",
 		name: "Structural Key Enumeration",

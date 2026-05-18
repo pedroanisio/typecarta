@@ -99,6 +99,12 @@ function scalarToBase(scalar: ProtobufScalarType): string {
 	}
 }
 
+const PROTOBUF_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
+	"literal",
+	"base",
+	"apply",
+]);
+
 // ─── Adapter class ─────────────────────────────────────────────────
 
 /** Adapt Protobuf type descriptors to and from the typecarta IR. */
@@ -140,6 +146,10 @@ export class ProtobufAdapter implements IRAdapter<Signature, ProtobufDescriptor>
 		} catch {
 			return false;
 		}
+	}
+
+	supportsKind(kind: TypeTerm["kind"]): boolean {
+		return PROTOBUF_SUPPORTED_KINDS.has(kind);
 	}
 
 	/**

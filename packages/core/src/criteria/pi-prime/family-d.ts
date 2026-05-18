@@ -1,9 +1,9 @@
 import { collect } from "../../ast/traversal.js";
 /** Family D — Shape Closure (π'₁₆–π'₁₈). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_D: readonly PiPrimeCriterion[] = [
+export const FAMILY_D: readonly Criterion[] = [
 	{
 		id: "pi-prime-16",
 		name: "Closed Record",
@@ -24,9 +24,9 @@ export const FAMILY_D: readonly PiPrimeCriterion[] = [
 	},
 	{
 		id: "pi-prime-17",
+		core: true,
 		name: "Open Record, Unconstrained Extras",
 		family: "D",
-		refines: "pi-13",
 		description: "Known fields + arbitrary extra keys",
 		evaluate(term: TypeTerm) {
 			const isOpen = (n: TypeTerm) =>

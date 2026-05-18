@@ -1,18 +1,17 @@
 import { collect } from "../../ast/traversal.js";
 /** Family E — Sum and Union Structure (π'₁₉–π'₂₂). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
 function isUnion(n: TypeTerm) {
 	return n.kind === "apply" && n.constructor === "union" && n.args.length >= 2;
 }
 
-export const FAMILY_E: readonly PiPrimeCriterion[] = [
+export const FAMILY_E: readonly Criterion[] = [
 	{
 		id: "pi-prime-19",
 		name: "Untagged Union",
 		family: "E",
-		refines: "pi-05",
 		description: "Union with no distinguished discriminant field",
 		evaluate(term: TypeTerm) {
 			if (isUnion(term)) return { status: "satisfied", witness: term };
@@ -24,9 +23,9 @@ export const FAMILY_E: readonly PiPrimeCriterion[] = [
 	},
 	{
 		id: "pi-prime-20",
+		core: true,
 		name: "Discriminated Union, Literal Tag",
 		family: "E",
-		refines: "pi-05",
 		description: "Union with a literal-typed tag field mapping to branches",
 		evaluate(term: TypeTerm) {
 			function isDiscriminated(n: TypeTerm): boolean {

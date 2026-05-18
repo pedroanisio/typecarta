@@ -26,7 +26,7 @@ import {
 	top,
 	union,
 } from "@typecarta/core";
-import { DIVERSE_SCHEMAS, type WitnessSchema } from "@typecarta/witnesses";
+import { CORE_SCHEMAS, type CoreWitnessSchema } from "@typecarta/witnesses";
 
 // ── "Flat Schema" adapter ──────────────────────────────────────────
 // A minimal adapter that only supports flat product types, unions of
@@ -139,7 +139,7 @@ const flatAdapter: IRAdapter = {
 // ── Compare ────────────────────────────────────────────────────────
 
 function main(): void {
-	const witnesses: WitnessEntry[] = DIVERSE_SCHEMAS.map((ws: WitnessSchema) => ({
+	const witnesses: WitnessEntry[] = CORE_SCHEMAS.map((ws: CoreWitnessSchema) => ({
 		criterionId: ws.id,
 		schema: ws.schema,
 		name: ws.name,

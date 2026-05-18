@@ -74,10 +74,10 @@ describe("CLI output formatters", () => {
 		it("renders scorecard with ANSI codes", async () => {
 			const { renderTerminal } = await import("../src/output/terminal.js");
 			const { evaluateScorecard } = await import("@typecarta/core");
-			const { DIVERSE_SCHEMAS } = await import("@typecarta/witnesses");
+			const { CORE_SCHEMAS } = await import("@typecarta/witnesses");
 
 			const adapter = new MockAdapter();
-			const witnesses = DIVERSE_SCHEMAS.map((w) => ({
+			const witnesses = CORE_SCHEMAS.map((w) => ({
 				criterionId: w.id,
 				schema: w.schema,
 				name: w.name,
@@ -94,10 +94,10 @@ describe("CLI output formatters", () => {
 		it("renders scorecard with frontmatter", async () => {
 			const { renderMarkdown } = await import("../src/output/markdown.js");
 			const { evaluateScorecard } = await import("@typecarta/core");
-			const { DIVERSE_SCHEMAS } = await import("@typecarta/witnesses");
+			const { CORE_SCHEMAS } = await import("@typecarta/witnesses");
 
 			const adapter = new MockAdapter();
-			const witnesses = DIVERSE_SCHEMAS.map((w) => ({
+			const witnesses = CORE_SCHEMAS.map((w) => ({
 				criterionId: w.id,
 				schema: w.schema,
 				name: w.name,
@@ -115,10 +115,10 @@ describe("CLI output formatters", () => {
 		it("renders scorecard as valid JSON", async () => {
 			const { renderJSON } = await import("../src/output/json.js");
 			const { evaluateScorecard } = await import("@typecarta/core");
-			const { DIVERSE_SCHEMAS } = await import("@typecarta/witnesses");
+			const { CORE_SCHEMAS } = await import("@typecarta/witnesses");
 
 			const adapter = new MockAdapter();
-			const witnesses = DIVERSE_SCHEMAS.map((w) => ({
+			const witnesses = CORE_SCHEMAS.map((w) => ({
 				criterionId: w.id,
 				schema: w.schema,
 				name: w.name,
@@ -135,10 +135,10 @@ describe("CLI output formatters", () => {
 		it("renders comparison as valid JSON", async () => {
 			const { renderComparisonJSON } = await import("../src/output/json.js");
 			const { evaluateScorecard, compareScorecards } = await import("@typecarta/core");
-			const { DIVERSE_SCHEMAS } = await import("@typecarta/witnesses");
+			const { CORE_SCHEMAS } = await import("@typecarta/witnesses");
 
 			const adapter = new MockAdapter();
-			const witnesses = DIVERSE_SCHEMAS.map((w) => ({
+			const witnesses = CORE_SCHEMAS.map((w) => ({
 				criterionId: w.id,
 				schema: w.schema,
 				name: w.name,

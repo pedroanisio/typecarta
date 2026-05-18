@@ -3,7 +3,12 @@
 // Implements IRAdapter<Signature, XsdDescriptor> using plain descriptor
 // objects that represent XSD schema components, not an XML parser runtime.
 
-import type { IRAdapter, RefinementPredicate, Signature, TypeTerm } from "@typecarta/core";
+import type {
+	IRAdapter,
+	RefinementPredicate,
+	Signature,
+	TypeTerm,
+} from "@typecarta/core";
 import {
 	andPredicate,
 	array,
@@ -81,6 +86,15 @@ export type XsdDescriptor =
 	| { readonly kind: "list"; readonly itemType: XsdDescriptor }
 	| { readonly kind: "union"; readonly members: readonly XsdDescriptor[] };
 
+const XSD_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
+	"bottom",
+	"top",
+	"literal",
+	"base",
+	"apply",
+	"refinement",
+]);
+
 const XSD_SIGNATURE: Signature = createSignature(
 	[
 		"string",
@@ -141,6 +155,10 @@ export class XsdAdapter implements IRAdapter<Signature, XsdDescriptor> {
 		} catch {
 			return false;
 		}
+	}
+
+	supportsKind(kind: TypeTerm["kind"]): boolean {
+		return XSD_SUPPORTED_KINDS.has(kind);
 	}
 
 	/**

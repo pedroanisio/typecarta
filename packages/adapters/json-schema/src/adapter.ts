@@ -32,6 +32,16 @@ const JSON_SCHEMA_SIGNATURE: Signature = createSignature(
 	],
 );
 
+const JSON_SCHEMA_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
+	"bottom",
+	"top",
+	"literal",
+	"base",
+	"apply",
+	"refinement",
+	"complement",
+]);
+
 /** JSON Schema draft-07 adapter — implements IRAdapter for JSON Schema documents. */
 export class JsonSchemaAdapter implements IRAdapter<Signature, JsonSchemaDocument> {
 	readonly name = "JSON Schema draft-07";
@@ -67,6 +77,10 @@ export class JsonSchemaAdapter implements IRAdapter<Signature, JsonSchemaDocumen
 		} catch {
 			return false;
 		}
+	}
+
+	supportsKind(kind: TypeTerm["kind"]): boolean {
+		return JSON_SCHEMA_SUPPORTED_KINDS.has(kind);
 	}
 
 	/**

@@ -1,9 +1,9 @@
 import { collect } from "../../ast/traversal.js";
 /** Family I — Nominal & Branding (π'₃₄–π'₃₇). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_I: readonly PiPrimeCriterion[] = [
+export const FAMILY_I: readonly Criterion[] = [
 	{
 		id: "pi-prime-34",
 		name: "Structural Identity Only",
@@ -18,9 +18,9 @@ export const FAMILY_I: readonly PiPrimeCriterion[] = [
 	},
 	{
 		id: "pi-prime-35",
+		core: true,
 		name: "Nominal Tag / Brand",
 		family: "I",
-		refines: "pi-12",
 		description: "nominal(Tag, τ) — type distinguished by a nominal tag",
 		evaluate(term: TypeTerm) {
 			if (term.kind === "nominal") return { status: "satisfied", witness: term };

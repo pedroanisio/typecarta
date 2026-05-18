@@ -1,9 +1,9 @@
 import { collect } from "../../ast/traversal.js";
 /** Family N — Modularity & Scoping [meta-annot] (π'₅₀–π'₅₂). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_N: readonly PiPrimeCriterion[] = [
+export const FAMILY_N: readonly Criterion[] = [
 	{
 		id: "pi-prime-50",
 		name: "Named Type Alias",

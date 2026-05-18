@@ -1,7 +1,7 @@
 import { collect } from "../../ast/traversal.js";
 /** Family P — Meta-Annotation [meta-annot] (π'₅₆–π'₅₈). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
 /** Well-known annotation keys that are not considered custom metadata. */
 const WELL_KNOWN_KEYS = new Set([
@@ -17,7 +17,7 @@ const WELL_KNOWN_KEYS = new Set([
 	"stateMachine",
 ]);
 
-export const FAMILY_P: readonly PiPrimeCriterion[] = [
+export const FAMILY_P: readonly Criterion[] = [
 	{
 		id: "pi-prime-56",
 		name: "Description / Documentation",

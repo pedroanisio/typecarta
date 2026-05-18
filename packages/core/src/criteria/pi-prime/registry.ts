@@ -3,21 +3,21 @@
  */
 
 import {
-	PI_PRIME_IDS,
-	type PiPrimeCriterion,
-	type PiPrimeId,
-	type PiPrimeRegistry,
+	CRITERION_IDS,
+	type Criterion,
+	type CriterionId,
+	type CriterionRegistry,
 } from "./types.js";
 
 /** Internal mutable store. */
-const _store = new Map<PiPrimeId, PiPrimeCriterion>();
+const _store = new Map<CriterionId, Criterion>();
 
 /**
  * Register a Π' criterion predicate.
  * Throws if the ID is already registered or is not a valid Π' ID.
  */
-export function registerPiPrimeCriterion(criterion: PiPrimeCriterion): void {
-	if (!(PI_PRIME_IDS as readonly string[]).includes(criterion.id)) {
+export function registerCriterion(criterion: Criterion): void {
+	if (!(CRITERION_IDS as readonly string[]).includes(criterion.id)) {
 		throw new RangeError(`"${criterion.id}" is not a valid Π' criterion identifier.`);
 	}
 	if (_store.has(criterion.id)) {
@@ -29,21 +29,21 @@ export function registerPiPrimeCriterion(criterion: PiPrimeCriterion): void {
 /**
  * Return a frozen, read-only snapshot of the current Π' registry.
  */
-export function getPiPrimeRegistry(): PiPrimeRegistry {
-	return new Map(_store) as PiPrimeRegistry;
+export function getCriterionRegistry(): CriterionRegistry {
+	return new Map(_store) as CriterionRegistry;
 }
 
 /**
  * Look up a single Π' criterion by ID.
  * Returns `undefined` when the ID has not been registered.
  */
-export function getPiPrimeCriterion(id: PiPrimeId): PiPrimeCriterion | undefined {
+export function getCriterion(id: CriterionId): Criterion | undefined {
 	return _store.get(id);
 }
 
 /**
  * Return the number of currently registered Π' criteria.
  */
-export function piPrimeRegistrySize(): number {
+export function criterionRegistrySize(): number {
 	return _store.size;
 }

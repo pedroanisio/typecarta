@@ -11,7 +11,7 @@
 
 import { JsonSchemaAdapter } from "@typecarta/adapter-json-schema";
 import {
-	PI_CRITERIA,
+	CORE_CRITERIA,
 	type WitnessEntry,
 	clearAdapters,
 	evaluateScorecard,
@@ -19,7 +19,7 @@ import {
 	renderJSON,
 	renderMarkdown,
 } from "@typecarta/core";
-import { DIVERSE_SCHEMAS, type WitnessSchema } from "@typecarta/witnesses";
+import { CORE_SCHEMAS, type CoreWitnessSchema } from "@typecarta/witnesses";
 
 // ── Setup ──────────────────────────────────────────────────────────
 
@@ -27,7 +27,7 @@ clearAdapters();
 const adapter = new JsonSchemaAdapter();
 registerAdapter(adapter);
 
-const witnesses: WitnessEntry[] = DIVERSE_SCHEMAS.map((ws: WitnessSchema) => ({
+const witnesses: WitnessEntry[] = CORE_SCHEMAS.map((ws: CoreWitnessSchema) => ({
 	criterionId: ws.id,
 	schema: ws.schema,
 	name: ws.name,
@@ -50,7 +50,7 @@ function buildToolPayload(): object {
 		tool: "typecarta_scorecard",
 		version: "0.1.0",
 		adapter: scorecard.adapterName,
-		criteria_count: PI_CRITERIA.length,
+		criteria_count: CORE_CRITERIA.length,
 		totals: {
 			satisfied: scorecard.totals.satisfied,
 			partial: scorecard.totals.partial,
@@ -99,7 +99,7 @@ function buildCompactSummary(): string {
 	const partial: string[] = [];
 	const missing: string[] = [];
 
-	for (const criterion of PI_CRITERIA) {
+	for (const criterion of CORE_CRITERIA) {
 		const cell = scorecard.cells.get(criterion.id);
 		const value = cell?.value ?? "\u2717";
 		switch (value) {

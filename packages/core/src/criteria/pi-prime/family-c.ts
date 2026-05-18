@@ -1,18 +1,17 @@
 import { collect } from "../../ast/traversal.js";
 /** Family C — Field Modality (π'₁₁–π'₁₅). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
 function getFields(n: TypeTerm) {
 	return n.kind === "apply" && n.constructor === "product" ? (n.fields ?? []) : [];
 }
 
-export const FAMILY_C: readonly PiPrimeCriterion[] = [
+export const FAMILY_C: readonly Criterion[] = [
 	{
 		id: "pi-prime-11",
 		name: "Required Field",
 		family: "C",
-		refines: "pi-04",
 		description: "∀v ∈ ⟦S⟧, lᵢ ∈ dom(v)",
 		evaluate(term: TypeTerm) {
 			const has = (n: TypeTerm) => getFields(n).some((f) => !f.optional);
@@ -25,9 +24,9 @@ export const FAMILY_C: readonly PiPrimeCriterion[] = [
 	},
 	{
 		id: "pi-prime-12",
+		core: true,
 		name: "Optional-by-Absence",
 		family: "C",
-		refines: "pi-11",
 		description: "Key may be absent from the value",
 		evaluate(term: TypeTerm) {
 			const has = (n: TypeTerm) => getFields(n).some((f) => f.optional === true);

@@ -1,9 +1,9 @@
 import { collect } from "../../ast/traversal.js";
 /** Family L — Collection Types (π'₄₅–π'₄₇). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_L: readonly PiPrimeCriterion[] = [
+export const FAMILY_L: readonly Criterion[] = [
 	{
 		id: "pi-prime-45",
 		name: "Homogeneous Array / List",

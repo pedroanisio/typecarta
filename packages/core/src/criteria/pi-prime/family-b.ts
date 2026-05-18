@@ -1,14 +1,13 @@
 import { collect } from "../../ast/traversal.js";
 /** Family B — Products, Records, and Tuples (π'₈–π'₁₀). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_B: readonly PiPrimeCriterion[] = [
+export const FAMILY_B: readonly Criterion[] = [
 	{
 		id: "pi-prime-08",
 		name: "Positional Tuple",
 		family: "B",
-		refines: "pi-04",
 		description: "Ordered, index-addressed product (τ₁, τ₂, …, τₙ)",
 		evaluate(term: TypeTerm) {
 			const isTuple = (n: TypeTerm) =>
@@ -22,9 +21,9 @@ export const FAMILY_B: readonly PiPrimeCriterion[] = [
 	},
 	{
 		id: "pi-prime-09",
+		core: true,
 		name: "Labelled Record",
 		family: "B",
-		refines: "pi-04",
 		description: "Product with named fields {l₁: τ₁, …, lₙ: τₙ}",
 		evaluate(term: TypeTerm) {
 			const isRecord = (n: TypeTerm) =>

@@ -15,15 +15,17 @@ import {
  * @returns A Markdown string with adapter name and generation timestamp.
  */
 export function renderMarkdown(result: ScorecardResult): string {
-	const header = [
-		"---",
-		`adapter: ${result.adapterName}`,
-		`generated: ${new Date().toISOString()}`,
-		"---",
-		"",
-	].join("\n");
+	const lines: string[] = ["---", `adapter: ${result.adapterName}`];
+	if (result.provenance) {
+		lines.push(`typecarta_version: ${result.provenance.typecartaVersion}`);
+		lines.push(`commit: ${result.provenance.commitHash}`);
+		lines.push(`generated: ${result.provenance.generatedAt}`);
+	} else {
+		lines.push(`generated: ${new Date().toISOString()}`);
+	}
+	lines.push("---", "");
 
-	return header + coreRenderMarkdown(result);
+	return lines.join("\n") + coreRenderMarkdown(result);
 }
 
 /**
@@ -33,14 +35,22 @@ export function renderMarkdown(result: ScorecardResult): string {
  * @returns A Markdown string with adapter names and generation timestamp.
  */
 export function renderComparisonMarkdown(comparison: ScorecardComparison): string {
-	const header = [
+	const lines: string[] = [
 		"---",
 		`left: ${comparison.left.adapterName}`,
 		`right: ${comparison.right.adapterName}`,
-		`generated: ${new Date().toISOString()}`,
-		"---",
-		"",
-	].join("\n");
+	];
+	// Use the left side's provenance as the comparison's; both adapters were
+	// evaluated by the same typecarta build, so the version/commit are shared.
+	const prov = comparison.left.provenance ?? comparison.right.provenance;
+	if (prov) {
+		lines.push(`typecarta_version: ${prov.typecartaVersion}`);
+		lines.push(`commit: ${prov.commitHash}`);
+		lines.push(`generated: ${prov.generatedAt}`);
+	} else {
+		lines.push(`generated: ${new Date().toISOString()}`);
+	}
+	lines.push("---", "");
 
-	return header + coreRenderComparisonMarkdown(comparison);
+	return lines.join("\n") + coreRenderComparisonMarkdown(comparison);
 }

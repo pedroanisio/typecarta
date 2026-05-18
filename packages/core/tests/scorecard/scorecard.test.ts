@@ -1,10 +1,10 @@
 import {
+	CRITERIA,
 	type IRAdapter,
 	type WitnessEntry,
 	base,
 	bottom,
 	compareScorecards,
-	evaluatePrimeScorecard,
 	evaluateScorecard,
 	field,
 	literal,
@@ -16,7 +16,7 @@ import {
 import type { TypeTerm } from "@typecarta/core";
 import { createSignature } from "@typecarta/core";
 import { describe, expect, it } from "vitest";
-import { DIVERSE_PRIME_SCHEMAS } from "../../../witnesses/src/index.js";
+import { ALL_WITNESSES } from "../../../witnesses/src/index.js";
 
 // Minimal mock adapter that supports everything
 const mockAdapter: IRAdapter = {
@@ -35,20 +35,25 @@ const mockAdapter: IRAdapter = {
 	inhabits: () => true,
 };
 
+// Use core-tagged Π' ids — after the Π merge, evaluateScorecard defaults to CORE_CRITERIA.
 const basicWitnesses: WitnessEntry[] = [
-	{ criterionId: "pi-01", schema: bottom(), name: "S1" },
-	{ criterionId: "pi-02", schema: top(), name: "S2" },
-	{ criterionId: "pi-03", schema: literal(42), name: "S3" },
-	{ criterionId: "pi-04", schema: product([field("x", base("number"))]), name: "S4" },
+	{ criterionId: "pi-prime-01", schema: bottom(), name: "SP1" }, // Syntactic Bottom (core)
+	{ criterionId: "pi-prime-03", schema: top(), name: "SP3" }, // Global Top (core)
+	{ criterionId: "pi-prime-05", schema: literal(42), name: "SP5" }, // Singleton Literal (core)
+	{
+		criterionId: "pi-prime-09", // Labelled Record (core)
+		schema: product([field("x", base("number"))]),
+		name: "SP9",
+	},
 ];
 
 describe("Scorecard", () => {
 	it("evaluates scorecard against adapter", () => {
 		const result = evaluateScorecard(mockAdapter, basicWitnesses);
 		expect(result.adapterName).toBe("Mock IR");
-		expect(result.cells.size).toBe(15); // All 15 criteria filled
-		expect(result.cells.get("pi-01")!.value).toBe("✓");
-		expect(result.cells.get("pi-02")!.value).toBe("✓");
+		expect(result.cells.size).toBe(15); // 15 core criteria filled
+		expect(result.cells.get("pi-prime-01")!.value).toBe("✓");
+		expect(result.cells.get("pi-prime-03")!.value).toBe("✓");
 	});
 
 	it("computes totals correctly", () => {
@@ -68,7 +73,7 @@ describe("Scorecard", () => {
 		const result = evaluateScorecard(mockAdapter, basicWitnesses);
 		const md = renderMarkdown(result);
 		expect(md).toContain("Mock IR");
-		expect(md).toContain("pi-01");
+		expect(md).toContain("pi-prime-01");
 	});
 
 	it("renders JSON", () => {
@@ -79,30 +84,32 @@ describe("Scorecard", () => {
 	});
 });
 
-describe("Prime Scorecard (70 criteria)", () => {
-	const primeWitnesses: WitnessEntry[] = DIVERSE_PRIME_SCHEMAS.map((w) => ({
+describe("Full Scorecard (70 criteria)", () => {
+	const allWitnesses: WitnessEntry[] = ALL_WITNESSES.map((w) => ({
 		criterionId: w.id,
 		schema: w.schema,
 		name: w.name,
 	}));
 
-	it("evaluatePrimeScorecard produces 70-cell result", () => {
-		const result = evaluatePrimeScorecard(mockAdapter, primeWitnesses);
+	it("evaluating against CRITERIA produces 70-cell result", () => {
+		const result = evaluateScorecard(mockAdapter, allWitnesses, CRITERIA);
 		expect(result.cells.size).toBe(70);
 		expect(result.adapterName).toBe("Mock IR");
 	});
 
 	it("all 70 cells have a value", () => {
-		const result = evaluatePrimeScorecard(mockAdapter, primeWitnesses);
+		const result = evaluateScorecard(mockAdapter, allWitnesses, CRITERIA);
 		for (const cell of result.cells.values()) {
-			expect(["✓", "partial", "✗"]).toContain(cell.value);
+			expect(["✓", "partial", "✗", "n/a"]).toContain(cell.value);
 		}
 	});
 
 	it("totals sum to 70", () => {
-		const result = evaluatePrimeScorecard(mockAdapter, primeWitnesses);
+		const result = evaluateScorecard(mockAdapter, allWitnesses, CRITERIA);
 		const { totals } = result;
-		expect(totals.satisfied + totals.partial + totals.notSatisfied).toBe(70);
+		expect(
+			totals.satisfied + totals.partial + totals.notSatisfied + totals.outOfVocabulary,
+		).toBe(70);
 	});
 
 	it("15-criterion path still works unchanged", () => {
@@ -110,8 +117,8 @@ describe("Prime Scorecard (70 criteria)", () => {
 		expect(result.cells.size).toBe(15);
 	});
 
-	it("renders prime scorecard as markdown", () => {
-		const result = evaluatePrimeScorecard(mockAdapter, primeWitnesses);
+	it("renders full scorecard as markdown", () => {
+		const result = evaluateScorecard(mockAdapter, allWitnesses, CRITERIA);
 		const md = renderMarkdown(result);
 		expect(md).toContain("pi-prime-01");
 		expect(md).toContain("pi-prime-70");

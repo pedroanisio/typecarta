@@ -12,6 +12,13 @@ import type { ScorecardComparison, ScorecardResult } from "./types.js";
 export function renderMarkdown(result: ScorecardResult): string {
 	const lines: string[] = [];
 	lines.push(`# Scorecard: ${result.adapterName}`);
+	if (result.provenance) {
+		const { typecartaVersion, commitHash, generatedAt } = result.provenance;
+		lines.push("");
+		lines.push(
+			`*typecarta ${typecartaVersion} · commit ${commitHash} · generated ${generatedAt}*`,
+		);
+	}
 	lines.push("");
 	lines.push("| # | Result | Justification |");
 	lines.push("|---|:---:|---|");
@@ -22,7 +29,7 @@ export function renderMarkdown(result: ScorecardResult): string {
 
 	lines.push("");
 	lines.push(
-		`**Totals:** ✓ ${result.totals.satisfied} | partial ${result.totals.partial} | ✗ ${result.totals.notSatisfied}`,
+		`**Totals:** ✓ ${result.totals.satisfied} | partial ${result.totals.partial} | ✗ ${result.totals.notSatisfied} | n/a ${result.totals.outOfVocabulary}`,
 	);
 
 	return lines.join("\n");
@@ -45,6 +52,7 @@ export function renderJSON(result: ScorecardResult): string {
 	return JSON.stringify(
 		{
 			adapter: result.adapterName,
+			...(result.provenance ? { provenance: result.provenance } : {}),
 			cells,
 			totals: result.totals,
 		},

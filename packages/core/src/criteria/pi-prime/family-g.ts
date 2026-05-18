@@ -1,14 +1,14 @@
 import { collect } from "../../ast/traversal.js";
 /** Family G — Recursion (π'₂₅–π'₂₇). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_G: readonly PiPrimeCriterion[] = [
+export const FAMILY_G: readonly Criterion[] = [
 	{
 		id: "pi-prime-25",
+		core: true,
 		name: "Direct Self-Recursion",
 		family: "G",
-		refines: "pi-07",
 		description: "μα.F(α) — fixpoint node for direct self-recursion",
 		evaluate(term: TypeTerm) {
 			if (term.kind === "mu") return { status: "satisfied", witness: term };
@@ -20,9 +20,9 @@ export const FAMILY_G: readonly PiPrimeCriterion[] = [
 	},
 	{
 		id: "pi-prime-26",
+		core: true,
 		name: "Mutual Recursion",
 		family: "G",
-		refines: "pi-08",
 		description: "Nested μ inside μ — mutual recursion via double fixpoint",
 		evaluate(term: TypeTerm) {
 			const isMutualRec = (n: TypeTerm) => {

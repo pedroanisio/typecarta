@@ -1,10 +1,9 @@
 import {
-	type CriterionPredicate,
+	type Criterion,
 	type IRAdapter,
 	JSON_SIGNATURE,
 	// Criteria
-	PI_CRITERIA,
-	type PiId,
+	CRITERIA,
 	type ScorecardCell,
 	type ScorecardResult,
 	type Signature,
@@ -729,58 +728,47 @@ describe("freeVars", () => {
 });
 
 // ────────────────────────────────────────────────────────────────────
-// §7 Criteria: pi-13 (Open Shape) and pi-14 (Dependent)
+// §7 Criteria: Open Shape (pi-prime-17) and Dependent Constraints
+// (pi-prime-42 discriminated union, pi-prime-65 conditional type)
 // ────────────────────────────────────────────────────────────────────
 describe("Criteria predicates", () => {
-	const pi13 = PI_CRITERIA.find((c) => c.id === "pi-13")!;
-	const pi14 = PI_CRITERIA.find((c) => c.id === "pi-14")!;
+	const openShape = CRITERIA.find((c) => c.id === "pi-prime-17")!;
+	const taggedDependent = CRITERIA.find((c) => c.id === "pi-prime-42")!;
+	const conditionalType = CRITERIA.find((c) => c.id === "pi-prime-65")!;
 
-	describe("pi-13: Open Shape", () => {
+	describe("pi-prime-17: Open Shape", () => {
 		it("detects open record via annotation", () => {
 			const openProduct = product([field("x", base("number"))], { open: true });
-			const result = pi13.evaluate(openProduct);
+			const result = openShape.evaluate(openProduct);
 			expect(result.status).toBe("satisfied");
 		});
 
 		it("detects open record via rowpoly at top level", () => {
 			const rp = rowPoly([field("x", base("number"))], "R");
-			const result = pi13.evaluate(rp);
+			const result = openShape.evaluate(rp);
 			expect(result.status).toBe("satisfied");
 		});
 
 		it("detects nested rowpoly", () => {
 			const rp = rowPoly([field("x", base("number"))], "R");
 			const wrapper = union([rp, base("string")]);
-			const result = pi13.evaluate(wrapper);
+			const result = openShape.evaluate(wrapper);
 			expect(result.status).toBe("satisfied");
 		});
 
 		it("reports not-satisfied for closed product", () => {
 			const closed = product([field("x", base("number"))]);
-			const result = pi13.evaluate(closed);
+			const result = openShape.evaluate(closed);
 			expect(result.status).toBe("not-satisfied");
 		});
 	});
 
-	describe("pi-14: Dependent Constraint", () => {
+	describe("pi-prime-42: Finite Tagged Dependent Choice", () => {
 		it("detects discriminated union", () => {
 			const branch1 = product([field("kind", literal("circle")), field("radius", base("number"))]);
 			const branch2 = product([field("kind", literal("square")), field("side", base("number"))]);
 			const du = union([branch1, branch2]);
-			const result = pi14.evaluate(du);
-			expect(result.status).toBe("satisfied");
-		});
-
-		it("detects conditional type as dependent", () => {
-			const c = conditional(typeVar("T"), base("string"), literal(true), literal(false));
-			const result = pi14.evaluate(c);
-			expect(result.status).toBe("satisfied");
-		});
-
-		it("detects nested conditional", () => {
-			const c = conditional(typeVar("T"), base("string"), literal(true), literal(false));
-			const wrapper = array(c);
-			const result = pi14.evaluate(wrapper);
+			const result = taggedDependent.evaluate(du);
 			expect(result.status).toBe("satisfied");
 		});
 
@@ -789,13 +777,34 @@ describe("Criteria predicates", () => {
 			const branch2 = product([field("kind", literal("b")), field("data", base("number"))]);
 			const du = union([branch1, branch2]);
 			const wrapper = array(du);
-			const result = pi14.evaluate(wrapper);
+			const result = taggedDependent.evaluate(wrapper);
 			expect(result.status).toBe("satisfied");
 		});
 
 		it("reports not-satisfied for plain product", () => {
 			const p = product([field("x", base("number"))]);
-			const result = pi14.evaluate(p);
+			const result = taggedDependent.evaluate(p);
+			expect(result.status).toBe("not-satisfied");
+		});
+	});
+
+	describe("pi-prime-65: Conditional Type", () => {
+		it("detects conditional type at top level", () => {
+			const c = conditional(typeVar("T"), base("string"), literal(true), literal(false));
+			const result = conditionalType.evaluate(c);
+			expect(result.status).toBe("satisfied");
+		});
+
+		it("detects nested conditional", () => {
+			const c = conditional(typeVar("T"), base("string"), literal(true), literal(false));
+			const wrapper = array(c);
+			const result = conditionalType.evaluate(wrapper);
+			expect(result.status).toBe("satisfied");
+		});
+
+		it("reports not-satisfied for plain product", () => {
+			const p = product([field("x", base("number"))]);
+			const result = conditionalType.evaluate(p);
 			expect(result.status).toBe("not-satisfied");
 		});
 	});
@@ -805,37 +814,32 @@ describe("Criteria predicates", () => {
 // §8 Scorecard: comparison, render, evaluate
 // ────────────────────────────────────────────────────────────────────
 describe("Scorecard", () => {
+	// Use a handful of core-tagged \u03a0' ids as synthetic fixtures.
+	type SyntheticId =
+		| "pi-prime-01"
+		| "pi-prime-03"
+		| "pi-prime-05"
+		| "pi-prime-09"
+		| "pi-prime-20";
+	const SYNTHETIC_IDS: SyntheticId[] = [
+		"pi-prime-01",
+		"pi-prime-03",
+		"pi-prime-05",
+		"pi-prime-09",
+		"pi-prime-20",
+	];
+
 	function makeScorecardResult(
 		name: string,
-		overrides: Partial<Record<PiId, ScorecardCell>>,
+		overrides: Partial<Record<SyntheticId, ScorecardCell>>,
 	): ScorecardResult {
-		const cells = new Map<PiId, ScorecardCell>();
-		const allIds: PiId[] = [
-			"pi-01",
-			"pi-02",
-			"pi-03",
-			"pi-04",
-			"pi-05",
-			"pi-06",
-			"pi-07",
-			"pi-08",
-			"pi-09",
-			"pi-10",
-			"pi-11",
-			"pi-12",
-			"pi-13",
-			"pi-14",
-			"pi-15",
-		];
+		const cells = new Map<SyntheticId, ScorecardCell>();
 		let satisfied = 0;
 		let partial = 0;
 		let notSatisfied = 0;
 
-		for (const id of allIds) {
-			const cell: ScorecardCell = overrides[id] ?? {
-				criterionId: id,
-				value: "\u2717", // X mark
-			};
+		for (const id of SYNTHETIC_IDS) {
+			const cell: ScorecardCell = overrides[id] ?? { criterionId: id, value: "\u2717" };
 			cells.set(id, cell);
 			if (cell.value === "\u2713") satisfied++;
 			else if (cell.value === "partial") partial++;
@@ -847,20 +851,20 @@ describe("Scorecard", () => {
 	describe("compareScorecards", () => {
 		it("finds differences between two scorecards", () => {
 			const left = makeScorecardResult("Adapter-A", {
-				"pi-01": { criterionId: "pi-01", value: "\u2713" },
-				"pi-02": { criterionId: "pi-02", value: "\u2717" },
+				"pi-prime-01": { criterionId: "pi-prime-01", value: "\u2713" },
+				"pi-prime-03": { criterionId: "pi-prime-03", value: "\u2717" },
 			});
 			const right = makeScorecardResult("Adapter-B", {
-				"pi-01": { criterionId: "pi-01", value: "\u2717" },
-				"pi-02": { criterionId: "pi-02", value: "\u2713" },
+				"pi-prime-01": { criterionId: "pi-prime-01", value: "\u2717" },
+				"pi-prime-03": { criterionId: "pi-prime-03", value: "\u2713" },
 			});
 
 			const comparison = compareScorecards(left, right);
 			expect(comparison.differences.length).toBeGreaterThanOrEqual(2);
-			const pi01Diff = comparison.differences.find((d) => d.criterionId === "pi-01");
-			expect(pi01Diff).toBeDefined();
-			expect(pi01Diff!.leftValue).toBe("\u2713");
-			expect(pi01Diff!.rightValue).toBe("\u2717");
+			const diff = comparison.differences.find((d) => d.criterionId === "pi-prime-01");
+			expect(diff).toBeDefined();
+			expect(diff!.leftValue).toBe("\u2713");
+			expect(diff!.rightValue).toBe("\u2717");
 		});
 
 		it("reports no differences for identical scorecards", () => {
@@ -873,10 +877,10 @@ describe("Scorecard", () => {
 	describe("renderComparisonMarkdown", () => {
 		it("renders comparison with differences", () => {
 			const left = makeScorecardResult("Adapter-A", {
-				"pi-01": { criterionId: "pi-01", value: "\u2713" },
+				"pi-prime-01": { criterionId: "pi-prime-01", value: "\u2713" },
 			});
 			const right = makeScorecardResult("Adapter-B", {
-				"pi-01": { criterionId: "pi-01", value: "\u2717" },
+				"pi-prime-01": { criterionId: "pi-prime-01", value: "\u2717" },
 			});
 			const comparison = compareScorecards(left, right);
 			const md = renderComparisonMarkdown(comparison);
@@ -908,8 +912,8 @@ describe("Scorecard", () => {
 		}
 
 		it("returns undecidable/partial for criterion that returns undecidable", () => {
-			const undecidableCriterion: CriterionPredicate = {
-				id: "pi-01",
+			const undecidableCriterion: Criterion = {
+				id: "pi-prime-01",
 				name: "Test",
 				description: "Test",
 				evaluate: () => ({ status: "undecidable", reason: "Cannot decide" }),
@@ -918,11 +922,11 @@ describe("Scorecard", () => {
 			const adapter = makeAdapter();
 			const result = evaluateScorecard(
 				adapter,
-				[{ criterionId: "pi-01", schema: base("string"), name: "w1" }],
+				[{ criterionId: "pi-prime-01", schema: base("string"), name: "w1" }],
 				[undecidableCriterion],
 			);
 
-			const cell = result.cells.get("pi-01");
+			const cell = result.cells.get("pi-prime-01");
 			expect(cell).toBeDefined();
 			expect(cell!.value).toBe("partial");
 			expect(cell!.justification).toContain("Cannot decide");
@@ -935,8 +939,8 @@ describe("Scorecard", () => {
 				},
 			});
 
-			const simpleCriterion: CriterionPredicate = {
-				id: "pi-01",
+			const simpleCriterion: Criterion = {
+				id: "pi-prime-01",
 				name: "Test",
 				description: "Test",
 				evaluate: () => ({ status: "satisfied" }),
@@ -944,11 +948,11 @@ describe("Scorecard", () => {
 
 			const result = evaluateScorecard(
 				throwingAdapter,
-				[{ criterionId: "pi-01", schema: base("string"), name: "w1" }],
+				[{ criterionId: "pi-prime-01", schema: base("string"), name: "w1" }],
 				[simpleCriterion],
 			);
 
-			const cell = result.cells.get("pi-01");
+			const cell = result.cells.get("pi-prime-01");
 			expect(cell).toBeDefined();
 			expect(cell!.value).toBe("partial");
 			expect(cell!.justification).toContain("round-trip failed");

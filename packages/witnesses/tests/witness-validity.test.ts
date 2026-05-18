@@ -1,23 +1,23 @@
-import { PI_PRIME_CRITERIA, PI_PRIME_IDS } from "@typecarta/core";
+import { CRITERIA, CRITERION_IDS } from "@typecarta/core";
 import { describe, expect, it } from "vitest";
-import { DIVERSE_PRIME_SCHEMAS } from "../src/index.js";
+import { ALL_WITNESSES } from "../src/index.js";
 import { RHO_DEPTH_PAIR, RHO_GENERIC_PAIR, RHO_WIDTH_PAIR } from "../src/index.js";
 
 describe("Expanded prime schema set C'", () => {
 	it("has exactly 70 schemas", () => {
-		expect(DIVERSE_PRIME_SCHEMAS).toHaveLength(70);
+		expect(ALL_WITNESSES).toHaveLength(70);
 	});
 
 	it("covers all 70 pi-prime criteria (Pi'-completeness)", () => {
-		for (const id of PI_PRIME_IDS) {
-			const witness = DIVERSE_PRIME_SCHEMAS.find((w) => w.id === id);
+		for (const id of CRITERION_IDS) {
+			const witness = ALL_WITNESSES.find((w) => w.id === id);
 			expect(witness, `Missing witness for ${id}`).toBeDefined();
 		}
 	});
 
 	it("each schema satisfies its primary criterion", () => {
-		for (const witness of DIVERSE_PRIME_SCHEMAS) {
-			const criterion = PI_PRIME_CRITERIA.find((c) => c.id === witness.id);
+		for (const witness of ALL_WITNESSES) {
+			const criterion = CRITERIA.find((c) => c.id === witness.id);
 			expect(criterion, `Missing criterion ${witness.id}`).toBeDefined();
 			if (!criterion) continue;
 			const result = criterion.evaluate(witness.schema);
@@ -31,15 +31,15 @@ describe("Expanded prime schema set C'", () => {
 	});
 
 	it("has unique criterion IDs (no duplicates)", () => {
-		const ids = DIVERSE_PRIME_SCHEMAS.map((w) => w.id);
+		const ids = ALL_WITNESSES.map((w) => w.id);
 		expect(new Set(ids).size).toBe(ids.length);
 	});
 
 	it("all IDs match valid pi-prime IDs", () => {
-		for (const witness of DIVERSE_PRIME_SCHEMAS) {
+		for (const witness of ALL_WITNESSES) {
 			expect(
-				(PI_PRIME_IDS as readonly string[]).includes(witness.id),
-				`${witness.id} is not a valid PiPrimeId`,
+				(CRITERION_IDS as readonly string[]).includes(witness.id),
+				`${witness.id} is not a valid CriterionId`,
 			).toBe(true);
 		}
 	});

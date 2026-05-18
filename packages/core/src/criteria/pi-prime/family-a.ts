@@ -1,14 +1,14 @@
 import { collect } from "../../ast/traversal.js";
 /** Family A — Cardinality and Base-Set Structure (π'₁–π'₇). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_A: readonly PiPrimeCriterion[] = [
+export const FAMILY_A: readonly Criterion[] = [
 	{
 		id: "pi-prime-01",
+		core: true,
 		name: "Syntactic Bottom",
 		family: "A",
-		refines: "pi-01",
 		description: "IR carries an explicit, named bottom node (⊥ ∈ B)",
 		evaluate(term: TypeTerm) {
 			if (term.kind === "bottom") return { status: "satisfied", witness: term };
@@ -22,7 +22,6 @@ export const FAMILY_A: readonly PiPrimeCriterion[] = [
 		id: "pi-prime-02",
 		name: "Semantic Emptiness",
 		family: "A",
-		refines: "pi-01",
 		description: "Empty extension via constraint interaction, not explicit ⊥",
 		evaluate(term: TypeTerm) {
 			// A refinement with unsatisfiable predicate, or intersection yielding empty
@@ -40,9 +39,9 @@ export const FAMILY_A: readonly PiPrimeCriterion[] = [
 	},
 	{
 		id: "pi-prime-03",
+		core: true,
 		name: "Global Top",
 		family: "A",
-		refines: "pi-02",
 		description: "⟦S⟧ = 𝒱",
 		evaluate(term: TypeTerm) {
 			if (term.kind === "top") return { status: "satisfied", witness: term };
@@ -67,9 +66,9 @@ export const FAMILY_A: readonly PiPrimeCriterion[] = [
 	},
 	{
 		id: "pi-prime-05",
+		core: true,
 		name: "Singleton Literal",
 		family: "A",
-		refines: "pi-03",
 		description: "|⟦S⟧| = 1 via literal constant",
 		evaluate(term: TypeTerm) {
 			if (term.kind === "literal") return { status: "satisfied", witness: term };

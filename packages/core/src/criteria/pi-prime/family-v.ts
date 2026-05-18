@@ -1,9 +1,9 @@
 import { collect } from "../../ast/traversal.js";
 /** Family V — Temporal / Stateful (π'₇₀). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_V: readonly PiPrimeCriterion[] = [
+export const FAMILY_V: readonly Criterion[] = [
 	{
 		id: "pi-prime-70",
 		name: "State-Machine Type",

@@ -42,6 +42,14 @@ const GRAPHQL_SIGNATURE: Signature = createSignature(
 	],
 );
 
+const GRAPHQL_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
+	"bottom",
+	"top",
+	"literal",
+	"base",
+	"apply",
+]);
+
 // ─── Adapter class ─────────────────────────────────────────────────
 
 /** Adapt GraphQL type descriptors to and from the typecarta IR. */
@@ -83,6 +91,10 @@ export class GraphQLAdapter implements IRAdapter<Signature, GraphQLTypeDescripto
 		} catch {
 			return false;
 		}
+	}
+
+	supportsKind(kind: TypeTerm["kind"]): boolean {
+		return GRAPHQL_SUPPORTED_KINDS.has(kind);
 	}
 
 	/**

@@ -1,7 +1,7 @@
 // witness — Look up and display a witness schema for a given criterion.
 
-import { PI_IDS, type PiId, printTerm } from "@typecarta/core";
-import { DIVERSE_SCHEMAS } from "@typecarta/witnesses";
+import { CRITERION_IDS, type CriterionId, printTerm } from "@typecarta/core";
+import { ALL_WITNESSES } from "@typecarta/witnesses";
 
 /**
  * Execute the `typecarta witness` subcommand.
@@ -12,17 +12,19 @@ import { DIVERSE_SCHEMAS } from "@typecarta/witnesses";
 export async function run(args: string[]): Promise<void> {
 	const criterionIdx = args.indexOf("--criterion");
 	if (criterionIdx === -1 || !args[criterionIdx + 1]) {
-		console.error("Usage: typecarta witness --criterion <pi-NN>");
+		console.error("Usage: typecarta witness --criterion <pi-prime-NN>");
 		process.exit(1);
 	}
-	const criterionId = args[criterionIdx + 1] as PiId;
+	const criterionId = args[criterionIdx + 1] as CriterionId;
 
-	if (!PI_IDS.includes(criterionId)) {
-		console.error(`Unknown criterion: ${criterionId}. Valid: ${PI_IDS.join(", ")}`);
+	if (!CRITERION_IDS.includes(criterionId)) {
+		console.error(
+			`Unknown criterion: ${criterionId}. Use one of pi-prime-01 .. pi-prime-70.`,
+		);
 		process.exit(1);
 	}
 
-	const witness = DIVERSE_SCHEMAS.find((w) => w.id === criterionId);
+	const witness = ALL_WITNESSES.find((w) => w.id === criterionId);
 	if (!witness) {
 		console.error(`No witness found for ${criterionId}`);
 		process.exit(1);

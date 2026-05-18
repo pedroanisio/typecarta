@@ -1,0 +1,73 @@
+import { CRITERIA, evaluateScorecard } from "@typecarta/core";
+import { describe, expect, it } from "vitest";
+import { ALL_WITNESSES } from "../../../witnesses/src/index.ts";
+import { XsdAdapter } from "../src/adapter.js";
+
+const adapter = new XsdAdapter();
+
+function fullScorecard() {
+	const witnesses = ALL_WITNESSES.map((w) => ({
+		criterionId: w.id,
+		name: w.name,
+		schema: w.schema,
+	}));
+	return evaluateScorecard(adapter, witnesses, CRITERIA);
+}
+
+describe("XSD full scorecard assessment", () => {
+	it("pins the current adapter full-mode totals", () => {
+		const scorecard = fullScorecard();
+
+		expect(scorecard.totals).toEqual({
+			satisfied: 21,
+			partial: 16,
+			notSatisfied: 7,
+			outOfVocabulary: 26,
+		});
+	});
+
+	it("keeps spec-recognized adapter gaps visible", () => {
+		const scorecard = fullScorecard();
+		const cells = scorecard.cells;
+
+		// These rows are `n/a` because the adapter does not model the IR
+		// constructor used by the witness — they are adapter holes, NOT XSD
+		// language gaps. See docs/guides/scorecard-spec-assessment.md for the
+		// adapter-hole vs. language-gap classification. When the adapter grows
+		// to support the listed XSD feature, the cell should flip; update this
+		// list then.
+		const knownAdapterHoles: Array<{
+			criterionId: string;
+			current: "partial" | "✗" | "n/a";
+			xsdFeature: string;
+		}> = [
+			// pi-prime-13's witness uses `union([string, base("null")])`. The IR
+			// kinds (base, apply) are supported, so this is `✗` rather than `n/a`
+			// — the encoder reaches the `null` base and throws. Still an adapter
+			// hole, just one that materializes deeper than `supportsKind` catches.
+			{ criterionId: "pi-prime-13", current: "✗", xsdFeature: 'nillable="true" + xsi:nil' },
+			{ criterionId: "pi-prime-25", current: "n/a", xsdFeature: "named complexType self-reference" },
+			{ criterionId: "pi-prime-26", current: "n/a", xsdFeature: "named complexType mutual reference" },
+			{ criterionId: "pi-prime-35", current: "n/a", xsdFeature: "nominal {ns}name + xsi:type" },
+			{ criterionId: "pi-prime-44", current: "n/a", xsdFeature: "xs:keyref (document-scoped)" },
+			// pi-prime-46's witness uses `apply("set", …)`. `apply` is in vocabulary,
+			// so it reaches the encoder and fails there → ✗, not n/a.
+			{ criterionId: "pi-prime-46", current: "✗", xsdFeature: 'xs:unique + maxOccurs="unbounded"' },
+			{ criterionId: "pi-prime-50", current: "n/a", xsdFeature: 'simpleType / complexType name="..."' },
+			{ criterionId: "pi-prime-51", current: "n/a", xsdFeature: "targetNamespace, xs:include, xs:import" },
+		];
+
+		for (const gap of knownAdapterHoles) {
+			expect(cells.get(gap.criterionId)?.value, gap.xsdFeature).toBe(gap.current);
+		}
+	});
+
+	it("documents that the adapter does not declare an XSD version", () => {
+		// Several verdicts pivot on XSD 1.0 vs. 1.1 (notably pi-prime-43 with
+		// xs:assert). The current adapter name is just "xsd" — it should be
+		// split into "xsd-1.0" and "xsd-1.1" before those rows can be called
+		// spec-correct. This test pins the current name so the split is a
+		// deliberate, visible change.
+		expect(adapter.name).toBe("xsd");
+	});
+});

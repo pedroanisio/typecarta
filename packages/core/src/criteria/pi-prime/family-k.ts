@@ -1,14 +1,14 @@
 import { collect } from "../../ast/traversal.js";
 /** Family K — Value Dependency (π'₄₂–π'₄₄, π'₆₇). */
 import type { TypeTerm } from "../../ast/type-term.js";
-import type { PiPrimeCriterion } from "./types.js";
+import type { Criterion } from "./types.js";
 
-export const FAMILY_K: readonly PiPrimeCriterion[] = [
+export const FAMILY_K: readonly Criterion[] = [
 	{
 		id: "pi-prime-42",
+		core: true,
 		name: "Finite Tagged Dependent Choice",
 		family: "K",
-		refines: "pi-14",
 		description: "Discriminated union where branch field types depend on a tag literal",
 		evaluate(term: TypeTerm) {
 			const isDiscriminated = (n: TypeTerm) => {

@@ -1,8 +1,8 @@
 // pi-prime/index
-// Aggregate the expanded witness schemas (SP1..SP70) and expose them as the DIVERSE_PRIME_SCHEMAS array.
+// Aggregate the expanded witness schemas (SP1..SP70) and expose them as the ALL_WITNESSES array.
 
 import type { TypeTerm } from "@typecarta/core";
-import type { PiPrimeId } from "@typecarta/core";
+import type { CriterionId } from "@typecarta/core";
 
 // ─── Family A ────────────────────────────────────────────────────────
 import {
@@ -113,14 +113,14 @@ import { SP66_ROW_POLY } from "./family-u.js";
 import { SP70_STATE_MACHINE } from "./family-v.js";
 
 /** A witness schema paired with its primary pi-prime criterion. */
-export interface WitnessPrimeSchema {
-	readonly id: PiPrimeId;
+export interface WitnessSchema {
+	readonly id: CriterionId;
 	readonly name: string;
 	readonly schema: TypeTerm;
 }
 
 /** The expanded diverse schema set C' = {SP₁, ..., SP₇₀}. */
-export const DIVERSE_PRIME_SCHEMAS: readonly WitnessPrimeSchema[] = [
+export const ALL_WITNESSES: readonly WitnessSchema[] = [
 	// Family A — Cardinality & base-set
 	{ id: "pi-prime-01", name: "SP₁ — Syntactic Bottom", schema: SP01_SYNTACTIC_BOTTOM },
 	{ id: "pi-prime-02", name: "SP₂ — Semantic Emptiness", schema: SP02_SEMANTIC_EMPTINESS },

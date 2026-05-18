@@ -6,10 +6,11 @@ import {
 	evaluateScorecard,
 	getAdapter,
 } from "@typecarta/core";
-import { DIVERSE_SCHEMAS } from "@typecarta/witnesses";
+import { CORE_SCHEMAS } from "@typecarta/witnesses";
 import { renderComparisonJSON } from "../output/json.js";
 import { renderComparisonMarkdown } from "../output/markdown.js";
 import { renderTerminalComparison } from "../output/terminal.js";
+import { captureProvenance } from "../provenance.js";
 
 /**
  * Execute the `typecarta compare` subcommand.
@@ -37,14 +38,15 @@ export async function run(args: string[]): Promise<void> {
 		process.exit(1);
 	}
 
-	const witnesses: WitnessEntry[] = DIVERSE_SCHEMAS.map((w) => ({
+	const witnesses: WitnessEntry[] = CORE_SCHEMAS.map((w) => ({
 		criterionId: w.id,
 		schema: w.schema,
 		name: w.name,
 	}));
 
-	const leftResult = evaluateScorecard(leftAdapter, witnesses);
-	const rightResult = evaluateScorecard(rightAdapter, witnesses);
+	const provenance = captureProvenance();
+	const leftResult = { ...evaluateScorecard(leftAdapter, witnesses), provenance };
+	const rightResult = { ...evaluateScorecard(rightAdapter, witnesses), provenance };
 	const comparison = compareScorecards(leftResult, rightResult);
 
 	switch (format) {

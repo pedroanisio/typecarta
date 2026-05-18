@@ -58,6 +58,14 @@ const AVRO_SIGNATURE: Signature = createSignature(
 	],
 );
 
+const AVRO_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
+	"bottom",
+	"top",
+	"literal",
+	"base",
+	"apply",
+]);
+
 // ─── Adapter class ─────────────────────────────────────────────────
 
 /** Convert between Apache Avro schema descriptors and the typecarta IR. */
@@ -95,6 +103,10 @@ export class AvroAdapter implements IRAdapter<Signature, AvroSchema> {
 		} catch {
 			return false;
 		}
+	}
+
+	supportsKind(kind: TypeTerm["kind"]): boolean {
+		return AVRO_SUPPORTED_KINDS.has(kind);
 	}
 
 	/**
