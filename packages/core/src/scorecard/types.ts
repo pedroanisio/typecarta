@@ -21,13 +21,17 @@ export interface ScorecardCell {
 }
 
 /**
- * Identify the typecarta build that produced a scorecard.
+ * Identify the typecarta build and the adapter target spec that produced a
+ * scorecard.
  *
- * Pinned in every rendered report so a stored result can be traced back to a
- * specific commit and adapter version. `generatedAt` is an ISO-8601 timestamp.
+ * Pinned in every rendered report so a stored result can be traced back to
+ * a specific commit, typecarta version, and target-language version (e.g.
+ * XSD 1.0 vs. 1.1, JSON Schema draft-07 vs. 2020-12). `generatedAt` is an
+ * ISO-8601 timestamp.
  */
 export interface ScorecardProvenance {
 	readonly typecartaVersion: string;
+	readonly adapterSpecVersion: string;
 	readonly commitHash: string;
 	readonly generatedAt: string;
 }

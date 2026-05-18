@@ -8,7 +8,11 @@ import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createProvenance, type ScorecardProvenance } from "@typecarta/core";
+import {
+	createProvenance,
+	type IRAdapter,
+	type ScorecardProvenance,
+} from "@typecarta/core";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -76,10 +80,17 @@ function readCommitHash(): string {
 	return cachedCommit;
 }
 
-/** Build a {@link ScorecardProvenance} record for the current CLI invocation. */
-export function captureProvenance(): ScorecardProvenance {
+/**
+ * Build a {@link ScorecardProvenance} record for the current CLI invocation,
+ * pulling the adapter's target spec version from the adapter itself.
+ *
+ * Pass the adapter that produced the scorecard so the resulting provenance
+ * names the exact spec (e.g. XSD 1.0 vs. 1.1) the verdicts are claims about.
+ */
+export function captureProvenance(adapter: IRAdapter): ScorecardProvenance {
 	return createProvenance({
 		typecartaVersion: readVersion(),
+		adapterSpecVersion: adapter.specVersion,
 		commitHash: readCommitHash(),
 	});
 }

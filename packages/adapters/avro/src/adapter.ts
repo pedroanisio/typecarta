@@ -71,6 +71,7 @@ const AVRO_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
 /** Convert between Apache Avro schema descriptors and the typecarta IR. */
 export class AvroAdapter implements IRAdapter<Signature, AvroSchema> {
 	readonly name = "Apache Avro";
+	readonly specVersion = "1.11";
 	readonly signature = AVRO_SIGNATURE;
 
 	/**

@@ -10,6 +10,16 @@ export interface IRAdapter<Sig extends Signature = Signature, Native = unknown> 
 	/** Human-readable name (e.g. "JSON Schema draft-07"). */
 	readonly name: string;
 
+	/**
+	 * The specific target-language version this adapter encodes against
+	 * (e.g. "1.0" for XSD 1.0, "draft-07" for JSON Schema draft-07,
+	 * "1.11" for Avro, "proto3" for Protobuf 3, "16.0" for TypeScript).
+	 *
+	 * Required so a scorecard verdict can be traced to a concrete spec.
+	 * Use the canonical version string the target language itself uses.
+	 */
+	readonly specVersion: string;
+
 	/** The IR's signature. */
 	readonly signature: Sig;
 

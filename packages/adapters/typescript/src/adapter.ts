@@ -87,6 +87,7 @@ const TS_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
 /** Adapt TypeScript type descriptors to and from the typecarta IR. */
 export class TypeScriptAdapter implements IRAdapter<Signature, TSTypeDescriptor> {
 	readonly name = "TypeScript";
+	readonly specVersion = "5.7";
 	readonly signature = TS_SIGNATURE;
 
 	/**

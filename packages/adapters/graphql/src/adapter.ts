@@ -55,6 +55,7 @@ const GRAPHQL_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
 /** Adapt GraphQL type descriptors to and from the typecarta IR. */
 export class GraphQLAdapter implements IRAdapter<Signature, GraphQLTypeDescriptor> {
 	readonly name = "GraphQL";
+	readonly specVersion = "October 2021";
 	readonly signature = GRAPHQL_SIGNATURE;
 
 	/**

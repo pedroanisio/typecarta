@@ -136,8 +136,11 @@ function renderSummary(result: ScorecardResult, scopeLabel: string): string[] {
 	const { satisfied, partial, notSatisfied, outOfVocabulary } = result.totals;
 	const total = satisfied + partial + notSatisfied + outOfVocabulary;
 	const lines: string[] = [];
+	const specSuffix = result.provenance?.adapterSpecVersion
+		? ` ${result.provenance.adapterSpecVersion}`
+		: "";
 	lines.push(
-		`${BOLD}Scorecard: ${result.adapterName}${RESET}   ${DIM}[${scopeLabel}]${RESET}`,
+		`${BOLD}Scorecard: ${result.adapterName}${specSuffix}${RESET}   ${DIM}[${scopeLabel}]${RESET}`,
 	);
 	if (result.provenance) {
 		const { typecartaVersion, commitHash, generatedAt } = result.provenance;

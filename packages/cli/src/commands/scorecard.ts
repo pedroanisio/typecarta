@@ -76,7 +76,7 @@ export async function run(args: string[]): Promise<void> {
 		filter === "core"
 			? evaluateScorecard(adapter, witnesses)
 			: evaluateScorecard(adapter, witnesses, CRITERIA);
-	const result = { ...baseResult, provenance: captureProvenance() };
+	const result = { ...baseResult, provenance: captureProvenance(adapter) };
 
 	switch (format) {
 		case "json":

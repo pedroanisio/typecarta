@@ -110,6 +110,7 @@ const PROTOBUF_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
 /** Adapt Protobuf type descriptors to and from the typecarta IR. */
 export class ProtobufAdapter implements IRAdapter<Signature, ProtobufDescriptor> {
 	readonly name = "Protocol Buffers";
+	readonly specVersion = "proto3";
 	readonly signature = PROTOBUF_SIGNATURE;
 
 	/**

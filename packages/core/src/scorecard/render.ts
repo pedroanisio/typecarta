@@ -11,7 +11,11 @@ import type { ScorecardComparison, ScorecardResult } from "./types.js";
  */
 export function renderMarkdown(result: ScorecardResult): string {
 	const lines: string[] = [];
-	lines.push(`# Scorecard: ${result.adapterName}`);
+	const specSuffix =
+		result.provenance && result.provenance.adapterSpecVersion !== "unknown"
+			? ` ${result.provenance.adapterSpecVersion}`
+			: "";
+	lines.push(`# Scorecard: ${result.adapterName}${specSuffix}`);
 	if (result.provenance) {
 		const { typecartaVersion, commitHash, generatedAt } = result.provenance;
 		lines.push("");

@@ -56,6 +56,12 @@ const ADAPTER_SIGNATURE: Signature = createSignature(
 export class TemplateAdapter implements IRAdapter<Signature, NativeDescriptor> {
 	/** TODO: Set a human-readable name for your adapter. */
 	readonly name = "TODO: Adapter Name";
+	/**
+	 * TODO: Pin the concrete target-language version this adapter encodes
+	 * against (e.g. "1.0", "draft-07", "proto3"). Required by the IRAdapter
+	 * contract — must be the canonical version string the target uses.
+	 */
+	readonly specVersion = "TODO: spec version";
 	readonly signature = ADAPTER_SIGNATURE;
 
 	/**

@@ -44,7 +44,8 @@ const JSON_SCHEMA_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
 
 /** JSON Schema draft-07 adapter — implements IRAdapter for JSON Schema documents. */
 export class JsonSchemaAdapter implements IRAdapter<Signature, JsonSchemaDocument> {
-	readonly name = "JSON Schema draft-07";
+	readonly name = "JSON Schema";
+	readonly specVersion = "draft-07";
 	readonly signature = JSON_SCHEMA_SIGNATURE;
 
 	/**

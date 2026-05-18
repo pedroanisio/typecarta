@@ -25,6 +25,7 @@ export function createProvenance(
 ): ScorecardProvenance {
 	return {
 		typecartaVersion: overrides.typecartaVersion ?? "unknown",
+		adapterSpecVersion: overrides.adapterSpecVersion ?? "unknown",
 		commitHash: overrides.commitHash ?? "unknown",
 		generatedAt: overrides.generatedAt ?? new Date().toISOString(),
 	};

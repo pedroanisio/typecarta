@@ -29,7 +29,7 @@ export const DEFAULT_ADAPTERS: readonly IRAdapter[] = [
 export const DEFAULT_ADAPTER_PACKAGES: ReadonlyMap<string, string> = new Map([
 	["xsd", "@typecarta/adapter-xsd"],
 	["Zod", "@typecarta/adapter-zod"],
-	["JSON Schema draft-07", "@typecarta/adapter-json-schema"],
+	["JSON Schema", "@typecarta/adapter-json-schema"],
 	["TypeScript", "@typecarta/adapter-typescript"],
 	["Protocol Buffers", "@typecarta/adapter-protobuf"],
 	["GraphQL", "@typecarta/adapter-graphql"],

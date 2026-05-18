@@ -69,6 +69,7 @@ const EFFECT_SCHEMA_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
 /** Convert between Effect Schema descriptors and the typecarta IR. */
 export class EffectSchemaAdapter implements IRAdapter<Signature, EffectSchemaDescriptor> {
 	readonly name = "Effect Schema";
+	readonly specVersion = "0.x";
 	readonly signature = EFFECT_SCHEMA_SIGNATURE;
 
 	/**

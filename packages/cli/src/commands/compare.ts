@@ -44,9 +44,16 @@ export async function run(args: string[]): Promise<void> {
 		name: w.name,
 	}));
 
-	const provenance = captureProvenance();
-	const leftResult = { ...evaluateScorecard(leftAdapter, witnesses), provenance };
-	const rightResult = { ...evaluateScorecard(rightAdapter, witnesses), provenance };
+	// Each side gets its own provenance — the two adapters may target different
+	// spec versions, and the report should make that visible.
+	const leftResult = {
+		...evaluateScorecard(leftAdapter, witnesses),
+		provenance: captureProvenance(leftAdapter),
+	};
+	const rightResult = {
+		...evaluateScorecard(rightAdapter, witnesses),
+		provenance: captureProvenance(rightAdapter),
+	};
 	const comparison = compareScorecards(leftResult, rightResult);
 
 	switch (format) {

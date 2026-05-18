@@ -68,6 +68,7 @@ const ZOD_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
 /** Convert between Zod schema descriptors and typecarta IR type terms. */
 export class ZodAdapter implements IRAdapter<Signature, ZodDescriptor> {
 	readonly name = "Zod";
+	readonly specVersion = "3.x";
 	readonly signature = ZOD_SIGNATURE;
 
 	/**

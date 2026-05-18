@@ -120,6 +120,10 @@ const XSD_SIGNATURE: Signature = createSignature(
 /** Adapt XSD schema-component descriptors to and from the typecarta IR. */
 export class XsdAdapter implements IRAdapter<Signature, XsdDescriptor> {
 	readonly name = "xsd";
+	// XSD 1.0 only — no `xs:assert`, `xs:override`, or conditional type
+	// assignment is implemented. Split into "xsd-1.0" / "xsd-1.1" adapters
+	// before claiming any 1.1-only verdict.
+	readonly specVersion = "1.0";
 	readonly signature = XSD_SIGNATURE;
 
 	/**
