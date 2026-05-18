@@ -11,9 +11,18 @@
 		"smoke": "pnpm run bench:all"
 	},
 	"dependencies": {
+		"@typecarta/adapter-avro": "workspace:*",
+		"@typecarta/adapter-effect-schema": "workspace:*",
+		"@typecarta/adapter-graphql": "workspace:*",
+		"@typecarta/adapter-json-schema": "workspace:*",
+		"@typecarta/adapter-protobuf": "workspace:*",
+		"@typecarta/adapter-shacl": "workspace:*",
+		"@typecarta/adapter-typescript": "workspace:*",
+		"@typecarta/adapter-xsd": "workspace:*",
+		"@typecarta/adapter-xsd-1-1": "workspace:*",
+		"@typecarta/adapter-zod": "workspace:*",
 		"@typecarta/core": "workspace:*",
-		"@typecarta/witnesses": "workspace:*",
-		"@typecarta/adapter-json-schema": "workspace:*"
+		"@typecarta/witnesses": "workspace:*"
 	},
 	"devDependencies": {
 		"tsx": "^4.0.0",
