@@ -9,6 +9,7 @@
 		{ "path": "../core" },
 		{ "path": "../witnesses" },
 		{ "path": "../adapters/xsd" },
-		{ "path": "../adapters/xsd-1-1" }
+		{ "path": "../adapters/xsd-1-1" },
+		{ "path": "../adapters/shacl" }
 	]
 }

@@ -206,6 +206,19 @@ importers:
         specifier: ^3.0.0
         version: 3.2.4(@types/node@25.5.0)(tsx@4.21.0)(yaml@2.8.2)
 
+  packages/adapters/shacl:
+    dependencies:
+      '@typecarta/core':
+        specifier: workspace:*
+        version: link:../../core
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@25.5.0)(tsx@4.21.0)(yaml@2.8.2)
+
   packages/adapters/typescript:
     dependencies:
       '@typecarta/core':
@@ -221,6 +234,9 @@ importers:
 
   packages/adapters/xsd:
     dependencies:
+      '@typecarta/adapter-xsd-core':
+        specifier: workspace:*
+        version: link:../xsd-core
       '@typecarta/core':
         specifier: workspace:*
         version: link:../../core
@@ -233,6 +249,22 @@ importers:
         version: 3.2.4(@types/node@25.5.0)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/adapters/xsd-1-1:
+    dependencies:
+      '@typecarta/adapter-xsd-core':
+        specifier: workspace:*
+        version: link:../xsd-core
+      '@typecarta/core':
+        specifier: workspace:*
+        version: link:../../core
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@25.5.0)(tsx@4.21.0)(yaml@2.8.2)
+
+  packages/adapters/xsd-core:
     dependencies:
       '@typecarta/core':
         specifier: workspace:*
@@ -275,6 +307,9 @@ importers:
       '@typecarta/adapter-protobuf':
         specifier: workspace:*
         version: link:../adapters/protobuf
+      '@typecarta/adapter-shacl':
+        specifier: workspace:*
+        version: link:../adapters/shacl
       '@typecarta/adapter-typescript':
         specifier: workspace:*
         version: link:../adapters/typescript

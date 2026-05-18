@@ -19,6 +19,7 @@
 		"@typecarta/adapter-graphql": "workspace:*",
 		"@typecarta/adapter-json-schema": "workspace:*",
 		"@typecarta/adapter-protobuf": "workspace:*",
+		"@typecarta/adapter-shacl": "workspace:*",
 		"@typecarta/adapter-typescript": "workspace:*",
 		"@typecarta/adapter-xsd": "workspace:*",
 		"@typecarta/adapter-xsd-1-1": "workspace:*",
