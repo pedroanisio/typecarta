@@ -1,0 +1,7 @@
+# Dependencies for scrape_lexicons.py
+#
+# Install with:
+#   pip install -r scripts/requirements.txt
+
+lxml>=5.0.0
+jsonschema>=4.21.0

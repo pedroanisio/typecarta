@@ -12,6 +12,7 @@ Covered languages
 - JSON Schema 2020-12 (8 vocabulary meta-schemas)
 - XSD 1.1 (Part 1 + Part 2 schema-for-schemas + Part 2 HTML prose)
 - SHACL (Core Turtle ontology + Compact Syntax ANTLR grammar)
+- JSON-LD 1.1 (§1.7 Syntax Tokens and Keywords)
 - TypeScript (tree-sitter-typescript node-types + lib.es5.d.ts intrinsics)
 - Zod v3 (single-file public .d.ts distribution)
 - Zod v4 (multi-file public .d.ts distribution)
@@ -112,30 +113,53 @@ XSD_PART1_XSD_URL   = "https://www.w3.org/TR/xmlschema11-1/XMLSchema.xsd"
 XSD_PART2_XSD_URL   = "https://www.w3.org/TR/xmlschema11-2/datatypes.xsd"
 XSD_PART2_HTML_URL  = "https://www.w3.org/TR/xmlschema11-2/"
 
+# SHACL Core ontology lives at a stable W3C namespace URI (the REC's normative
+# namespace). The 2017 Recommendation's vocabulary is what this URL serves.
 SHACL_VOCAB_TTL_URL      = "https://www.w3.org/ns/shacl.ttl"
-SHACL_COMPACT_SYNTAX_URL = "https://w3c.github.io/shacl/shacl-compact-syntax/"
 
+# SHACL Compact Syntax is a W3C Community Group draft with no version tag.
+# Pin to a specific commit SHA from w3c/shacl so the scraped grammar is
+# reproducible across runs.
+SHACL_COMPACT_SYNTAX_COMMIT = "e28389980cab29f0bb63f83a4037a6cbef52e3ba"  # 2025-01-27
+SHACL_COMPACT_SYNTAX_URL = (
+    f"https://raw.githubusercontent.com/w3c/shacl/"
+    f"{SHACL_COMPACT_SYNTAX_COMMIT}/shacl-compact-syntax/index.html"
+)
+
+JSON_LD_1_1_HTML_URL = "https://www.w3.org/TR/json-ld11/"
+
+# Pinned: tree-sitter-typescript v0.23.2 (latest tagged release).
+TYPESCRIPT_TREE_SITTER_VERSION = "v0.23.2"
 TYPESCRIPT_TREE_SITTER_NODE_TYPES_URL = (
-    "https://raw.githubusercontent.com/tree-sitter/tree-sitter-typescript/"
-    "master/typescript/src/node-types.json"
-)
-TYPESCRIPT_LIB_ES5_DTS_URL = (
-    "https://raw.githubusercontent.com/microsoft/TypeScript/"
-    "main/src/lib/es5.d.ts"
+    f"https://raw.githubusercontent.com/tree-sitter/tree-sitter-typescript/"
+    f"{TYPESCRIPT_TREE_SITTER_VERSION}/typescript/src/node-types.json"
 )
 
-ZOD_V3_DTS_URLS: tuple[str, ...] = (
-    "https://cdn.jsdelivr.net/npm/zod@3/lib/types.d.ts",
+# Pinned: TypeScript v6.0.3 (latest release as of pinning).
+TYPESCRIPT_VERSION = "v6.0.3"
+TYPESCRIPT_LIB_ES5_DTS_URL = (
+    f"https://raw.githubusercontent.com/microsoft/TypeScript/"
+    f"{TYPESCRIPT_VERSION}/src/lib/es5.d.ts"
 )
+
+# Pinned: zod@3.24.4 (last release with the `lib/types.d.ts` layout;
+# starting at 3.25.0 the package was reorganized into v3/ + v4/ trees).
+ZOD_V3_VERSION = "3.24.4"
+ZOD_V3_DTS_URLS: tuple[str, ...] = (
+    f"https://cdn.jsdelivr.net/npm/zod@{ZOD_V3_VERSION}/lib/types.d.ts",
+)
+
+# Pinned: zod@4.4.3 (latest stable v4 in the dedicated v4 package line).
+ZOD_V4_VERSION = "4.4.3"
 ZOD_V4_DTS_URLS: tuple[str, ...] = (
-    "https://cdn.jsdelivr.net/npm/zod@4/v4/classic/schemas.d.ts",
-    "https://cdn.jsdelivr.net/npm/zod@4/v4/classic/checks.d.ts",
-    "https://cdn.jsdelivr.net/npm/zod@4/v4/classic/iso.d.ts",
-    "https://cdn.jsdelivr.net/npm/zod@4/v4/classic/coerce.d.ts",
-    "https://cdn.jsdelivr.net/npm/zod@4/v4/classic/errors.d.ts",
-    "https://cdn.jsdelivr.net/npm/zod@4/v4/classic/parse.d.ts",
-    "https://cdn.jsdelivr.net/npm/zod@4/v4/classic/compat.d.ts",
-    "https://cdn.jsdelivr.net/npm/zod@4/v4/classic/external.d.ts",
+    f"https://cdn.jsdelivr.net/npm/zod@{ZOD_V4_VERSION}/v4/classic/schemas.d.ts",
+    f"https://cdn.jsdelivr.net/npm/zod@{ZOD_V4_VERSION}/v4/classic/checks.d.ts",
+    f"https://cdn.jsdelivr.net/npm/zod@{ZOD_V4_VERSION}/v4/classic/iso.d.ts",
+    f"https://cdn.jsdelivr.net/npm/zod@{ZOD_V4_VERSION}/v4/classic/coerce.d.ts",
+    f"https://cdn.jsdelivr.net/npm/zod@{ZOD_V4_VERSION}/v4/classic/errors.d.ts",
+    f"https://cdn.jsdelivr.net/npm/zod@{ZOD_V4_VERSION}/v4/classic/parse.d.ts",
+    f"https://cdn.jsdelivr.net/npm/zod@{ZOD_V4_VERSION}/v4/classic/compat.d.ts",
+    f"https://cdn.jsdelivr.net/npm/zod@{ZOD_V4_VERSION}/v4/classic/external.d.ts",
 )
 
 XS = "{http://www.w3.org/2001/XMLSchema}"
@@ -149,21 +173,40 @@ SOURCE_AUTHORITY: dict[str, str] = {
     "json_schema_2020_12":   "IETF draft (standards-track) — current dialect meta-schema",
     "xsd_1_1":               "W3C Recommendation (2012-04-05)",
     "shacl_core":            "W3C Recommendation (2017-07-20)",
-    "shacl_compact_syntax":  "W3C Community Group draft — NOT a Recommendation",
+    "shacl_compact_syntax":  (
+        f"W3C Community Group draft — NOT a Recommendation. "
+        f"Pinned to w3c/shacl commit {SHACL_COMPACT_SYNTAX_COMMIT[:7]} (2025-01-27)."
+    ),
+    "json_ld_1_1":           "W3C Recommendation (2020-07-16)",
     "typescript_grammar":    (
-        "Community grammar (tree-sitter) — answers 'what does this parser "
-        "emit' rather than 'what does the TypeScript compiler recognize'. "
-        "For an authoritative TypeScript keyword inventory the compiler's "
-        "SyntaxKind enum (src/compiler/types.ts) is closer to the truth; "
-        "the two surfaces can disagree."
+        f"Community grammar (tree-sitter-typescript {TYPESCRIPT_TREE_SITTER_VERSION}) "
+        "— answers 'what does this parser emit' rather than 'what does the "
+        "TypeScript compiler recognize'. For an authoritative TypeScript keyword "
+        "inventory the compiler's SyntaxKind enum (src/compiler/types.ts) is "
+        "closer to the truth; the two surfaces can disagree."
     ),
     "typescript_lib":        (
-        "Reference implementation (Microsoft) — no normative EBNF exists for "
-        "TypeScript; lib.*.d.ts IS the definition of the intrinsic types it "
-        "declares."
+        f"Reference implementation (Microsoft TypeScript {TYPESCRIPT_VERSION}) — "
+        "no normative EBNF exists for TypeScript; lib.*.d.ts IS the definition "
+        "of the intrinsic types it declares."
     ),
-    "zod_v3":                "Published npm distribution (zod@3) — library API, no formal spec",
-    "zod_v4":                "Published npm distribution (zod@4) — library API, no formal spec",
+    "zod_v3":                f"Published npm distribution (zod@{ZOD_V3_VERSION}) — library API, no formal spec",
+    "zod_v4":                f"Published npm distribution (zod@{ZOD_V4_VERSION}) — library API, no formal spec",
+}
+
+# Single source of truth for the exact pinned version of each source.
+# Emitted into the output's metadata.pinned_versions so consumers can
+# detect drift even when the top-level key (e.g. "zod_v3") is stable.
+PINNED_VERSIONS: dict[str, str] = {
+    "json_schema":          "draft/2020-12",
+    "xsd":                  "1.1",
+    "shacl_core":           "1.0 (2017 REC)",
+    "shacl_compact_syntax": f"w3c/shacl@{SHACL_COMPACT_SYNTAX_COMMIT}",
+    "json_ld":              "1.1",
+    "tree_sitter_typescript": TYPESCRIPT_TREE_SITTER_VERSION,
+    "typescript":           TYPESCRIPT_VERSION,
+    "zod_v3":               ZOD_V3_VERSION,
+    "zod_v4":               ZOD_V4_VERSION,
 }
 
 
@@ -494,6 +537,56 @@ def scrape_shacl_compact_syntax_grammar(cache_dir: Path) -> list[dict]:
 
 
 # =========================================================================== #
+# JSON-LD 1.1 — syntax tokens and keywords (lxml-based)                       #
+# =========================================================================== #
+
+def scrape_json_ld_keywords(cache_dir: Path) -> list[dict]:
+    """Extract the @-keywords from JSON-LD 1.1 §1.7 'Syntax Tokens and
+    Keywords'. The section contains a single <dl> whose <dt>/<dd> pairs are
+    the keyword and its prose definition. We select the section structurally
+    by id and walk the <dl> children — same approach as XSD datatype headings.
+    """
+    if not _HAS_LXML:
+        raise RuntimeError(
+            "lxml is required for HTML parsing (JSON-LD 1.1 keywords). "
+            "Install with: pip install lxml"
+        )
+    fs = fetch(JSON_LD_1_1_HTML_URL, cache_dir)
+    tree = lxml.html.fromstring(fs.content)
+
+    sections = tree.xpath('//section[@id="syntax-tokens-and-keywords"]')
+    if not sections:
+        return []
+    dls = sections[0].xpath(".//dl")
+    if not dls:
+        return []
+
+    out: list[dict] = []
+    children = [c for c in dls[0] if c.tag in ("dt", "dd")]
+    i = 0
+    while i < len(children):
+        if children[i].tag != "dt":
+            i += 1
+            continue
+        name = " ".join(children[i].text_content().split())
+        # Filter to actual @-keywords; the section also lists ':' as an
+        # aliasing separator, which is not a keyword.
+        if not name.startswith("@"):
+            i += 1
+            continue
+        description = ""
+        if i + 1 < len(children) and children[i + 1].tag == "dd":
+            description = " ".join(children[i + 1].text_content().split())
+        out.append({
+            "name": name,
+            "description": description,
+            "source_url": JSON_LD_1_1_HTML_URL,
+        })
+        i += 1
+    return out
+
+
+# =========================================================================== #
 # TypeScript — tree-sitter grammar + lib.es5.d.ts intrinsics                  #
 # =========================================================================== #
 
@@ -636,13 +729,18 @@ OUTPUT_SCHEMA: dict[str, Any] = {
         "metadata": {
             "type": "object",
             "required": [
-                "fetched_at", "tool", "sources", "source_provenance",
-                "source_authority", "extraction_rules", "disclaimer",
+                "fetched_at", "tool", "sources", "pinned_versions",
+                "source_provenance", "source_authority",
+                "extraction_rules", "disclaimer",
             ],
             "properties": {
-                "fetched_at": {"type": "string"},
-                "tool":       {"type": "string"},
-                "sources":    {"type": "object"},
+                "fetched_at":      {"type": "string"},
+                "tool":            {"type": "string"},
+                "sources":         {"type": "object"},
+                "pinned_versions": {
+                    "type": "object",
+                    "additionalProperties": {"type": "string"},
+                },
                 "source_provenance": {
                     "type": "array",
                     "items": {
@@ -730,6 +828,24 @@ OUTPUT_SCHEMA: dict[str, Any] = {
                     },
                     "additionalProperties": True,
                 }},
+            },
+        },
+        "json_ld_1_1": {
+            "type": "object",
+            "properties": {
+                "keywords": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": ["name", "source_url"],
+                        "properties": {
+                            "name":        {"type": "string",
+                                            "pattern": "^@[A-Za-z]+$"},
+                            "description": {"type": "string"},
+                        },
+                        "additionalProperties": True,
+                    },
+                },
             },
         },
         "typescript": {
@@ -834,6 +950,11 @@ EXTRACTION_RULES: dict[str, str] = {
         "lxml: locate the <pre> element containing 'grammar SHACLC;', then "
         "parse 'name : body ;' rules from its text content."
     ),
+    "json_ld_keywords": (
+        "lxml: section[@id='syntax-tokens-and-keywords'] in the JSON-LD 1.1 "
+        "Recommendation; walk the <dl>'s <dt>/<dd> pairs, keeping entries "
+        "whose <dt> begins with '@'."
+    ),
     "typescript_syntactic_constructs": (
         "Named, non-internal node types in tree-sitter-typescript's "
         "node-types.json."
@@ -858,6 +979,7 @@ def build_payload(cache_dir: Path) -> dict:
     productions     = scrape_xsd_part2_productions(cache_dir)
     shacl_vocab     = scrape_shacl_core_vocabulary(cache_dir)
     shaclc_grammar  = scrape_shacl_compact_syntax_grammar(cache_dir)
+    jsonld_kw       = scrape_json_ld_keywords(cache_dir)
     ts_syntactic    = scrape_typescript_syntactic_constructs(cache_dir)
     ts_intrinsic    = scrape_typescript_intrinsic_types(cache_dir)
     zod_v3          = scrape_zod_distribution(ZOD_V3_DTS_URLS, "v3", cache_dir)
@@ -880,12 +1002,14 @@ def build_payload(cache_dir: Path) -> dict:
                 "xsd_1_1_part_2_html": XSD_PART2_HTML_URL,
                 "shacl_core_ttl": SHACL_VOCAB_TTL_URL,
                 "shacl_compact_syntax_html": SHACL_COMPACT_SYNTAX_URL,
+                "json_ld_1_1_html": JSON_LD_1_1_HTML_URL,
                 "typescript_tree_sitter_node_types":
                     TYPESCRIPT_TREE_SITTER_NODE_TYPES_URL,
                 "typescript_lib_es5_dts": TYPESCRIPT_LIB_ES5_DTS_URL,
                 "zod_v3_dts": list(ZOD_V3_DTS_URLS),
                 "zod_v4_dts": list(ZOD_V4_DTS_URLS),
             },
+            "pinned_versions":   PINNED_VERSIONS,
             "source_provenance": provenance,
             "source_authority":  SOURCE_AUTHORITY,
             "extraction_rules":  EXTRACTION_RULES,
@@ -909,6 +1033,7 @@ def build_payload(cache_dir: Path) -> dict:
             "core_vocabulary": shacl_vocab,
             "compact_syntax_grammar": shaclc_grammar,
         },
+        "json_ld_1_1": {"keywords": jsonld_kw},
         "typescript": {
             "syntactic_constructs": ts_syntactic,
             "intrinsic_types": ts_intrinsic,
@@ -924,6 +1049,7 @@ def build_payload(cache_dir: Path) -> dict:
             "xsd_datatype_production_count":         len(productions),
             "shacl_core_term_count":                 len(shacl_vocab),
             "shacl_compact_grammar_rule_count":      len(shaclc_grammar),
+            "json_ld_keyword_count":                 len(jsonld_kw),
             "typescript_syntactic_construct_count":  len(ts_syntactic),
             "typescript_intrinsic_type_count":       len(ts_intrinsic),
             "zod_v3_export_count":                   len(zod_v3),
@@ -997,6 +1123,7 @@ def main(argv: list[str] | None = None) -> int:
         f"{s['xsd_datatype_production_count']} productions\n"
         f"     SHACL               : {s['shacl_core_term_count']} core terms, "
         f"{s['shacl_compact_grammar_rule_count']} compact-syntax rules\n"
+        f"     JSON-LD 1.1         : {s['json_ld_keyword_count']} keywords\n"
         f"     TypeScript          : {s['typescript_syntactic_construct_count']} "
         f"syntactic constructs, {s['typescript_intrinsic_type_count']} intrinsic types\n"
         f"     Zod v3              : {s['zod_v3_export_count']} public exports\n"
