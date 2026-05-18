@@ -9,3 +9,4 @@ tsconfig.tsbuildinfo
 .turbo/
 .agent-tasks/
 global-ast-space-*.html
+bench.txt

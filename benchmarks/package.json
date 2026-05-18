@@ -8,13 +8,15 @@
 		"bench:coverage": "tsx adapter-coverage/index.ts",
 		"bench:fidelity": "tsx encoding-fidelity/index.ts",
 		"bench:all": "pnpm run bench:scorecard && pnpm run bench:coverage && pnpm run bench:fidelity",
-		"smoke": "pnpm run bench:all"
+		"smoke": "pnpm run bench:all",
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"@typecarta/adapter-avro": "workspace:*",
 		"@typecarta/adapter-effect-schema": "workspace:*",
 		"@typecarta/adapter-graphql": "workspace:*",
 		"@typecarta/adapter-json-schema": "workspace:*",
+		"@typecarta/adapter-linkml": "workspace:*",
 		"@typecarta/adapter-protobuf": "workspace:*",
 		"@typecarta/adapter-shacl": "workspace:*",
 		"@typecarta/adapter-typescript": "workspace:*",
@@ -26,6 +28,7 @@
 	},
 	"devDependencies": {
 		"tsx": "^4.0.0",
-		"typescript": "^5.7.0"
+		"typescript": "^5.7.0",
+		"vitest": "^3.0.0"
 	}
 }

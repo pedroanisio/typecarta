@@ -15,6 +15,7 @@ import { AvroAdapter } from "@typecarta/adapter-avro";
 import { EffectSchemaAdapter } from "@typecarta/adapter-effect-schema";
 import { GraphQLAdapter } from "@typecarta/adapter-graphql";
 import { JsonSchemaAdapter } from "@typecarta/adapter-json-schema";
+import { LinkmlAdapter } from "@typecarta/adapter-linkml";
 import { ProtobufAdapter } from "@typecarta/adapter-protobuf";
 import { ShaclAdapter } from "@typecarta/adapter-shacl";
 import { TypeScriptAdapter } from "@typecarta/adapter-typescript";
@@ -37,6 +38,7 @@ export function buildAllAdapters(): readonly IRAdapter[] {
 		new TypeScriptAdapter(),
 		new ProtobufAdapter(),
 		new GraphQLAdapter(),
+		new LinkmlAdapter(),
 		new EffectSchemaAdapter(),
 		new AvroAdapter(),
 		new ShaclAdapter(),

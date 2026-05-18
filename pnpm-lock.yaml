@@ -44,6 +44,9 @@ importers:
       '@typecarta/adapter-json-schema':
         specifier: workspace:*
         version: link:../packages/adapters/json-schema
+      '@typecarta/adapter-linkml':
+        specifier: workspace:*
+        version: link:../packages/adapters/linkml
       '@typecarta/adapter-protobuf':
         specifier: workspace:*
         version: link:../packages/adapters/protobuf
@@ -75,6 +78,9 @@ importers:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
+      vitest:
+        specifier: ^3.0.0
+        version: 3.2.4(@types/node@25.5.0)(tsx@4.21.0)(yaml@2.8.2)
 
   examples/basic-scorecard:
     dependencies:
