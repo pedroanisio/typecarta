@@ -1,6 +1,8 @@
 import {
 	andPredicate,
+	apply,
 	array,
+	arrow,
 	base,
 	bottom,
 	complement,
@@ -437,6 +439,75 @@ describe("TypeScriptAdapter", () => {
 			expect(adapter.isEncodable(term)).toBe(true);
 			const parsed = adapter.parse(adapter.encode(term));
 			expect(parsed.kind).toBe("complement");
+		});
+	});
+
+	// P0.3 — Family M regression: arrow / function types (2026-05-18).
+	// TypeScript natively supports `(args) => ret`; before this fix the
+	// adapter rejected `apply("arrow", …)` because `encodeApply` had no
+	// case for it. Witness SP48 (`arrow([string], number)`) and SP49
+	// (overloaded function as `intersection` of arrows) both depend on
+	// this case existing.
+	describe("Tier 2 regression: arrow (function types)", () => {
+		it("encodes (string) => number as a function descriptor", () => {
+			const term = arrow([base("string")], base("number"));
+			expect(adapter.isEncodable(term)).toBe(true);
+			const encoded = adapter.encode(term);
+			expect(encoded).toEqual({
+				type: "function",
+				params: [{ type: "string" }],
+				returns: { type: "number" },
+			});
+		});
+
+		it("round-trips SP48 arrow as an arrow", () => {
+			const term = arrow([base("string")], base("number"));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed).toEqual(term);
+		});
+
+		it("round-trips multi-parameter arrows", () => {
+			const term = arrow([base("string"), base("number")], base("boolean"));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed).toEqual(term);
+		});
+
+		it("round-trips zero-parameter arrows (thunks)", () => {
+			const term = arrow([], base("string"));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed).toEqual(term);
+		});
+
+		it("encodes SP49 overloaded function as intersection of arrows", () => {
+			const term = intersection([
+				arrow([base("string")], base("number")),
+				arrow([base("number")], base("string")),
+			]);
+			expect(adapter.isEncodable(term)).toBe(true);
+			const parsed = adapter.parse(adapter.encode(term));
+			// The arrows survive inside the intersection.
+			expect(parsed.kind).toBe("apply");
+			expect((parsed as { constructor: string }).constructor).toBe("intersection");
+		});
+
+		it("inhabits accepts a function value against an arrow term", () => {
+			const term = arrow([base("string")], base("number"));
+			expect(adapter.inhabits((s: string) => s.length, term)).toBe(true);
+		});
+
+		it("inhabits rejects non-function values against an arrow term", () => {
+			const term = arrow([base("string")], base("number"));
+			expect(adapter.inhabits(42, term)).toBe(false);
+			expect(adapter.inhabits("not-a-fn", term)).toBe(false);
+			expect(adapter.inhabits({ call: () => 1 }, term)).toBe(false);
+			expect(adapter.inhabits(null, term)).toBe(false);
+		});
+
+		it("supportsKind/encodeApply still rejects unknown constructors", () => {
+			// Sanity: adding `arrow` doesn't widen acceptance to other unknown
+			// constructors. `apply("rowpoly", …)` should still be unencodable.
+			const rowpolyTerm = apply("rowpoly", [base("string")]);
+			expect(adapter.isEncodable(rowpolyTerm)).toBe(false);
 		});
 	});
 });

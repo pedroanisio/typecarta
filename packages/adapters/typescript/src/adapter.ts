@@ -13,6 +13,7 @@ import type {
 import {
 	andPredicate,
 	array,
+	arrow,
 	base,
 	bottom,
 	complement,
@@ -122,7 +123,9 @@ export type TSTypeDescriptor =
 			else: TSTypeDescriptor;
 	  }
 	/** Opaque extension envelope for IR `extension` nodes that have no TS analogue. */
-	| { type: "opaque"; extensionKind: string; payload: unknown };
+	| { type: "opaque"; extensionKind: string; payload: unknown }
+	/** Function / arrow type, e.g. `(s: string) => number`. */
+	| { type: "function"; params: TSTypeDescriptor[]; returns: TSTypeDescriptor };
 
 // ─── Signature — base sorts and type constructors for the TS adapter ──
 
@@ -146,6 +149,11 @@ const TS_SIGNATURE: Signature = createSignature(
 		{ name: "intersection", arity: 2 },
 		{ name: "tuple", arity: 1 },
 		{ name: "map", arity: 2 },
+		// `arrow` has variadic arity at the IR layer (params… + return).
+		// Pick 2 (one param + return) as the canonical advertised arity;
+		// witnesses with more parameters still encode correctly because
+		// the adapter never re-checks arity against the signature.
+		{ name: "arrow", arity: 2 },
 	],
 );
 
@@ -331,6 +339,8 @@ function parseTSDescriptor(desc: TSTypeDescriptor): TypeTerm {
 			);
 		case "opaque":
 			return extension(desc.extensionKind, desc.payload);
+		case "function":
+			return arrow(desc.params.map(parseTSDescriptor), parseTSDescriptor(desc.returns));
 		default:
 			return top();
 	}
@@ -605,6 +615,21 @@ function encodeApply(term: Extract<TypeTerm, { kind: "apply" }>): TSTypeDescript
 				value: encodeToTSDescriptor(valArg),
 			};
 		}
+		case "arrow": {
+			// IR convention: arrow params come first, return type last.
+			// SP48 builds `arrow([string], number)` → args = [string, number].
+			// Tolerate a zero-arg `arrow([], ret)` for thunks (args = [ret]).
+			if (term.args.length === 0) {
+				throw new Error("arrow constructor requires at least a return type");
+			}
+			const params = term.args.slice(0, -1);
+			const returnTerm = term.args[term.args.length - 1]!;
+			return {
+				type: "function",
+				params: params.map(encodeToTSDescriptor),
+				returns: encodeToTSDescriptor(returnTerm),
+			};
+		}
 		default:
 			throw new Error(`Cannot encode constructor "${term.constructor}" to TypeScript`);
 	}
@@ -752,6 +777,13 @@ function checkApplyInhabitation(
 				([k, v]) => checkInhabitation(k, keyType) && checkInhabitation(v, valType),
 			);
 		}
+		case "arrow":
+			// Function inhabitation is opaque at runtime: TS itself only knows
+			// the call-signature shape, not whether `f(x)` will actually
+			// return a value of the declared type. Accept any function value
+			// and reject non-functions. Arity-checking would be unsound (TS
+			// permits passing fewer arguments than declared parameters).
+			return typeof value === "function";
 		default:
 			return false;
 	}
