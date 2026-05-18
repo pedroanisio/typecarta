@@ -300,6 +300,49 @@ POSTGRES_PG_CAST_URL = (
     f"{POSTGRES_VERSION}/src/include/catalog/pg_cast.dat"
 )
 
+# Pinned: Rust 1.95.0 (latest stable as of 2026-05-18, verified via the
+# rust-lang/rust tags API). Six canonical sources across two repos:
+#   - rust-lang/rust@1.95.0:
+#       compiler/rustc_span/src/symbol.rs    (keyword identifiers + comments)
+#       library/core/src/primitive_docs.rs   (mod prim_<name> per primitive)
+#       library/core/src/prelude/v1.rs       (`pub use` of every preluded item)
+#       compiler/rustc_feature/src/builtin_attrs.rs (ungated/gated/rustc_attr)
+#   - rust-lang/reference@<commit-sha>:
+#       src/keywords.md   (strict/reserved/weak section headers)
+#       src/tokens.md     (PUNCTUATION grammar block with operator literals)
+#
+# The Reference repo has NO semver tags aligned with rustc releases — pin
+# via commit SHA for reproducibility, same way SHACL Compact Syntax is
+# pinned. The Reference is also self-described as "best-effort, not
+# normative" — we mark its two files with a separate authority status.
+RUST_VERSION = "1.95.0"
+# Reference commit SHA at scrape pinning time (2026-05-14T17:00:42Z).
+RUST_REFERENCE_COMMIT = "ad35aca48175"
+RUST_SYMBOL_URL = (
+    f"https://raw.githubusercontent.com/rust-lang/rust/"
+    f"{RUST_VERSION}/compiler/rustc_span/src/symbol.rs"
+)
+RUST_PRIMITIVE_DOCS_URL = (
+    f"https://raw.githubusercontent.com/rust-lang/rust/"
+    f"{RUST_VERSION}/library/core/src/primitive_docs.rs"
+)
+RUST_PRELUDE_URL = (
+    f"https://raw.githubusercontent.com/rust-lang/rust/"
+    f"{RUST_VERSION}/library/core/src/prelude/v1.rs"
+)
+RUST_BUILTIN_ATTRS_URL = (
+    f"https://raw.githubusercontent.com/rust-lang/rust/"
+    f"{RUST_VERSION}/compiler/rustc_feature/src/builtin_attrs.rs"
+)
+RUST_REFERENCE_KEYWORDS_URL = (
+    f"https://raw.githubusercontent.com/rust-lang/reference/"
+    f"{RUST_REFERENCE_COMMIT}/src/keywords.md"
+)
+RUST_REFERENCE_TOKENS_URL = (
+    f"https://raw.githubusercontent.com/rust-lang/reference/"
+    f"{RUST_REFERENCE_COMMIT}/src/tokens.md"
+)
+
 XS = "{http://www.w3.org/2001/XMLSchema}"
 
 
@@ -374,6 +417,23 @@ SOURCE_AUTHORITY: dict[str, str] = {
         "(or extends it: jsonb operators, range types, system catalogs), "
         "this lexicon reflects what PG ships, not what SQL:2023 mandates."
     ),
+    "rust":                  (
+        f"Reference implementation (rust-lang/rust {RUST_VERSION}) for the "
+        "compiler-defined surface (keywords' internal symbols, primitive "
+        "types, prelude items, built-in attributes); plus the Rust "
+        f"Reference (rust-lang/reference @ {RUST_REFERENCE_COMMIT}) for "
+        "the keyword classification (strict/reserved/weak) and the "
+        "PUNCTUATION token grammar. The Reference is self-described as "
+        "'best-effort, not normative' — entries derived from it carry "
+        "`authority_status: reference-best-effort`; entries from the "
+        "rustc source carry `authority_status: normative-compiler` "
+        "because rustc IS the language definition where the Reference "
+        "and the compiler diverge. Macros (println!, vec!, …), lints "
+        "(~700), and Cargo manifest keys are deliberately omitted — they "
+        "are not deterministically enumerable from a single file (macros "
+        "and lints are scattered across stdlib + clippy; Cargo lives in "
+        "a separate repo with its own cadence)."
+    ),
 }
 
 # Single source of truth for the exact pinned version of each source.
@@ -393,6 +453,8 @@ PINNED_VERSIONS: dict[str, str] = {
     "python":               PYTHON_VERSION,
     "protobuf":             PROTOBUF_VERSION,
     "postgres":             POSTGRES_VERSION,
+    "rust":                 RUST_VERSION,
+    "rust_reference":       RUST_REFERENCE_COMMIT,
 }
 
 
@@ -1423,12 +1485,11 @@ _PG_CAST_PAIR_RE     = re.compile(
 )
 
 # Per-entry Perl-hash parser. Each .dat file has a top-level Perl list of
-# `{ key => 'value', ... }` records; this regex captures the body of each
-# top-level `{...}` (one record at a time), and `_PG_HASH_FIELD_RE` then
-# extracts individual `key => 'value'` pairs within it. We use this to
-# attach record-scoped fields like castcontext to the right cast row.
-_PG_HASH_ENTRY_RE = re.compile(r"\{([^{}]*)\}", re.DOTALL)
-_PG_HASH_FIELD_RE = re.compile(r"(\w+)\s*=>\s*'([^']*)'")
+# `{ key => 'value', ... }` records. A naive `\{([^{}]*)\}` regex misses
+# entries whose string values contain literal `{`/`}` (e.g. pg_type.dat's
+# `line` entry has descr containing `\'{A,B,C}\'`). The state-machine
+# walker below respects string boundaries so all entries are captured.
+_PG_HASH_FIELD_RE = re.compile(r"(\w+)\s*=>\s*'((?:[^'\\]|\\.)*)'", re.DOTALL)
 
 
 def _parse_pg_hash_entries(src: str) -> list[dict[str, str]]:
@@ -1436,11 +1497,40 @@ def _parse_pg_hash_entries(src: str) -> list[dict[str, str]]:
     Each entry becomes a {field_name: string_value} dict. Field values
     are kept as raw strings (Postgres uses single-character codes for
     enums like castcontext='a', typcategory='B', typtype='b' — the
-    interpretation belongs to the consumer)."""
-    return [
-        {k: v for k, v in _PG_HASH_FIELD_RE.findall(body)}
-        for body in _PG_HASH_ENTRY_RE.findall(src)
-    ]
+    interpretation belongs to the consumer).
+
+    Walks the source with string-aware brace matching so entries whose
+    values contain literal `{`/`}` (escaped inside single-quoted Perl
+    strings) are captured intact."""
+    entries: list[dict[str, str]] = []
+    i, n = 0, len(src)
+    while i < n:
+        if src[i] != "{":
+            i += 1
+            continue
+        depth = 1
+        j = i + 1
+        in_string = False
+        while j < n and depth > 0:
+            ch = src[j]
+            if in_string:
+                if ch == "\\" and j + 1 < n:
+                    j += 2
+                    continue
+                if ch == "'":
+                    in_string = False
+            else:
+                if ch == "'":
+                    in_string = True
+                elif ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+            j += 1
+        body = src[i + 1: j - 1]
+        entries.append({k: v for k, v in _PG_HASH_FIELD_RE.findall(body)})
+        i = j
+    return entries
 
 
 # Decoded labels for the single-character enum codes used in pg_cast and
@@ -1580,6 +1670,229 @@ def scrape_postgres_lexicon(cache_dir: Path) -> dict[str, list[dict]]:
         "functions": functions,
         "operators": operators,
         "casts":     casts,
+    }
+
+
+# =========================================================================== #
+# Rust 1.95.0 — keywords, primitives, prelude, attributes, punctuation        #
+# =========================================================================== #
+#
+# Five extractions across two repos:
+#   - Keywords (from rust-lang/reference's keywords.md): strict / reserved /
+#     weak, classified by section headers. 39 / 14 / 5 unique entries.
+#   - Primitive types (from primitive_docs.rs in rust-lang/rust): every
+#     `mod prim_<name> {}` line — 27 primitives including unstable f16/f128.
+#   - Prelude items (from library/core/src/prelude/v1.rs): every name in
+#     `pub use crate::path::{Item, ...};` lines, paired with the stability
+#     annotation from the immediately-preceding `#[stable]` / `#[unstable]`.
+#   - Built-in attributes (from compiler/rustc_feature/src/builtin_attrs.rs):
+#     names in `ungated!(...)`, `gated!(...)`, `rustc_attr!(...)`,
+#     `rustc_internal!(...)` macro invocations. The macro NAME carries the
+#     stability/audience (ungated=stable, gated=behind a feature flag,
+#     rustc_attr=compiler-internal, rustc_internal=truly internal).
+#   - Punctuation/operator tokens (from tokens.md): the PUNCTUATION grammar
+#     block in the Reference enumerates 52 source-character tokens.
+#
+# Authority is split: 4 buckets sourced from rust-lang/rust carry
+# `authority_status: "normative-compiler"`; 2 buckets from rust-lang/reference
+# carry `authority_status: "reference-best-effort"` (the Reference is
+# explicitly not normative — only rustc itself is).
+#
+# Deliberately omitted: macros (println!, vec!, …), lints (~700), and
+# Cargo manifest keys. Each requires multi-file walking and/or a separate
+# repo; not enumerable from a single source-of-truth file. Per CLAUDE.md
+# Rule 2, partial scraping of these would be misleading.
+
+_RUST_KW_SECTION_RE = re.compile(
+    r"^##\s+(\w+)\s+keywords\s*$",
+    re.MULTILINE | re.IGNORECASE,
+)
+_RUST_KW_BULLET_RE = re.compile(r"^[-*]\s+`([^`]+)`", re.MULTILINE)
+_RUST_PRIM_RE = re.compile(r"^mod prim_([a-z0-9_]+)\s*\{\}", re.MULTILINE)
+_RUST_PRELUDE_USE_RE = re.compile(
+    r"#\[(stable|unstable)\(\s*feature\s*=\s*\"([^\"]+)\"\s*,\s*"
+    r"(?:since\s*=\s*\"([^\"]+)\"|issue\s*=[^)]+)\s*\)\]\s*"
+    r"(?:#\[[^\]]+\]\s*)*"
+    r"pub use\s+([^;]+);",
+    re.MULTILINE | re.DOTALL,
+)
+_RUST_BUILTIN_ATTR_RE = re.compile(
+    r"^\s*(ungated|gated|rustc_attr|rustc_internal)!\(\s*"
+    r"(?:unsafe\([^)]*\)\s+)?"
+    r"([A-Za-z_][A-Za-z0-9_]*)",
+    re.MULTILINE,
+)
+_RUST_PUNCT_BLOCK_RE = re.compile(
+    r"PUNCTUATION\s*[\-=:]>(.*?)(?=^##|\Z)",
+    re.DOTALL | re.MULTILINE,
+)
+_RUST_PUNCT_TOKEN_RE = re.compile(r"`([^`]+)`")
+
+# Primitives whose stability is unstable in 1.95.0. There's no inline
+# marker on the `mod prim_*` line in primitive_docs.rs, so we maintain a
+# tiny well-known allowlist here. A test asserts that everything else in
+# the bucket is treated as stable.
+_RUST_UNSTABLE_PRIMITIVES: frozenset[str] = frozenset({"f16", "f128"})
+
+# Valid Rust keyword classifications surfaced in keywords.md sections.
+_RUST_KEYWORD_CLASSES: frozenset[str] = frozenset({"strict", "reserved", "weak"})
+
+
+def _rust_extract_prelude_names(use_block: str) -> list[str]:
+    """Given the RHS of a `pub use ...;` statement, return the leaf names
+    re-exported. Handles braced lists, `as` aliases, `*`, and the Rust
+    idiom `Type::{self, Variant, ...}` (where `self` re-exports the path
+    segment immediately before `::{` as a top-level name)."""
+    brace = re.search(r"\{([^}]+)\}", use_block)
+    items: list[str] = []
+    if brace:
+        # If the braced group is preceded by `Path::Type::`, the segment
+        # before `::{` is the type-itself name that `self` would import.
+        # rstrip both whitespace and the trailing `::` separator before
+        # picking the last path segment.
+        prefix = use_block[:brace.start()].rstrip().rstrip(":")
+        prefix_leaf = (
+            prefix.rsplit("::", 1)[-1].strip() if "::" in prefix else None
+        )
+        candidates = brace.group(1).split(",")
+    else:
+        # Simple `pub use crate::path::Item;`
+        candidates = [use_block.strip().rsplit("::", 1)[-1]]
+        prefix_leaf = None
+    for raw in candidates:
+        raw = raw.strip()
+        if not raw or raw == "*":
+            continue
+        leaf = raw.split(" as ")[-1].strip()
+        if "::" in leaf:
+            leaf = leaf.rsplit("::", 1)[-1]
+        if not leaf:
+            continue
+        if leaf == "self":
+            # `self` inside `Type::{...}` re-exports the Type itself.
+            if prefix_leaf and prefix_leaf not in items:
+                items.append(prefix_leaf)
+            continue
+        items.append(leaf)
+    return items
+
+
+def scrape_rust_lexicon(cache_dir: Path) -> dict[str, list[dict]]:
+    """Extract Rust 1.95.0's keyword / primitive / prelude / attribute /
+    punctuation vocabularies.
+
+    Returns five buckets:
+      - `keywords`    — strict + reserved + weak, classified by section
+      - `primitives`  — 27 primitive type names (with stability tag)
+      - `prelude`     — preluded items from `core::prelude::v1`
+      - `attributes`  — built-in attribute names (with stability tag)
+      - `punctuation` — operator/punctuation tokens from tokens.md
+    """
+    kw_src    = fetch(RUST_REFERENCE_KEYWORDS_URL, cache_dir).text
+    prim_src  = fetch(RUST_PRIMITIVE_DOCS_URL,     cache_dir).text
+    prel_src  = fetch(RUST_PRELUDE_URL,            cache_dir).text
+    attr_src  = fetch(RUST_BUILTIN_ATTRS_URL,      cache_dir).text
+    punct_src = fetch(RUST_REFERENCE_TOKENS_URL,   cache_dir).text
+
+    # --- Keywords -------------------------------------------------------- #
+    keywords: list[dict] = []
+    section_starts: list[tuple[str, int]] = []
+    for m in _RUST_KW_SECTION_RE.finditer(kw_src):
+        cls = m.group(1).lower()
+        if cls in _RUST_KEYWORD_CLASSES:
+            section_starts.append((cls, m.end()))
+    for i, (cls, start) in enumerate(section_starts):
+        end = section_starts[i + 1][1] if i + 1 < len(section_starts) else len(kw_src)
+        body = kw_src[start:end]
+        seen: set[str] = set()
+        for name in _RUST_KW_BULLET_RE.findall(body):
+            if name in seen:
+                continue
+            seen.add(name)
+            keywords.append({
+                "name":             name,
+                "classification":   cls,
+                "source_url":       RUST_REFERENCE_KEYWORDS_URL,
+                "authority_status": "reference-best-effort",
+            })
+
+    # --- Primitives ------------------------------------------------------ #
+    primitives = [
+        {
+            "name":             name,
+            "stability":        "unstable" if name in _RUST_UNSTABLE_PRIMITIVES
+                                 else "stable",
+            "source_url":       RUST_PRIMITIVE_DOCS_URL,
+            "authority_status": "normative-compiler",
+        }
+        for name in _RUST_PRIM_RE.findall(prim_src)
+    ]
+
+    # --- Prelude --------------------------------------------------------- #
+    prelude: list[dict] = []
+    prelude_seen: set[str] = set()
+    for m in _RUST_PRELUDE_USE_RE.finditer(prel_src):
+        stability = m.group(1)         # "stable" | "unstable"
+        feature   = m.group(2)
+        since     = m.group(3)         # may be None for unstable
+        use_block = m.group(4)
+        for leaf in _rust_extract_prelude_names(use_block):
+            if leaf in prelude_seen:
+                continue
+            prelude_seen.add(leaf)
+            entry: dict = {
+                "name":             leaf,
+                "stability":        stability,
+                "feature":          feature,
+                "source_url":       RUST_PRELUDE_URL,
+                "authority_status": "normative-compiler",
+            }
+            if since:
+                entry["since"] = since
+            prelude.append(entry)
+
+    # --- Built-in attributes -------------------------------------------- #
+    attr_stability_map = {
+        "ungated":        "stable",
+        "gated":          "unstable",
+        "rustc_attr":     "compiler-internal",
+        "rustc_internal": "compiler-internal",
+    }
+    attrs: list[dict] = []
+    attr_seen: set[str] = set()
+    for macro, name in _RUST_BUILTIN_ATTR_RE.findall(attr_src):
+        if name in attr_seen:
+            continue
+        attr_seen.add(name)
+        attrs.append({
+            "name":             name,
+            "stability":        attr_stability_map.get(macro, "unknown"),
+            "macro":            macro,
+            "source_url":       RUST_BUILTIN_ATTRS_URL,
+            "authority_status": "normative-compiler",
+        })
+
+    # --- Punctuation / operators ---------------------------------------- #
+    punctuation: list[dict] = []
+    punct_seen: set[str] = set()
+    block_m = _RUST_PUNCT_BLOCK_RE.search(punct_src)
+    if block_m:
+        for token in _RUST_PUNCT_TOKEN_RE.findall(block_m.group(1)):
+            if token in punct_seen:
+                continue
+            punct_seen.add(token)
+            punctuation.append({
+                "name":             token,
+                "source_url":       RUST_REFERENCE_TOKENS_URL,
+                "authority_status": "reference-best-effort",
+            })
+
+    return {
+        "keywords":    keywords,
+        "primitives":  primitives,
+        "prelude":     prelude,
+        "attributes":  attrs,
+        "punctuation": punctuation,
     }
 
 
@@ -2038,6 +2351,75 @@ OUTPUT_SCHEMA: dict[str, Any] = {
             },
             "additionalProperties": True,
         },
+        "rust": {
+            "type": "object",
+            "required": ["keywords", "primitives", "prelude",
+                         "attributes", "punctuation"],
+            "properties": {
+                "keywords": {"type": "array", "items": {
+                    "type": "object",
+                    "required": ["name", "classification",
+                                 "source_url", "authority_status"],
+                    "properties": {
+                        "name":             {"type": "string"},
+                        "classification":   {"enum": ["strict", "reserved", "weak"]},
+                        "authority_status": {"const": "reference-best-effort"},
+                    },
+                    "additionalProperties": True,
+                }},
+                "primitives": {"type": "array", "items": {
+                    "type": "object",
+                    "required": ["name", "stability",
+                                 "source_url", "authority_status"],
+                    "properties": {
+                        "name":             {"type": "string"},
+                        "stability":        {"enum": ["stable", "unstable"]},
+                        "authority_status": {"const": "normative-compiler"},
+                    },
+                    "additionalProperties": True,
+                }},
+                "prelude": {"type": "array", "items": {
+                    "type": "object",
+                    "required": ["name", "stability", "feature",
+                                 "source_url", "authority_status"],
+                    "properties": {
+                        "name":             {"type": "string"},
+                        "stability":        {"enum": ["stable", "unstable"]},
+                        "feature":          {"type": "string"},
+                        "since":            {"type": "string"},
+                        "authority_status": {"const": "normative-compiler"},
+                    },
+                    "additionalProperties": True,
+                }},
+                "attributes": {"type": "array", "items": {
+                    "type": "object",
+                    "required": ["name", "stability", "macro",
+                                 "source_url", "authority_status"],
+                    "properties": {
+                        "name":             {"type": "string"},
+                        "stability":        {"enum": [
+                            "stable", "unstable", "compiler-internal",
+                        ]},
+                        "macro":            {"enum": [
+                            "ungated", "gated",
+                            "rustc_attr", "rustc_internal",
+                        ]},
+                        "authority_status": {"const": "normative-compiler"},
+                    },
+                    "additionalProperties": True,
+                }},
+                "punctuation": {"type": "array", "items": {
+                    "type": "object",
+                    "required": ["name", "source_url", "authority_status"],
+                    "properties": {
+                        "name":             {"type": "string"},
+                        "authority_status": {"const": "reference-best-effort"},
+                    },
+                    "additionalProperties": True,
+                }},
+            },
+            "additionalProperties": True,
+        },
         "summary": {
             "type": "object",
             "additionalProperties": {"type": "integer"},
@@ -2050,6 +2432,15 @@ OUTPUT_SCHEMA: dict[str, Any] = {
                 "type": "array",
                 "items": {"type": "string"},
                 "minItems": 2,
+            },
+        },
+        "cross_language_index_meta": {
+            "type": "object",
+            "required": ["caveat", "min_lexicon_count", "size"],
+            "properties": {
+                "caveat":            {"type": "string"},
+                "min_lexicon_count": {"type": "integer", "minimum": 2},
+                "size":              {"type": "integer", "minimum": 0},
             },
         },
     },
@@ -2252,6 +2643,33 @@ EXTRACTION_RULES: dict[str, str] = {
         "These files compile into the initial template1 database via "
         "genbki.pl; they ARE the catalog."
     ),
+    "rust_lexicon": (
+        "Five buckets from two pinned upstreams. (keywords) bullet "
+        "lists under `## Strict|Reserved|Weak keywords` in rust-lang/"
+        "reference's keywords.md, deduped within each section "
+        "(the Weak section documents some entries twice — definition "
+        "+ reference). Each entry carries a `classification` field. "
+        "(primitives) every `mod prim_<name> {}` in primitive_docs.rs; "
+        "f16 and f128 are tagged `stability: unstable` from a "
+        "well-known allowlist (the source file has no inline marker). "
+        "(prelude) every `pub use crate::path::{Item, ...}` in "
+        "library/core/src/prelude/v1.rs, paired with the stability "
+        "annotation (`#[stable(feature=..., since=...)]` or "
+        "`#[unstable(...)]`) on the preceding line. (attributes) "
+        "every name in `ungated!`/`gated!`/`rustc_attr!`/"
+        "`rustc_internal!` macro invocations in builtin_attrs.rs. "
+        "The macro NAME carries stability: ungated→stable, gated→"
+        "unstable, rustc_attr|rustc_internal→compiler-internal. "
+        "(punctuation) the PUNCTUATION grammar block in rust-lang/"
+        "reference's tokens.md, listing 52 source-character operator "
+        "tokens. Macros (println!, vec!, …), lints (~700), and Cargo "
+        "manifest keys are deliberately OMITTED — none are "
+        "deterministically enumerable from a single source-of-truth "
+        "file. Authority is split: 4 buckets from rust-lang/rust "
+        "carry `authority_status: normative-compiler`; 2 from rust-"
+        "lang/reference carry `reference-best-effort` (the Reference "
+        "self-describes as 'best-effort, not normative')."
+    ),
 }
 
 
@@ -2317,6 +2735,12 @@ def build_payload(cache_dir: Path) -> dict:
     # vocabulary meta-schemas compose, and its SHA-256 belongs in the
     # provenance record alongside the rest.
     fetch(JSON_SCHEMA_DIALECT_URL, cache_dir)
+    # Same provenance-only fetch for rustc's symbol.rs — it's named in our
+    # SOURCE_AUTHORITY narrative as the canonical compiler-internal keyword
+    # source, but we extract the user-facing classification from the
+    # Reference's keywords.md. Hash it so the provenance record matches the
+    # advertised metadata.sources list.
+    fetch(RUST_SYMBOL_URL, cache_dir)
     keywords        = scrape_json_schema_keywords(cache_dir)
     shared_defs     = scrape_json_schema_shared_defs(cache_dir)
     elements, attrs = scrape_xsd_elements_and_attributes(cache_dir)
@@ -2334,6 +2758,7 @@ def build_payload(cache_dir: Path) -> dict:
     python_lex      = scrape_python_lexicon(cache_dir)
     protobuf_lex    = scrape_protobuf_lexicon(cache_dir)
     postgres_lex    = scrape_postgres_lexicon(cache_dir)
+    rust_lex        = scrape_rust_lexicon(cache_dir)
 
     provenance = [
         {"url": fs.url, "sha256": fs.sha256, "byte_length": fs.byte_length}
@@ -2380,6 +2805,12 @@ def build_payload(cache_dir: Path) -> dict:
                 "postgres_pg_proc":     POSTGRES_PG_PROC_URL,
                 "postgres_pg_operator": POSTGRES_PG_OPERATOR_URL,
                 "postgres_pg_cast":     POSTGRES_PG_CAST_URL,
+                "rust_symbol_rs":           RUST_SYMBOL_URL,
+                "rust_primitive_docs_rs":   RUST_PRIMITIVE_DOCS_URL,
+                "rust_prelude_v1_rs":       RUST_PRELUDE_URL,
+                "rust_builtin_attrs_rs":    RUST_BUILTIN_ATTRS_URL,
+                "rust_reference_keywords":  RUST_REFERENCE_KEYWORDS_URL,
+                "rust_reference_tokens":    RUST_REFERENCE_TOKENS_URL,
             },
             "pinned_versions":   PINNED_VERSIONS,
             "source_provenance": provenance,
@@ -2445,6 +2876,13 @@ def build_payload(cache_dir: Path) -> dict:
             "operators": postgres_lex["operators"],
             "casts":     postgres_lex["casts"],
         },
+        "rust": {
+            "keywords":    rust_lex["keywords"],
+            "primitives":  rust_lex["primitives"],
+            "prelude":     rust_lex["prelude"],
+            "attributes":  rust_lex["attributes"],
+            "punctuation": rust_lex["punctuation"],
+        },
         "summary": {
             "json_schema_keyword_count":             len(keywords),
             "json_schema_vocabulary_count":          len(JSON_SCHEMA_VOCABULARIES),
@@ -2478,6 +2916,11 @@ def build_payload(cache_dir: Path) -> dict:
             "postgres_function_count":               len(postgres_lex["functions"]),
             "postgres_operator_count":               len(postgres_lex["operators"]),
             "postgres_cast_count":                   len(postgres_lex["casts"]),
+            "rust_keyword_count":                    len(rust_lex["keywords"]),
+            "rust_primitive_count":                  len(rust_lex["primitives"]),
+            "rust_prelude_count":                    len(rust_lex["prelude"]),
+            "rust_attribute_count":                  len(rust_lex["attributes"]),
+            "rust_punctuation_count":                len(rust_lex["punctuation"]),
             "fetched_url_count":                     len(provenance),
             # Derived from SOURCE_AUTHORITY rather than hardcoded so the
             # count stays in sync with the set of distinct logical sources
@@ -2611,6 +3054,12 @@ def main(argv: list[str] | None = None) -> int:
         f"{s['postgres_function_count']} functions, "
         f"{s['postgres_operator_count']} operators, "
         f"{s['postgres_cast_count']} casts\n"
+        f"     Rust {pv['rust']}         : "
+        f"{s['rust_keyword_count']} keywords, "
+        f"{s['rust_primitive_count']} primitives, "
+        f"{s['rust_prelude_count']} prelude, "
+        f"{s['rust_attribute_count']} attributes, "
+        f"{s['rust_punctuation_count']} punctuation\n"
         f"     provenance          : {s['fetched_url_count']} URLs hashed "
         f"across {s['logical_source_count']} logical sources",
         file=sys.stderr,

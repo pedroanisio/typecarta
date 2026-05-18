@@ -972,6 +972,291 @@ class TestPostgresInvariants:
                 )
 
 
+# --------------------------------------------------------------------------- #
+# Rust 1.95.0 — regexes + invariants                                          #
+# --------------------------------------------------------------------------- #
+
+class TestRustRegexes:
+    """Pure regex tests against handcrafted bytes — catch upstream format
+    drift (a Reference page restructure, a builtin_attrs macro rename)
+    before it pollutes a cache-driven invariant test."""
+
+    def test_kw_section_header(self):
+        src = "## Strict keywords\n\nFoo\n\n## Reserved keywords\n"
+        hits = sl._RUST_KW_SECTION_RE.findall(src)
+        # Findall on a 1-group regex returns just the group, not tuples.
+        assert hits == ["Strict", "Reserved"]
+
+    def test_kw_bullet_lines(self):
+        src = "- `as`\n- `async`\n* `await`\n"
+        assert sl._RUST_KW_BULLET_RE.findall(src) == ["as", "async", "await"]
+
+    def test_primitive_mod_lines(self):
+        src = "mod prim_bool {}\nmod prim_i32 {}\n// unrelated\nmod prim_f64 {}\n"
+        assert sl._RUST_PRIM_RE.findall(src) == ["bool", "i32", "f64"]
+
+    def test_prelude_use_block_with_stable_annotation(self):
+        src = (
+            '#[stable(feature = "core_prelude", since = "1.4.0")]\n'
+            "#[doc(no_inline)]\n"
+            "pub use crate::marker::{Copy, Send, Sized};\n"
+        )
+        m = sl._RUST_PRELUDE_USE_RE.search(src)
+        assert m is not None
+        assert m.group(1) == "stable"
+        assert m.group(2) == "core_prelude"
+        assert m.group(3) == "1.4.0"
+        names = sl._rust_extract_prelude_names(m.group(4))
+        assert names == ["Copy", "Send", "Sized"]
+
+    def test_prelude_use_block_unstable_with_issue(self):
+        """Unstable items have `issue = "..."` instead of `since = "..."`."""
+        src = (
+            '#[unstable(feature = "tryfrom", issue = "33417")]\n'
+            "pub use crate::convert::TryFrom;\n"
+        )
+        m = sl._RUST_PRELUDE_USE_RE.search(src)
+        assert m is not None
+        assert m.group(1) == "unstable"
+        assert m.group(3) is None  # no `since`
+        names = sl._rust_extract_prelude_names(m.group(4))
+        assert names == ["TryFrom"]
+
+    def test_extract_prelude_names_handles_self_and_aliases(self):
+        """Rust idiom: `Type::{self, Variant1, Variant2}` re-exports Type
+        itself plus its variants. `self` must NOT be emitted literally; the
+        path segment before `::{` is the actual exported name."""
+        names = sl._rust_extract_prelude_names(
+            "crate::option::Option::{self, None, Some as Yes}"
+        )
+        assert "self" not in names
+        assert "Option" in names      # self → Option itself
+        assert "None" in names
+        assert "Yes" in names         # alias wins over Some
+        assert "Some" not in names
+
+    def test_extract_prelude_names_handles_simple_path(self):
+        assert sl._rust_extract_prelude_names("crate::mem::drop") == ["drop"]
+
+    def test_extract_prelude_names_drops_wildcards(self):
+        assert sl._rust_extract_prelude_names("crate::foo::*") == []
+
+    def test_builtin_attr_macro_invocations(self):
+        src = (
+            "ungated!(cfg, Normal, template!(...), DuplicatesOk),\n"
+            "gated!(no_std, CrateLevel, ..., experimental_attr, ...),\n"
+            "rustc_attr!(rustc_specialization_trait, Normal, ...),\n"
+            "ungated!(unsafe(Edition2024) link_section, Normal, ...),\n"
+        )
+        hits = sl._RUST_BUILTIN_ATTR_RE.findall(src)
+        names = [n for _, n in hits]
+        # The `unsafe(Edition2024)` wrapper must NOT capture as the name.
+        assert "cfg" in names
+        assert "no_std" in names
+        assert "rustc_specialization_trait" in names
+        assert "link_section" in names
+        # The Edition wrapper string itself must not slip in.
+        assert "Edition2024" not in names
+
+    def test_punctuation_block_extracts_tokens(self):
+        src = (
+            "PUNCTUATION -> \n"
+            "| `+` (plus)\n"
+            "| `+=` (plus-eq)\n"
+            "| `->` (arrow)\n"
+            "\n## Next section\n"
+        )
+        m = sl._RUST_PUNCT_BLOCK_RE.search(src)
+        assert m is not None
+        tokens = sl._RUST_PUNCT_TOKEN_RE.findall(m.group(1))
+        assert tokens == ["+", "+=", "->"]
+
+    def test_keyword_classes_frozenset_locked(self):
+        """If a 4th class shows up in the Reference, fail loudly so we
+        decide deliberately whether to admit it."""
+        assert sl._RUST_KEYWORD_CLASSES == frozenset(
+            {"strict", "reserved", "weak"}
+        )
+
+    def test_unstable_primitives_set_minimal(self):
+        """The allowlist must be tight — these are the only primitives the
+        adapter treats as unstable. f32/f64/i32/etc. must NEVER appear here."""
+        for stable in ("f32", "f64", "bool", "i32", "u8", "str"):
+            assert stable not in sl._RUST_UNSTABLE_PRIMITIVES
+        assert "f16" in sl._RUST_UNSTABLE_PRIMITIVES
+        assert "f128" in sl._RUST_UNSTABLE_PRIMITIVES
+
+
+class TestRustInvariants:
+    def test_five_buckets_present(self, cache_dir):
+        r = sl.scrape_rust_lexicon(cache_dir)
+        for k in ("keywords", "primitives", "prelude",
+                  "attributes", "punctuation"):
+            assert k in r, f"missing bucket: {k}"
+
+    def test_baseline_counts(self, cache_dir):
+        """Floors pinned to 1.95.0. Numbers can grow; bump deliberately."""
+        r = sl.scrape_rust_lexicon(cache_dir)
+        assert len(r["keywords"])    >= 50, len(r["keywords"])
+        assert len(r["primitives"])  >= 20, len(r["primitives"])
+        assert len(r["prelude"])     >= 70, len(r["prelude"])
+        assert len(r["attributes"])  >= 130, len(r["attributes"])
+        assert len(r["punctuation"]) >= 45, len(r["punctuation"])
+
+    def test_keyword_classification_counts(self, cache_dir):
+        """At 1.95.0: 39 strict + 14 reserved + 5 weak. Reasonable floors
+        leave room for future additions without losing meaningful drift
+        detection."""
+        from collections import Counter
+        r = sl.scrape_rust_lexicon(cache_dir)
+        counts = Counter(k["classification"] for k in r["keywords"])
+        assert counts["strict"]   >= 35, counts
+        assert counts["reserved"] >= 10, counts
+        assert counts["weak"]     >= 5,  counts
+
+    def test_known_strict_keyword_canaries(self, cache_dir):
+        r = sl.scrape_rust_lexicon(cache_dir)
+        names = {k["name"]: k for k in r["keywords"]
+                 if k["classification"] == "strict"}
+        for canary in ("fn", "let", "mut", "impl", "trait", "pub",
+                       "match", "return", "use", "if", "else",
+                       "for", "while", "loop", "struct", "enum",
+                       "async", "await", "move", "ref"):
+            assert canary in names, f"missing strict canary {canary!r}"
+
+    def test_known_reserved_keyword_canaries(self, cache_dir):
+        r = sl.scrape_rust_lexicon(cache_dir)
+        names = {k["name"] for k in r["keywords"]
+                 if k["classification"] == "reserved"}
+        for canary in ("abstract", "become", "final", "override",
+                       "priv", "typeof", "unsized", "virtual", "yield"):
+            assert canary in names, f"missing reserved canary {canary!r}"
+
+    def test_known_weak_keyword_canaries(self, cache_dir):
+        """Weak keywords are context-dependent. The Reference's public set
+        is small: 'static, macro_rules, raw, safe, union."""
+        r = sl.scrape_rust_lexicon(cache_dir)
+        names = {k["name"] for k in r["keywords"]
+                 if k["classification"] == "weak"}
+        for canary in ("'static", "macro_rules", "raw", "safe", "union"):
+            assert canary in names, f"missing weak canary {canary!r}"
+
+    def test_known_primitive_canaries(self, cache_dir):
+        r = sl.scrape_rust_lexicon(cache_dir)
+        by_name = {p["name"]: p for p in r["primitives"]}
+        for canary in ("bool", "char", "str", "i8", "i16", "i32", "i64",
+                       "i128", "isize", "u8", "u16", "u32", "u64", "u128",
+                       "usize", "f32", "f64", "array", "slice", "tuple"):
+            assert canary in by_name, f"missing primitive canary {canary!r}"
+            assert by_name[canary]["stability"] == "stable", (
+                f"{canary} should be stable, got "
+                f"{by_name[canary]['stability']}"
+            )
+
+    def test_unstable_primitives_correctly_tagged(self, cache_dir):
+        r = sl.scrape_rust_lexicon(cache_dir)
+        by_name = {p["name"]: p for p in r["primitives"]}
+        for unstable in ("f16", "f128"):
+            assert unstable in by_name
+            assert by_name[unstable]["stability"] == "unstable", (
+                f"{unstable} must be tagged unstable, got "
+                f"{by_name[unstable]['stability']}"
+            )
+
+    def test_known_prelude_canaries_present(self, cache_dir):
+        r = sl.scrape_rust_lexicon(cache_dir)
+        names = {p["name"] for p in r["prelude"]}
+        for canary in ("Option", "Some", "None", "Result", "Ok", "Err",
+                       "Copy", "Clone", "Drop", "Send", "Sync", "Sized",
+                       "Fn", "FnMut", "FnOnce", "Iterator", "IntoIterator",
+                       "Default", "From", "Into"):
+            assert canary in names, f"missing prelude canary {canary!r}"
+
+    def test_prelude_stable_entries_have_since(self, cache_dir):
+        """Every stable prelude item should carry a `since` version."""
+        r = sl.scrape_rust_lexicon(cache_dir)
+        stable = [p for p in r["prelude"] if p["stability"] == "stable"]
+        assert stable, "no stable prelude entries"
+        for p in stable:
+            assert "since" in p, f"stable {p['name']!r} missing `since`"
+
+    def test_known_attribute_canaries(self, cache_dir):
+        """Canaries from builtin_attrs.rs. Note: `#[test]` and `#[derive]`
+        are NOT in this file — they're procedural macros handled elsewhere
+        in the compiler. Only macro-defined builtin attributes count here."""
+        r = sl.scrape_rust_lexicon(cache_dir)
+        by_name = {a["name"]: a for a in r["attributes"]}
+        for canary in ("cfg", "cfg_attr", "deprecated", "inline", "no_std",
+                       "should_panic", "allow", "warn", "deny",
+                       "forbid", "repr", "non_exhaustive"):
+            assert canary in by_name, f"missing attribute canary {canary!r}"
+
+    def test_attribute_stability_distribution_is_sensible(self, cache_dir):
+        """Sanity: all three stability levels should be represented, with
+        compiler-internal being a non-trivial fraction since rustc_attr!
+        invocations are common."""
+        from collections import Counter
+        r = sl.scrape_rust_lexicon(cache_dir)
+        counts = Counter(a["stability"] for a in r["attributes"])
+        assert counts["stable"]            >= 30, counts
+        assert counts["unstable"]          >= 10, counts
+        assert counts["compiler-internal"] >= 30, counts
+
+    def test_known_punctuation_canaries(self, cache_dir):
+        r = sl.scrape_rust_lexicon(cache_dir)
+        names = {p["name"] for p in r["punctuation"]}
+        for canary in ("+", "-", "*", "/", "%", "&", "|", "^", "!",
+                       "&&", "||", "==", "!=", "<", ">", "<=", ">=",
+                       "=", "+=", "-=", "..", "..=", "->", "=>",
+                       "::", "?"):
+            assert canary in names, f"missing punctuation canary {canary!r}"
+
+    def test_authority_status_split(self, cache_dir):
+        """Buckets sourced from rust-lang/rust are normative-compiler;
+        buckets from rust-lang/reference are reference-best-effort."""
+        r = sl.scrape_rust_lexicon(cache_dir)
+        for bucket_name in ("primitives", "prelude", "attributes"):
+            for e in r[bucket_name]:
+                assert e["authority_status"] == "normative-compiler", (
+                    f"{bucket_name}: {e['name']!r} should be normative-"
+                    f"compiler, got {e['authority_status']}"
+                )
+        for bucket_name in ("keywords", "punctuation"):
+            for e in r[bucket_name]:
+                assert e["authority_status"] == "reference-best-effort", (
+                    f"{bucket_name}: {e['name']!r} should be reference-"
+                    f"best-effort, got {e['authority_status']}"
+                )
+
+    def test_no_duplicates_within_bucket(self, cache_dir):
+        """Each bucket dedups within itself. The keywords.md weak section
+        in particular documents some entries twice in source — the
+        extractor must collapse them per classification."""
+        r = sl.scrape_rust_lexicon(cache_dir)
+        # Keywords dedup is per (classification, name): same name in
+        # different classifications would be a real signal, not noise.
+        kw_keys = [(k["classification"], k["name"]) for k in r["keywords"]]
+        assert len(kw_keys) == len(set(kw_keys)), "keyword dedup broke"
+        for bucket in ("primitives", "prelude", "attributes", "punctuation"):
+            names = [e["name"] for e in r[bucket]]
+            assert len(names) == len(set(names)), (
+                f"{bucket} bucket has duplicates"
+            )
+
+    def test_source_urls_pinned(self, cache_dir):
+        r = sl.scrape_rust_lexicon(cache_dir)
+        for bucket in r.values():
+            for e in bucket:
+                url = e["source_url"]
+                assert "/main/" not in url, url
+                assert "/master/" not in url, url
+                # Either rustc tag or Reference commit SHA must appear.
+                assert (f"/{sl.RUST_VERSION}/" in url or
+                        f"/{sl.RUST_REFERENCE_COMMIT}/" in url), (
+                    f"source_url not pinned to a known anchor: {url}"
+                )
+
+
 class TestEndToEndPayload:
     def test_build_payload_validates(self, cache_dir):
         """The strongest single regression check: the assembled payload
@@ -1012,6 +1297,11 @@ class TestEndToEndPayload:
         assert s["postgres_function_count"] == len(payload["postgres_18"]["functions"])
         assert s["postgres_operator_count"] == len(payload["postgres_18"]["operators"])
         assert s["postgres_cast_count"]     == len(payload["postgres_18"]["casts"])
+        assert s["rust_keyword_count"]     == len(payload["rust"]["keywords"])
+        assert s["rust_primitive_count"]   == len(payload["rust"]["primitives"])
+        assert s["rust_prelude_count"]     == len(payload["rust"]["prelude"])
+        assert s["rust_attribute_count"]   == len(payload["rust"]["attributes"])
+        assert s["rust_punctuation_count"] == len(payload["rust"]["punctuation"])
 
     def test_zod_delta_is_consistent_with_lexicons(self, cache_dir):
         """The delta computed inside build_payload must match a fresh
@@ -2017,3 +2307,236 @@ class TestCrossLanguageIndexAsDerivedArtifact:
         # Must call out that it's a derived artifact with no authority entry.
         assert "derived artifact" in rule.lower() or "Derived artifact" in rule
         assert "no source_authority" in rule or "NO source_authority" in rule
+
+
+# --------------------------------------------------------------------------- #
+# Regression tests for v7 re-review fixes                                     #
+# --------------------------------------------------------------------------- #
+#
+# Fixes:
+#  1. Postgres casts now carry castcontext (i/a/e) + castmethod (f/i/b)
+#     with both raw codes and decoded labels.
+#  2. Postgres functions: extraction rule explicitly documents
+#     "name roster, not signature catalog".
+#  3. Postgres types now carry typcategory + typtype (b/c/d/e/p/r/m)
+#     with raw codes and decoded labels.
+#  4. cross_language_index_meta sibling field carries the homograph-not-
+#     semantic caveat at point-of-use (the cross_language_index dict
+#     itself stays a clean name→locations mapping).
+#
+# REJECTED in v7: bare_label boolean conversion would erase the AS_LABEL
+# distinction (455 BARE_LABEL + 39 AS_LABEL, not 494 boolean-true).
+# The current 2-value string encoding is correct.
+
+
+class TestPostgresCastContextAndMethod:
+    """v7: Postgres casts now carry castcontext (i/a/e) and castmethod
+    (f/i/b). These are load-bearing for emitters — implicit ≠ assignment
+    ≠ explicit; binary-coercible ≠ function-call ≠ inout."""
+
+    def test_every_cast_has_castcontext_and_method(self, cache_dir):
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        for c in r["casts"]:
+            assert "castcontext" in c
+            assert "castmethod"  in c
+            assert "castcontext_label" in c
+            assert "castmethod_label"  in c
+
+    def test_castcontext_values_are_pg_spec_codes(self, cache_dir):
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        observed = {c["castcontext"] for c in r["casts"]}
+        assert observed <= {"i", "a", "e"}, (
+            f"unexpected castcontext codes: {observed - {'i','a','e'}}"
+        )
+
+    def test_castmethod_values_are_pg_spec_codes(self, cache_dir):
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        observed = {c["castmethod"] for c in r["casts"]}
+        assert observed <= {"f", "i", "b"}, (
+            f"unexpected castmethod codes: {observed - {'f','i','b'}}"
+        )
+
+    def test_labels_match_codes(self, cache_dir):
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        expected_ctx = {"i": "implicit", "a": "assignment", "e": "explicit"}
+        expected_method = {"f": "function", "i": "inout", "b": "binary-coercible"}
+        for c in r["casts"]:
+            assert c["castcontext_label"] == expected_ctx[c["castcontext"]]
+            assert c["castmethod_label"]  == expected_method[c["castmethod"]]
+
+    def test_all_three_contexts_actually_appear(self, cache_dir):
+        """Postgres ships casts in all three contexts. If only one shows
+        up the extractor likely defaulted on all entries."""
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        observed = {c["castcontext"] for c in r["casts"]}
+        assert observed == {"i", "a", "e"}, (
+            f"expected all three context codes; got {observed}"
+        )
+
+
+class TestPostgresTypeCategoryAndType:
+    """v7: Postgres types now carry typcategory + typtype.
+    typcategory: single-char category (B=boolean, N=numeric, …).
+    typtype: b=base, c=composite, d=domain, e=enum, p=pseudo, r=range,
+             m=multirange. Defaults to 'b' when omitted in source."""
+
+    def test_every_type_has_typcategory_and_typtype(self, cache_dir):
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        for t in r["types"]:
+            assert "typcategory" in t
+            assert "typtype"     in t
+            assert "typtype_label" in t
+
+    def test_typtype_values_are_pg_spec_codes(self, cache_dir):
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        observed = {t["typtype"] for t in r["types"]}
+        assert observed <= {"b", "c", "d", "e", "p", "r", "m"}, (
+            f"unexpected typtype codes: {observed - set('bcdeprm')}"
+        )
+
+    def test_typtype_defaults_to_base_when_source_omits(self, cache_dir):
+        """pg_type.dat omits typtype on most base types; the extractor
+        must default to 'b' (base) per Postgres catalog conventions."""
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        # bool, int4, text — canonical base types, no explicit typtype in source.
+        for name in ("bool", "int4", "text"):
+            t = next((x for x in r["types"] if x["name"] == name), None)
+            assert t is not None, f"type {name} missing"
+            assert t["typtype"] == "b"
+            assert t["typtype_label"] == "base"
+
+    def test_pseudo_types_correctly_categorized(self, cache_dir):
+        """Pseudo types (any, anyelement, void, record, cstring, …) must
+        carry typtype='p'. These are the types a USL-NG emitter cares
+        about distinguishing from scalars."""
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        pseudos = {t["name"] for t in r["types"] if t["typtype"] == "p"}
+        for canonical in ("any", "anyelement", "void", "record", "cstring"):
+            assert canonical in pseudos, (
+                f"{canonical} should be typtype='p' (pseudo); got "
+                f"{next((t['typtype'] for t in r['types'] if t['name'] == canonical), 'MISSING')}"
+            )
+
+    def test_type_count_unchanged_after_v7_fix(self, cache_dir):
+        """v7 fix initially regressed type count 112→111 because the naive
+        per-entry regex choked on pg_type.dat's `line` entry (descr field
+        contains literal `\\'{A,B,C}\\'`). String-aware parser recovers it."""
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        assert len(r["types"]) == 112
+        names = {t["name"] for t in r["types"]}
+        assert "line" in names, (
+            "`line` type dropped — string-aware hash parser regressed"
+        )
+
+    def test_typtype_label_decoding(self, cache_dir):
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        expected = {
+            "b": "base", "c": "composite", "d": "domain", "e": "enum",
+            "p": "pseudo", "r": "range", "m": "multirange",
+        }
+        for t in r["types"]:
+            assert t["typtype_label"] == expected[t["typtype"]]
+
+
+class TestPgHashEntryParser:
+    """Pure-function tests for _parse_pg_hash_entries — the string-aware
+    walker that handles entries whose values contain literal `{`/`}`."""
+
+    def test_parses_simple_entry(self):
+        src = "{ a => 'x', b => 'y' }"
+        r = sl._parse_pg_hash_entries(src)
+        assert r == [{"a": "x", "b": "y"}]
+
+    def test_parses_entry_with_braces_in_string_value(self):
+        """The defect that motivated string-aware parsing: pg_type.dat's
+        `line` entry has descr `\\'{A,B,C}\\'`. A naive `\\{[^{}]*\\}` regex
+        truncates at the inner `{`."""
+        src = r"{ descr => 'has {braces} inside', typname => 'line' }"
+        r = sl._parse_pg_hash_entries(src)
+        assert len(r) == 1
+        assert r[0]["typname"] == "line"
+        assert "{braces}" in r[0]["descr"]
+
+    def test_parses_multiple_entries(self):
+        src = "{ a => '1' }, { a => '2' }, { a => '3' }"
+        r = sl._parse_pg_hash_entries(src)
+        assert [e["a"] for e in r] == ["1", "2", "3"]
+
+    def test_handles_escaped_quotes_in_string(self):
+        """Perl allows `\\'` to escape a single-quote inside a single-
+        quoted string. The walker must keep brace-tracking off until the
+        unescaped closing `'`."""
+        src = r"{ k => 'with \'quote\' and {brace}' }"
+        r = sl._parse_pg_hash_entries(src)
+        assert len(r) == 1
+        assert "{brace}" in r[0]["k"]
+
+
+class TestPostgresFunctionsScopeNote:
+    """v7: extraction rule explicitly documents that functions partition
+    is a name roster, not a signature catalog. Defends against the
+    repeating reviewer request for arg/return types."""
+
+    def test_extraction_rule_documents_name_roster_scope(self):
+        rule = sl.EXTRACTION_RULES["postgres_lexicon"]
+        # Must call out the scope limitation explicitly.
+        assert "NAME ROSTER" in rule or "name roster" in rule.lower()
+        assert "SIGNATURE CATALOG" in rule or "signature catalog" in rule.lower()
+        # Must point consumers at the source for signatures.
+        assert "consult pg_proc.dat" in rule or "consult pg_proc" in rule
+
+
+class TestCrossLanguageIndexMeta:
+    """v7: cross_language_index_meta sibling field surfaces the homograph-
+    not-semantic caveat at point-of-use. The index itself stays a clean
+    name→locations dict; the caveat lives in a peer field that consumers
+    will naturally encounter."""
+
+    def test_meta_field_present(self, cache_dir):
+        payload = sl.build_payload(cache_dir)
+        assert "cross_language_index_meta" in payload
+        meta = payload["cross_language_index_meta"]
+        assert "caveat" in meta
+        assert "min_lexicon_count" in meta
+        assert "size" in meta
+
+    def test_meta_size_matches_index_size(self, cache_dir):
+        payload = sl.build_payload(cache_dir)
+        meta = payload["cross_language_index_meta"]
+        assert meta["size"] == len(payload["cross_language_index"])
+
+    def test_meta_min_lexicon_count_matches_index_filter(self, cache_dir):
+        payload = sl.build_payload(cache_dir)
+        meta = payload["cross_language_index_meta"]
+        # Every index entry must satisfy the declared min_lexicon_count.
+        for name, locs in payload["cross_language_index"].items():
+            assert len(locs) >= meta["min_lexicon_count"]
+
+    def test_caveat_calls_out_homograph_risk_specifically(self, cache_dir):
+        payload = sl.build_payload(cache_dir)
+        caveat = payload["cross_language_index_meta"]["caveat"]
+        assert "homograph" in caveat.lower()
+        assert "no semantic correspondence" in caveat.lower() or \
+               "no semantic equivalence" in caveat.lower()
+
+
+class TestBareLabelEncodingPreserved:
+    """v7 REJECTED finding: reviewer suggested converting bare_label to
+    boolean. The current 2-value encoding (BARE_LABEL vs AS_LABEL) is
+    correct — converting to boolean would lose the 39 AS_LABEL entries'
+    distinction from the 455 BARE_LABEL entries. This test locks the
+    current encoding in place so a future reviewer's same request doesn't
+    silently get implemented."""
+
+    def test_bare_label_is_string_enum_not_boolean(self, cache_dir):
+        r = sl.scrape_postgres_lexicon(cache_dir)
+        observed = {k["bare_label"] for k in r["keywords"]}
+        assert observed <= {"BARE_LABEL", "AS_LABEL"}, (
+            f"unexpected bare_label values: {observed - {'BARE_LABEL', 'AS_LABEL'}}"
+        )
+        # Both must actually appear.
+        assert "BARE_LABEL" in observed
+        assert "AS_LABEL" in observed, (
+            "AS_LABEL never appears — if encoding was simplified to "
+            "boolean-presence the AS_LABEL distinction would be lost"
+        )

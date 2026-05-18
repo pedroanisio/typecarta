@@ -978,6 +978,165 @@
       },
       "additionalProperties": true
     },
+    "rust": {
+      "type": "object",
+      "required": [
+        "keywords",
+        "primitives",
+        "prelude",
+        "attributes",
+        "punctuation"
+      ],
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "classification",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "classification": {
+                "enum": [
+                  "strict",
+                  "reserved",
+                  "weak"
+                ]
+              },
+              "authority_status": {
+                "const": "reference-best-effort"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "primitives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "stability",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "stability": {
+                "enum": [
+                  "stable",
+                  "unstable"
+                ]
+              },
+              "authority_status": {
+                "const": "normative-compiler"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "prelude": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "stability",
+              "feature",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "stability": {
+                "enum": [
+                  "stable",
+                  "unstable"
+                ]
+              },
+              "feature": {
+                "type": "string"
+              },
+              "since": {
+                "type": "string"
+              },
+              "authority_status": {
+                "const": "normative-compiler"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "attributes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "stability",
+              "macro",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "stability": {
+                "enum": [
+                  "stable",
+                  "unstable",
+                  "compiler-internal"
+                ]
+              },
+              "macro": {
+                "enum": [
+                  "ungated",
+                  "gated",
+                  "rustc_attr",
+                  "rustc_internal"
+                ]
+              },
+              "authority_status": {
+                "const": "normative-compiler"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "punctuation": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "authority_status": {
+                "const": "reference-best-effort"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
     "summary": {
       "type": "object",
       "additionalProperties": {
@@ -992,6 +1151,27 @@
           "type": "string"
         },
         "minItems": 2
+      }
+    },
+    "cross_language_index_meta": {
+      "type": "object",
+      "required": [
+        "caveat",
+        "min_lexicon_count",
+        "size"
+      ],
+      "properties": {
+        "caveat": {
+          "type": "string"
+        },
+        "min_lexicon_count": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     }
   }
