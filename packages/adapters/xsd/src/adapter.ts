@@ -22,6 +22,7 @@ import {
 	product,
 	rangeConstraint,
 	refinement,
+	set,
 	top,
 	union,
 } from "@typecarta/core";
@@ -54,6 +55,8 @@ export interface XsdElementDescriptor {
 	readonly type: XsdDescriptor;
 	readonly minOccurs?: number;
 	readonly maxOccurs?: number | "unbounded";
+	/** Maps to XSD `nillable="true"` (element may carry `xsi:nil` instead of a value). */
+	readonly nillable?: boolean;
 }
 
 /** Describe an XSD attribute within a complex type. */
@@ -79,11 +82,15 @@ export type XsdDescriptor =
 			readonly name?: string;
 			readonly elements: readonly XsdElementDescriptor[];
 			readonly attributes?: readonly XsdAttributeDescriptor[];
+			/** Maps to an `xs:any` wildcard particle (open record). */
+			readonly open?: boolean;
 	  }
 	| { readonly kind: "sequence"; readonly elements: readonly XsdElementDescriptor[] }
 	| { readonly kind: "all"; readonly elements: readonly XsdElementDescriptor[] }
 	| { readonly kind: "choice"; readonly options: readonly XsdElementDescriptor[] }
 	| { readonly kind: "list"; readonly itemType: XsdDescriptor }
+	/** `xs:list` over a complex parent constrained by `xs:unique` — set-uniqueness. */
+	| { readonly kind: "set"; readonly itemType: XsdDescriptor }
 	| { readonly kind: "union"; readonly members: readonly XsdDescriptor[] };
 
 const XSD_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
@@ -187,11 +194,13 @@ function parseXsdDescriptor(desc: XsdDescriptor): TypeTerm {
 			return bottom();
 		case "simpleType":
 			return parseSimpleType(desc);
-		case "complexType":
-			return product([
+		case "complexType": {
+			const fields = [
 				...desc.elements.map(parseElement),
 				...(desc.attributes ?? []).map(parseAttribute),
-			]);
+			];
+			return desc.open ? product(fields, { open: true }) : product(fields);
+		}
 		case "sequence":
 		case "all":
 			return product(desc.elements.map(parseElement));
@@ -199,6 +208,8 @@ function parseXsdDescriptor(desc: XsdDescriptor): TypeTerm {
 			return union(desc.options.map((option) => parseXsdDescriptor(option.type)));
 		case "list":
 			return array(parseXsdDescriptor(desc.itemType));
+		case "set":
+			return set(parseXsdDescriptor(desc.itemType));
 		case "union":
 			return union(desc.members.map(parseXsdDescriptor));
 	}
@@ -236,11 +247,12 @@ function facetsToPredicate(facets: XsdFacets | undefined): RefinementPredicate |
 
 function parseElement(element: XsdElementDescriptor): ReturnType<typeof field> {
 	const parsedType = parseXsdDescriptor(element.type);
-	const type =
+	const arrayWrapped =
 		element.maxOccurs === "unbounded" ||
 		(typeof element.maxOccurs === "number" && element.maxOccurs > 1)
 			? array(parsedType)
 			: parsedType;
+	const type = element.nillable ? union([arrayWrapped, base("null")]) : arrayWrapped;
 	return field(element.name, type, {
 		...(element.minOccurs === 0 ? { optional: true } : {}),
 	});
@@ -304,6 +316,13 @@ function encodeBase(name: string): XsdDescriptor {
 		"anyURI",
 	]);
 	if (name === "number") return { kind: "primitive", name: "decimal" };
+	if (name === "null") {
+		// `null` is not a first-class XSD type. It appears here only when a bare
+		// `base("null")` is encoded outside the `union([T, null])` pattern, which
+		// `encodeField` rewrites to `nillable: true`. Fall back to anyType so
+		// encoding doesn't throw; round-trip fidelity for that case is best-effort.
+		return { kind: "anyType" };
+	}
 	if (supported.has(name)) return { kind: "primitive", name: name as XsdPrimitiveName };
 	throw new Error(`Cannot encode base type "${name}" to XSD`);
 }
@@ -314,11 +333,18 @@ function encodeApply(term: Extract<TypeTerm, { kind: "apply" }>): XsdDescriptor 
 			return {
 				kind: "complexType",
 				elements: (term.fields ?? []).map(encodeField),
+				...(term.annotations?.open === true ? { open: true } : {}),
 			};
 		case "array": {
 			const itemType = term.args[0];
 			if (itemType === undefined) throw new Error("XSD list requires an item type");
 			return { kind: "list", itemType: encodeToXsdDescriptor(itemType) };
+		}
+		case "set": {
+			const itemType = term.args[0];
+			if (itemType === undefined) throw new Error("XSD set requires an item type");
+			// Models `xs:list` constrained by `xs:unique` (set-uniqueness within scope).
+			return { kind: "set", itemType: encodeToXsdDescriptor(itemType) };
 		}
 		case "union":
 			return { kind: "union", members: term.args.map(encodeToXsdDescriptor) };
@@ -357,6 +383,17 @@ function encodeField(f: {
 	readonly type: TypeTerm;
 	readonly optional?: boolean;
 }): XsdElementDescriptor {
+	// Detect `union([T, base("null")])` — the spec's nullable-by-value pattern —
+	// and lift it into `nillable: true` on the element with type T.
+	const nullableInner = extractNullableInner(f.type);
+	if (nullableInner !== undefined) {
+		return {
+			name: f.name,
+			type: encodeToXsdDescriptor(nullableInner),
+			nillable: true,
+			...(f.optional ? { minOccurs: 0 } : {}),
+		};
+	}
 	if (f.type.kind === "apply" && f.type.constructor === "array") {
 		const elementType = f.type.args[0];
 		if (elementType === undefined) throw new Error(`Array field "${f.name}" has no element type`);
@@ -372,6 +409,22 @@ function encodeField(f: {
 		type: encodeToXsdDescriptor(f.type),
 		...(f.optional ? { minOccurs: 0 } : {}),
 	};
+}
+
+/**
+ * If `term` is `union([T, base("null")])` (in either order), return `T`.
+ * Otherwise return undefined. Recognizes binary unions only; nested unions
+ * with null among >2 arms fall through to the normal union encoder.
+ */
+function extractNullableInner(term: TypeTerm): TypeTerm | undefined {
+	if (term.kind !== "apply" || term.constructor !== "union") return undefined;
+	if (term.args.length !== 2) return undefined;
+	const [a, b] = term.args;
+	if (a === undefined || b === undefined) return undefined;
+	const isNull = (t: TypeTerm) => t.kind === "base" && t.name === "null";
+	if (isNull(a)) return b;
+	if (isNull(b)) return a;
+	return undefined;
 }
 
 function encodeRefinement(term: Extract<TypeTerm, { kind: "refinement" }>): XsdDescriptor {

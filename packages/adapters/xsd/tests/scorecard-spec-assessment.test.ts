@@ -19,9 +19,9 @@ describe("XSD full scorecard assessment", () => {
 		const scorecard = fullScorecard();
 
 		expect(scorecard.totals).toEqual({
-			satisfied: 21,
-			partial: 16,
-			notSatisfied: 7,
+			satisfied: 24,
+			partial: 15,
+			notSatisfied: 5,
 			outOfVocabulary: 26,
 		});
 	});
@@ -36,23 +36,19 @@ describe("XSD full scorecard assessment", () => {
 		// adapter-hole vs. language-gap classification. When the adapter grows
 		// to support the listed XSD feature, the cell should flip; update this
 		// list then.
+		//
+		// pi-prime-13 (nillable), pi-prime-17 (xs:any open record), and pi-prime-46
+		// (xs:list+xs:unique for sets) were previously here but now encode faithfully
+		// — adapter implementations exist for each.
 		const knownAdapterHoles: Array<{
 			criterionId: string;
 			current: "partial" | "✗" | "n/a";
 			xsdFeature: string;
 		}> = [
-			// pi-prime-13's witness uses `union([string, base("null")])`. The IR
-			// kinds (base, apply) are supported, so this is `✗` rather than `n/a`
-			// — the encoder reaches the `null` base and throws. Still an adapter
-			// hole, just one that materializes deeper than `supportsKind` catches.
-			{ criterionId: "pi-prime-13", current: "✗", xsdFeature: 'nillable="true" + xsi:nil' },
 			{ criterionId: "pi-prime-25", current: "n/a", xsdFeature: "named complexType self-reference" },
 			{ criterionId: "pi-prime-26", current: "n/a", xsdFeature: "named complexType mutual reference" },
 			{ criterionId: "pi-prime-35", current: "n/a", xsdFeature: "nominal {ns}name + xsi:type" },
 			{ criterionId: "pi-prime-44", current: "n/a", xsdFeature: "xs:keyref (document-scoped)" },
-			// pi-prime-46's witness uses `apply("set", …)`. `apply` is in vocabulary,
-			// so it reaches the encoder and fails there → ✗, not n/a.
-			{ criterionId: "pi-prime-46", current: "✗", xsdFeature: 'xs:unique + maxOccurs="unbounded"' },
 			{ criterionId: "pi-prime-50", current: "n/a", xsdFeature: 'simpleType / complexType name="..."' },
 			{ criterionId: "pi-prime-51", current: "n/a", xsdFeature: "targetNamespace, xs:include, xs:import" },
 		];
