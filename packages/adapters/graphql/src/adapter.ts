@@ -140,10 +140,17 @@ function parseGraphQLDescriptor(desc: GraphQLTypeDescriptor): TypeTerm {
 		case "object":
 		case "input":
 		case "interface": {
-			const fields = desc.fields.map((f) =>
-				// GraphQL fields are nullable by default (optional)
-				field(f.name, parseGraphQLDescriptor(f.type), { optional: true }),
-			);
+			// GraphQL fields are nullable by default: a bare type means
+			// `optional: true`. A `NonNull` wrapper at the field type marks
+			// the field as required. Without honoring this here, every
+			// round-tripped product widens its fields to optional, which
+			// breaks soundness for products containing required fields
+			// (bench:fidelity product-person row, 2026-05-18).
+			const fields = desc.fields.map((f) => {
+				const isRequired = f.type.type === "nonNull";
+				const inner = isRequired ? parseGraphQLDescriptor((f.type as { inner: GraphQLTypeDescriptor }).inner) : parseGraphQLDescriptor(f.type);
+				return field(f.name, inner, isRequired ? {} : { optional: true });
+			});
 			return product(fields);
 		}
 		case "list":
@@ -231,10 +238,21 @@ function encodeBaseToGraphQL(name: string): GraphQLTypeDescriptor {
 function encodeApply(term: Extract<TypeTerm, { kind: "apply" }>): GraphQLTypeDescriptor {
 	switch (term.constructor) {
 		case "product": {
-			const fields: GraphQLFieldDescriptor[] = (term.fields ?? []).map((f) => ({
-				name: f.name,
-				type: encodeToGraphQLDescriptor(f.type),
-			}));
+			// GraphQL fields are nullable by default; the parser reads any
+			// unwrapped field as `optional: true`. To preserve IR semantics
+			// across the round-trip, wrap required fields in `NonNull` here.
+			// Without this, `product([field("name", base("string"))])` would
+			// re-parse as `product([field("name", base("string"), { optional: true })])`
+			// and inhabits would accept `{}`, which the original term
+			// rejects — a real soundness violation flagged by bench:fidelity
+			// on the product-person row (2026-05-18).
+			const fields: GraphQLFieldDescriptor[] = (term.fields ?? []).map((f) => {
+				const innerType = encodeToGraphQLDescriptor(f.type);
+				return {
+					name: f.name,
+					type: f.optional === true ? innerType : { type: "nonNull", inner: innerType },
+				};
+			});
 			return { type: "object", name: "Object", fields };
 		}
 		case "array": {

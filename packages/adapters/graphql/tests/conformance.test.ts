@@ -239,4 +239,51 @@ describe("GraphQLAdapter", () => {
 			expect(adapter.inhabits(42, base("integer"))).toBe(true);
 		});
 	});
+
+	// P0.4 — bench:fidelity soundness on product-person (2026-05-18).
+	// GraphQL's SDL convention: an unmarked field is nullable (the parsed
+	// IR adds `optional: true`). When the IR's source term has a required
+	// field (`optional` falsy / undefined), the encoder must wrap that
+	// field's type in `NonNull` so the round-trip preserves required-ness.
+	// Without this, `{}` is accepted by the parsed term but rejected by
+	// the original IR — a soundness violation.
+	describe("Required-field round-trip via NonNull", () => {
+		it("emits NonNull around required field types", () => {
+			const term = product([
+				field("name", base("string")),
+				field("age", base("number")),
+			]);
+			const encoded = adapter.encode(term) as { type: "object"; fields: Array<{ name: string; type: { type: string } }> };
+			expect(encoded.type).toBe("object");
+			expect(encoded.fields[0]!.type.type).toBe("nonNull");
+			expect(encoded.fields[1]!.type.type).toBe("nonNull");
+		});
+
+		it("emits a bare type for optional fields", () => {
+			const term = product([
+				field("name", base("string"), { optional: true }),
+				field("age", base("number")),
+			]);
+			const encoded = adapter.encode(term) as { type: "object"; fields: Array<{ name: string; type: { type: string } }> };
+			// optional → bare scalar; required → NonNull-wrapped
+			expect(encoded.fields[0]!.type.type).toBe("scalar");
+			expect(encoded.fields[1]!.type.type).toBe("nonNull");
+		});
+
+		it("product-person round-trips with required fields preserved (soundness)", () => {
+			const term = product([
+				field("name", base("string")),
+				field("age", base("number")),
+			]);
+			const parsed = adapter.parse(adapter.encode(term));
+			// Soundness: a value rejected by the original IR must also be
+			// rejected by the round-tripped term. Empty object lacks `name`
+			// and `age`, so both terms must reject it.
+			expect(adapter.inhabits({}, term)).toBe(false);
+			expect(adapter.inhabits({}, parsed)).toBe(false);
+			// And the valid value still inhabits both.
+			expect(adapter.inhabits({ name: "Alice", age: 30 }, term)).toBe(true);
+			expect(adapter.inhabits({ name: "Alice", age: 30 }, parsed)).toBe(true);
+		});
+	});
 });
