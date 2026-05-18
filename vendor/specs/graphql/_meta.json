@@ -1,0 +1,97 @@
+{
+  "adapter_key": "graphql",
+  "name": "GraphQL",
+  "spec_version": "October 2021",
+  "files": [
+    {
+      "filename": "GraphQL.md",
+      "url": "https://raw.githubusercontent.com/graphql/graphql-spec/October2021/spec/GraphQL.md",
+      "description": "GraphQL Specification index, October 2021 edition",
+      "fetched_at": "2026-05-18T16:16:29+00:00",
+      "content_type": "text/plain; charset=utf-8",
+      "bytes": 6358,
+      "sha256": "9f48d9650307e82737c1ce17e1e6a1acf5cd92dd99bd4ef218cb5d91a13be56f"
+    },
+    {
+      "filename": "Section 1 -- Overview.md",
+      "url": "https://raw.githubusercontent.com/graphql/graphql-spec/October2021/spec/Section%201%20--%20Overview.md",
+      "description": "Section 1 \u2014 Overview",
+      "fetched_at": "2026-05-18T16:18:32+00:00",
+      "content_type": "text/plain; charset=utf-8",
+      "bytes": 3993,
+      "sha256": "4796da8a9e27ebc461472e9263ac3b0793e47b550e54f574693bdd7dd9fa8868"
+    },
+    {
+      "filename": "Section 2 -- Language.md",
+      "url": "https://raw.githubusercontent.com/graphql/graphql-spec/October2021/spec/Section%202%20--%20Language.md",
+      "description": "Section 2 \u2014 Language",
+      "fetched_at": "2026-05-18T16:18:33+00:00",
+      "content_type": "text/plain; charset=utf-8",
+      "bytes": 35080,
+      "sha256": "161241d5a30e02299a46377004de178998173c885766ffd3ff78e5aa3d29582e"
+    },
+    {
+      "filename": "Section 3 -- Type System.md",
+      "url": "https://raw.githubusercontent.com/graphql/graphql-spec/October2021/spec/Section%203%20--%20Type%20System.md",
+      "description": "Section 3 \u2014 Type System",
+      "fetched_at": "2026-05-18T16:18:33+00:00",
+      "content_type": "text/plain; charset=utf-8",
+      "bytes": 70894,
+      "sha256": "fa2bd4600883bf365116b8fad7900ca9d9bbabde687f097a98a799a40f2cd98c"
+    },
+    {
+      "filename": "Section 4 -- Introspection.md",
+      "url": "https://raw.githubusercontent.com/graphql/graphql-spec/October2021/spec/Section%204%20--%20Introspection.md",
+      "description": "Section 4 \u2014 Introspection",
+      "fetched_at": "2026-05-18T16:18:33+00:00",
+      "content_type": "text/plain; charset=utf-8",
+      "bytes": 14232,
+      "sha256": "1304299962875c8ff322358e7a7540781360e7c7b9a66ccaf50857b6d84b01cf"
+    },
+    {
+      "filename": "Section 5 -- Validation.md",
+      "url": "https://raw.githubusercontent.com/graphql/graphql-spec/October2021/spec/Section%205%20--%20Validation.md",
+      "description": "Section 5 \u2014 Validation",
+      "fetched_at": "2026-05-18T16:18:34+00:00",
+      "content_type": "text/plain; charset=utf-8",
+      "bytes": 48899,
+      "sha256": "e3bd14529e9902d883a256e2376238017722c6a574bcf79016386c44b6e4deeb"
+    },
+    {
+      "filename": "Section 6 -- Execution.md",
+      "url": "https://raw.githubusercontent.com/graphql/graphql-spec/October2021/spec/Section%206%20--%20Execution.md",
+      "description": "Section 6 \u2014 Execution",
+      "fetched_at": "2026-05-18T16:18:34+00:00",
+      "content_type": "text/plain; charset=utf-8",
+      "bytes": 34175,
+      "sha256": "421f8451187e7aff25cfe5856b5544b51929a251de1445f819b440f913ccfa5f"
+    },
+    {
+      "filename": "Section 7 -- Response.md",
+      "url": "https://raw.githubusercontent.com/graphql/graphql-spec/October2021/spec/Section%207%20--%20Response.md",
+      "description": "Section 7 \u2014 Response",
+      "fetched_at": "2026-05-18T16:18:34+00:00",
+      "content_type": "text/plain; charset=utf-8",
+      "bytes": 11427,
+      "sha256": "64557312dd033d1c7f9a5be2eaf820c9760c76a501af4277ea78ac12a144ca49"
+    },
+    {
+      "filename": "Appendix A -- Notation Conventions.md",
+      "url": "https://raw.githubusercontent.com/graphql/graphql-spec/October2021/spec/Appendix%20A%20--%20Notation%20Conventions.md",
+      "description": "Appendix A \u2014 Notation Conventions",
+      "fetched_at": "2026-05-18T16:18:34+00:00",
+      "content_type": "text/plain; charset=utf-8",
+      "bytes": 7016,
+      "sha256": "8c997263fb393931b055e2a39078aa3f6cd50501a2ce29fbd9f6eee81148ffe4"
+    },
+    {
+      "filename": "Appendix B -- Grammar Summary.md",
+      "url": "https://raw.githubusercontent.com/graphql/graphql-spec/October2021/spec/Appendix%20B%20--%20Grammar%20Summary.md",
+      "description": "Appendix B \u2014 Grammar Summary",
+      "fetched_at": "2026-05-18T16:18:35+00:00",
+      "content_type": "text/plain; charset=utf-8",
+      "bytes": 8212,
+      "sha256": "8091632aeb79595a708765902d9c0bf40f7924967d48b6f2fb68f87940ca5c86"
+    }
+  ]
+}

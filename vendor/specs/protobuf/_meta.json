@@ -1,0 +1,16 @@
+{
+  "adapter_key": "protobuf",
+  "name": "Protocol Buffers",
+  "spec_version": "proto3",
+  "files": [
+    {
+      "filename": "proto3.html",
+      "url": "https://protobuf.dev/programming-guides/proto3/",
+      "description": "protobuf.dev Programming Guide: proto3 (the closest thing to a spec; there is no formal RFC-style proto3 spec)",
+      "fetched_at": "2026-05-18T16:16:29+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 190831,
+      "sha256": "1bd3ad39adf69ee4123af8ae1869c6f1d24c790ee217d35cc7d496ad358a1244"
+    }
+  ]
+}

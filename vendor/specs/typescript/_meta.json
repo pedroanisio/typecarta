@@ -1,0 +1,7 @@
+{
+  "adapter_key": "typescript",
+  "name": "TypeScript",
+  "spec_version": "5.7",
+  "no_spec_reason": "TypeScript has no formal language specification. The original spec at github.com/microsoft/TypeScript/blob/master/doc/spec-ARCHIVED.md was archived in 2014 and has not tracked the language since.",
+  "no_spec_closest_reference": "Closest authoritative reference: the TypeScript Handbook (https://www.typescriptlang.org/docs/handbook/) and release notes for v5.7. Behavior is ultimately defined by the compiler."
+}

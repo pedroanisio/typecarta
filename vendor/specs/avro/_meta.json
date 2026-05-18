@@ -1,0 +1,16 @@
+{
+  "adapter_key": "avro",
+  "name": "Apache Avro",
+  "spec_version": "1.11",
+  "files": [
+    {
+      "filename": "specification.html",
+      "url": "https://avro.apache.org/docs/1.11.1/specification/",
+      "description": "Apache Avro 1.11.1 Specification (published HTML)",
+      "fetched_at": "2026-05-18T16:16:29+00:00",
+      "content_type": "text/html",
+      "bytes": 157906,
+      "sha256": "2bd67aaf6d60acc60a9b7731a2e8e883dde3b45e231a12fd194b9f4b5adbc182"
+    }
+  ]
+}

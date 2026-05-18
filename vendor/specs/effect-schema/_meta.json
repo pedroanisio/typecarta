@@ -1,0 +1,7 @@
+{
+  "adapter_key": "effect-schema",
+  "name": "Effect Schema",
+  "spec_version": "0.x",
+  "no_spec_reason": "Effect Schema is a TypeScript library, not a standardized format. There is no spec separate from the library's source.",
+  "no_spec_closest_reference": "Closest authoritative reference: the Effect-TS/effect repository and its docs (https://effect.website/docs/schema/introduction/). Pinning a minor version recommended for any concrete claim."
+}
