@@ -66,6 +66,68 @@ const AVRO_SUPPORTED_KINDS: ReadonlySet<TypeTerm["kind"]> = new Set([
 	"apply",
 ]);
 
+/**
+ * Map IR-canonical base names (JSON-Schema-flavored: `string`, `number`,
+ * `integer`, `boolean`) to Avro's primitive names. Returns `undefined` for
+ * base names that have no Avro equivalent so the caller can fall through
+ * to the rejection path.
+ *
+ * Without this, witness `product([field("id", base("number")), …])` fails
+ * encoding with `Cannot encode base type "number" to Avro`, which cascades
+ * the entire enclosing record into ✗. Flagged by the bench:fidelity
+ * reviewer on SP9 Labelled Record (2026-05-18).
+ */
+function normalizeIrBaseToAvro(name: string): string | undefined {
+	switch (name) {
+		// Avro-native names pass through.
+		case "null":
+		case "boolean":
+		case "int":
+		case "long":
+		case "float":
+		case "double":
+		case "bytes":
+		case "string":
+			return name;
+		// IR-canonical aliases that pick the widest faithful Avro mapping.
+		// `number` → `double` (IEEE-754 64-bit; matches JSON `number`).
+		// `integer` → `long` (64-bit signed; matches JSON `integer` range).
+		case "number":
+			return "double";
+		case "integer":
+			return "long";
+		default:
+			return undefined;
+	}
+}
+
+/**
+ * Inverse of `normalizeIrBaseToAvro` for the *wide* Avro types only.
+ *
+ * Asymmetric on purpose:
+ *  - encode is many→one: IR `number` → Avro `double`; IR `integer` → `long`.
+ *  - parse keeps narrow Avro types intact: `int`/`float` stay as
+ *    `base("int")` / `base("float")` so an Avro-authored schema doesn't
+ *    silently widen its precision on the round-trip.
+ *  - Wide Avro types parse back to the IR-canonical aliases so an
+ *    IR-authored term round-trips to itself: `double` → `base("number")`,
+ *    `long` → `base("integer")`.
+ *
+ * The asymmetry matches how IR-authored witnesses (which use `number` /
+ * `integer`) and Avro-authored schemas (which may use any of `int`,
+ * `long`, `float`, `double`) coexist in the same scorecard.
+ */
+function normalizeAvroBaseToIr(name: string): string {
+	switch (name) {
+		case "double":
+			return "number";
+		case "long":
+			return "integer";
+		default:
+			return name;
+	}
+}
+
 // ─── Adapter class ─────────────────────────────────────────────────
 
 /** Convert between Apache Avro schema descriptors and the typecarta IR. */
@@ -127,7 +189,7 @@ export class AvroAdapter implements IRAdapter<Signature, AvroSchema> {
 function parseAvroSchema(schema: AvroSchema): TypeTerm {
 	// Primitive string types
 	if (typeof schema === "string") {
-		return base(schema);
+		return base(normalizeAvroBaseToIr(schema));
 	}
 
 	// Union (array of schemas)
@@ -187,20 +249,13 @@ function encodeToAvroSchema(term: TypeTerm): AvroSchema {
 	}
 }
 
-// Map a base type name to an Avro primitive schema string.
+// Map a base type name to an Avro primitive schema string. Accepts both
+// Avro-native names (`int`, `double`, …) and IR-canonical aliases
+// (`number`, `integer`) via `normalizeIrBaseToAvro`.
 function encodeBaseToAvro(name: string): AvroSchema {
-	const primitives = new Set([
-		"null",
-		"boolean",
-		"int",
-		"long",
-		"float",
-		"double",
-		"bytes",
-		"string",
-	]);
-	if (primitives.has(name)) {
-		return name as AvroSchema;
+	const avroName = normalizeIrBaseToAvro(name);
+	if (avroName !== undefined) {
+		return avroName as AvroSchema;
 	}
 	throw new Error(`Cannot encode base type "${name}" to Avro`);
 }
@@ -243,7 +298,10 @@ function checkInhabitation(value: unknown, term: TypeTerm): boolean {
 		case "literal":
 			return value === term.value;
 		case "base":
-			switch (term.name) {
+			// Accept both Avro-native names and IR-canonical aliases so a
+			// round-tripped term (always lowered to IR by parse) still
+			// validates correctly.
+			switch (normalizeIrBaseToAvro(term.name) ?? term.name) {
 				case "null":
 					return value === null;
 				case "boolean":
