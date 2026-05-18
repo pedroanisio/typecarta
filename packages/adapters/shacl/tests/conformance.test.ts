@@ -2,6 +2,7 @@ import {
 	andPredicate,
 	array,
 	base,
+	bottom,
 	complement,
 	field,
 	forall,
@@ -346,6 +347,64 @@ describe("ShaclAdapter", () => {
 
 		it("returns false for unsupported higher-rank terms", () => {
 			expect(adapter.isEncodable(forall("T", base("string")))).toBe(false);
+		});
+	});
+
+	// P0.2 — bench:fidelity soundness regressions (2026-05-18).
+	// The fidelity bench shows shacl-1-0 at 11/15 soundness; the four
+	// failures are `bottom`, `null`, `array-string`, `nested-array`. The
+	// reviewer's "sh:closed" framing was a misdiagnosis — `encodeProduct`
+	// already emits `sh:closed: true` by default. The actual gaps are:
+	//   1. `bottom()` encodes as `{in: []}` which parses back to `top()`
+	//      (empty `sh:in` should be unsatisfiable).
+	//   2. `array(T)` encodes as a product with a `member` property and
+	//      parses back as that product, not as an array. The IR
+	//      array→SHACL→IR round-trip loses the "this is an array" mark.
+	describe("Soundness regressions (bench:fidelity P0.2)", () => {
+		it("bottom round-trips as bottom, not top", () => {
+			const encoded = adapter.encode(bottom());
+			expect(adapter.parse(encoded).kind).toBe("bottom");
+		});
+
+		it("bottom-shaped descriptor rejects every value via inhabits", () => {
+			const term = adapter.parse(adapter.encode(bottom()));
+			expect(adapter.inhabits("anything", term)).toBe(false);
+			expect(adapter.inhabits(42, term)).toBe(false);
+			expect(adapter.inhabits(null, term)).toBe(false);
+			expect(adapter.inhabits([], term)).toBe(false);
+			expect(adapter.inhabits({}, term)).toBe(false);
+		});
+
+		it("array(T) round-trips as an array, not as a product", () => {
+			const term = array(base("string"));
+			const encoded = adapter.encode(term);
+			const parsed = adapter.parse(encoded);
+			expect(parsed.kind).toBe("apply");
+			expect((parsed as { constructor: string }).constructor).toBe("array");
+		});
+
+		it("round-tripped array rejects non-array values", () => {
+			const term = array(base("string"));
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(adapter.inhabits(["a", "b"], parsed)).toBe(true);
+			expect(adapter.inhabits([1, 2], parsed)).toBe(false);
+			// Soundness: a value the original IR rejects must also be
+			// rejected by the round-tripped term.
+			expect(adapter.inhabits("not an array", parsed)).toBe(false);
+			expect(adapter.inhabits({ foo: "bar" }, parsed)).toBe(false);
+			expect(adapter.inhabits(42, parsed)).toBe(false);
+		});
+
+		it("nested array(product(...)) round-trips as an array of product", () => {
+			const term = array(
+				product([field("id", base("integer")), field("tags", array(base("string")))]),
+			);
+			const parsed = adapter.parse(adapter.encode(term));
+			expect(parsed.kind).toBe("apply");
+			expect((parsed as { constructor: string }).constructor).toBe("array");
+			// Soundness: bare objects (not arrays) must be rejected.
+			expect(adapter.inhabits({ id: 1, tags: ["a"] }, parsed)).toBe(false);
+			expect(adapter.inhabits([{ id: 1, tags: ["a"] }], parsed)).toBe(true);
 		});
 	});
 });

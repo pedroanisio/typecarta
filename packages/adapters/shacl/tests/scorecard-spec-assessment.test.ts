@@ -30,9 +30,16 @@ describe("SHACL 1.0 full scorecard assessment", () => {
 		//     pi-prime-03, -06, -07, -20, -21, -23, -42 moved ◐ → ✓.
 		//   v3 (26 / 21 / 7 / 16) — refinement-facet encoder/parser pair:
 		//     pi-prime-24, -40, -41 moved ◐ → ✓.
+		//   v4 (27 / 20 / 7 / 16) — array round-trip via `_irArrayMarker`
+		//     and empty-`sh:in` parsed as `bottom()`. pi-prime-11
+		//     (Family C: Sequence/Array) moved ◐ → ✓ because the encoded
+		//     NodeShape now reconstructs as `array(T)` instead of a
+		//     product with a `member` field. Bench:fidelity soundness
+		//     for `bottom`, `array-string`, `nested-array` fixed in the
+		//     same pass.
 		expect(scorecard.totals).toEqual({
-			satisfied: 26,
-			partial: 21,
+			satisfied: 27,
+			partial: 20,
 			notSatisfied: 7,
 			outOfVocabulary: 16,
 		});

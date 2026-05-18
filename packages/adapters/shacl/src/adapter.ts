@@ -27,8 +27,10 @@ import type {
 } from "@typecarta/core";
 import {
 	andPredicate,
+	apply,
 	array,
 	base,
+	bottom,
 	complement,
 	createSignature,
 	extension,
@@ -191,6 +193,14 @@ export interface ShaclNodeShape {
 	// divisor explicitly so the parser can rebuild the refinement; the
 	// encoder also emits a `sh:sparql` constraint for validation honesty.
 	readonly multipleOf?: number;
+	// Round-trip marker for IR `array(T)`. SHACL has no first-class
+	// "this focus is a sequence of T" shape; the standard idiom is a
+	// NodeShape with a single `rdf:member` property of unbounded count.
+	// Without an explicit mark, parse cannot tell that shape apart from
+	// a product with a `member` field, and a non-array value (e.g. `[1,2]`
+	// against `array(string)`) would silently pass. The encoder sets this
+	// flag; the parser uses it to reconstruct the `array(T)` term.
+	readonly _irArrayMarker?: boolean;
 }
 
 /** A reference to a named shape elsewhere in the shapes graph. */
@@ -363,6 +373,35 @@ function parseShacl(desc: ShaclDescriptor): TypeTerm {
  * empty product into every logical-combinator branch.
  */
 function parseNodeShapeCore(desc: ShaclNodeShape): TypeTerm | undefined {
+	// Round-trip marker for IR `array(T)`. Reconstruct the array term
+	// from the single `rdf:member` property (set by the array encoder).
+	// Use the value-type extractor (not parseProperty) so the
+	// minCount:0 / no-maxCount combination doesn't re-wrap the inner
+	// type in another array layer.
+	if (desc._irArrayMarker === true && (desc.properties?.length ?? 0) === 1) {
+		const memberProp = desc.properties![0]!;
+		const itemTerm = parsePropertyValueType(memberProp);
+		return apply("array", [itemTerm]);
+	}
+
+	// Empty `sh:in` (no admissible values) means the shape is
+	// unsatisfiable — round-trip back to `bottom()`. Without this, the
+	// emitted `{in: []}` parses to `top()` and `inhabits` accepts every
+	// value, breaking soundness for any IR term that originally encoded
+	// as bottom.
+	const inDefined = desc.in !== undefined;
+	if (
+		inDefined &&
+		desc.in!.length === 0 &&
+		(desc.properties?.length ?? 0) === 0 &&
+		desc.datatype === undefined &&
+		(desc.class?.length ?? 0) === 0 &&
+		(desc.hasValue?.length ?? 0) === 0 &&
+		!hasNodeShapeFacets(desc)
+	) {
+		return bottom();
+	}
+
 	const hasProperties = (desc.properties?.length ?? 0) > 0;
 	const hasInValue = desc.in !== undefined && desc.in.length > 0;
 	const hasHasValue = desc.hasValue !== undefined && desc.hasValue.length > 0;
@@ -776,9 +815,14 @@ function encodeApply(term: Extract<TypeTerm, { kind: "apply" }>): ShaclDescripto
 			const item = term.args[0];
 			if (item === undefined) throw new Error("SHACL array requires an item type");
 			// Top-level array of T → a NodeShape with a single property
-			// `member` carrying T and unbounded count.
+			// `rdf:member` carrying T and unbounded count. The
+			// `_irArrayMarker` flag distinguishes this shape from a
+			// product whose only field happens to be called `member`,
+			// so parse can round-trip back to `array(T)` and
+			// `inhabits` can reject non-array values.
 			return {
 				kind: "NodeShape",
+				_irArrayMarker: true,
 				properties: [
 					{
 						kind: "PropertyShape",
