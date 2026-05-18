@@ -1,4 +1,5 @@
 import {
+	andPredicate,
 	array,
 	base,
 	bottom,
@@ -6,6 +7,7 @@ import {
 	field,
 	forall,
 	literal,
+	multipleOfConstraint,
 	product,
 	rangeConstraint,
 	refinement,
@@ -197,6 +199,72 @@ describe("XsdAdapter", () => {
 			if (reencoded.kind === "complexType") {
 				expect(reencoded.openContent).toEqual({ mode: "interleave" });
 			}
+		});
+
+		// ─── xs:assert shim for divisibility (lifts pi-prime-40 / -41 on 1.1) ──
+		//
+		// XSD has no `multipleOf` facet in 1.0 OR 1.1. But 1.1's `xs:assert`
+		// can express `$value mod N = 0` as an XPath 2.0 boolean test. The
+		// 1.1 adapter splits a predicate tree on encounter of multipleOf,
+		// emitting facets for the rest and assertions for the divisibility
+		// piece. These regression tests pin that behavior so a future
+		// refactor can't silently lose it.
+
+		it("encodes a bare multipleOf as an xs:assert (not a facet)", () => {
+			const term = refinement(base("integer"), multipleOfConstraint(3));
+			const encoded = adapter.encode(term);
+			expect(encoded.kind).toBe("simpleType");
+			if (encoded.kind === "simpleType") {
+				// No multipleOf in the facet record (XSD has no such facet).
+				expect((encoded.facets as { multipleOf?: unknown }).multipleOf).toBeUndefined();
+				// xs:assert carries the divisibility XPath.
+				expect(encoded.facets?.assertions).toEqual([{ test: "$value mod 3 = 0" }]);
+			}
+		});
+
+		it("encodes range ∧ multipleOf as facets + xs:assert (the SP41 shape)", () => {
+			const term = refinement(
+				base("number"),
+				andPredicate(rangeConstraint(0, 100), multipleOfConstraint(5)),
+			);
+			const encoded = adapter.encode(term);
+			expect(encoded.kind).toBe("simpleType");
+			if (encoded.kind === "simpleType") {
+				expect(encoded.facets?.minInclusive).toBe(0);
+				expect(encoded.facets?.maxInclusive).toBe(100);
+				expect(encoded.facets?.assertions).toEqual([{ test: "$value mod 5 = 0" }]);
+			}
+		});
+
+		it("round-trips multipleOf via the xs:assert ↔ predicate convention", () => {
+			const original = refinement(base("integer"), multipleOfConstraint(7));
+			const encoded = adapter.encode(original);
+			const parsed = adapter.parse(encoded);
+			// The parsed term must carry a `multipleOf` predicate somewhere so
+			// pi-prime-40 (and pi-prime-41 by extension) can recognize it.
+			expect(parsed.kind).toBe("refinement");
+			if (parsed.kind === "refinement") {
+				const findMultipleOf = (p: typeof parsed.predicate): boolean => {
+					if (p.kind === "multipleOf") return p.divisor === 7;
+					if (p.kind === "and") return findMultipleOf(p.left) || findMultipleOf(p.right);
+					return false;
+				};
+				expect(findMultipleOf(parsed.predicate)).toBe(true);
+			}
+		});
+
+		it("ignores xs:assert tests that don't match the multipleOf shape", () => {
+			// Non-divisibility assertions stay on the simpleType as opaque
+			// xs:assert children; they don't poison the parse path.
+			const desc: XsdDescriptor = {
+				kind: "simpleType",
+				base: { kind: "primitive", name: "integer" },
+				facets: { assertions: [{ test: "$value gt 0" }] },
+			};
+			const parsed = adapter.parse(desc);
+			// No multipleOf was recognized — parse falls through to the core,
+			// which emits a refinement with a custom `xsd:assertions` predicate.
+			expect(parsed.kind).toBe("refinement");
 		});
 	});
 });

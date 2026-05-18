@@ -23,19 +23,20 @@ describe("XSD 1.1 full scorecard assessment", () => {
 		//     anyAtomicType)
 		//   - 2 facets (assertions, explicitTimezone)
 		//   - the "conditional" IR kind (xs:alternative)
-		// None of these flip a current scorecard cell because:
-		//   - the SP43 cross-field witness is a `refinement(product, ...)`
-		//     shape that doesn't naturally map to xs:assert (the IR has no
-		//     XPath analog); pi-prime-43 stays `◐` for both versions.
-		//   - the SP65 conditional witness wraps `typeVar("alpha")`, an IR
-		//     `var` kind neither adapter models; pi-prime-65 stays `n/a`.
-		// So 1.1's totals equal 1.0's — the version difference is real
-		// at the contract level (see the `supportsKind` test below) but
-		// not exercised by the current witness set.
+		//   - an encode/parse hook that translates `multipleOf` predicates
+		//     into `xs:assert test="$value mod N = 0"` and back
+		//
+		// The xs:assert hook is what lifts pi-prime-40 (Modular/Divisibility)
+		// and pi-prime-41 (Compound Decidable Predicate) from ✗ to ✓ on 1.1
+		// while 1.0 keeps refusing the same witnesses (1.0 has no xs:assert).
+		// pi-prime-43 stays `◐` for now: the SP43 witness shape is
+		// `refinement(product, rangeConstraint())` which lacks a concrete
+		// cross-field XPath. pi-prime-65 stays `n/a`: the SP65 witness wraps
+		// `typeVar("alpha")`, an IR `var` kind neither adapter models.
 		expect(scorecard.totals).toEqual({
-			satisfied: 26,
+			satisfied: 28,
 			partial: 15,
-			notSatisfied: 12,
+			notSatisfied: 10,
 			outOfVocabulary: 17,
 		});
 	});
