@@ -38,6 +38,15 @@ A scorecard with all ✓ means the schema language can express every fundamental
 - **TypeScript** covers most criteria but may show partial for π₁₄ (dependent types)
 - **Protobuf** tends to ✗ on π₆ (intersection), π₁₀ (refinement), π₁₅ (HKT)
 
+Treat scorecards as adapter-backed evidence, not standalone proof that a language matches the formal specification. The evaluator checks whether each witness can be encoded, parsed back, and still satisfy the criterion predicate. It does not prove semantic faithfulness for the whole schema language.
+
+For full 70-criterion mode, distinguish two claims:
+
+- **Language capability**: whether the schema language can express the phenomenon under the specification.
+- **Adapter capability**: whether the current TypeCarta adapter preserves that phenomenon through `encode -> parse`.
+
+Use [Scorecard Spec Assessment](./scorecard-spec-assessment.md) when validating a scorecard against the specification.
+
 ## Comparison Mode
 
 Use `typecarta compare --left <a> --right <b>` to see a side-by-side diff. Differences are highlighted, making it easy to identify expressiveness gaps when choosing or migrating between schema languages.

@@ -44,14 +44,17 @@ function renderTable(rows: readonly AdapterRow[]): string {
 		lines.push(`${pad(r.name, nameWidth)}  ${pad(r.source, sourceWidth)}  ${r.pkg}`);
 	}
 	lines.push("");
-	lines.push(
-		`${DIM}Pass the exact Name to --adapter (quote names that contain spaces).${RESET}`,
-	);
+	lines.push(`${DIM}Pass the exact Name to --adapter (quote names that contain spaces).${RESET}`);
 	return lines.join("\n");
 }
 
 function renderMarkdown(rows: readonly AdapterRow[]): string {
-	const lines: string[] = ["# Registered adapters", "", "| Name | Source | Package |", "|---|---|---|"];
+	const lines: string[] = [
+		"# Registered adapters",
+		"",
+		"| Name | Source | Package |",
+		"|---|---|---|",
+	];
 	for (const r of rows) {
 		lines.push(`| \`${r.name}\` | ${r.source} | \`${r.pkg}\` |`);
 	}
