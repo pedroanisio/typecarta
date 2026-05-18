@@ -19,9 +19,7 @@ export function renderMarkdown(result: ScorecardResult): string {
 	if (result.provenance) {
 		const { typecartaVersion, commitHash, generatedAt } = result.provenance;
 		lines.push("");
-		lines.push(
-			`*typecarta ${typecartaVersion} · commit ${commitHash} · generated ${generatedAt}*`,
-		);
+		lines.push(`*typecarta ${typecartaVersion} · commit ${commitHash} · generated ${generatedAt}*`);
 	}
 	lines.push("");
 	lines.push("| # | Result | Justification |");

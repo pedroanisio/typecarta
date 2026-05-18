@@ -76,5 +76,7 @@ export async function run(args: string[]): Promise<void> {
 		console.log(`  ${icon} ${criterion.id} ${criterion.name} [${criterion.family}]${coreTag}`);
 	}
 	console.log("");
-	console.log(`  ${satisfied}/${CRITERION_IDS.length} criteria satisfied (${coreSatisfied}/${coreTotal} core).`);
+	console.log(
+		`  ${satisfied}/${CRITERION_IDS.length} criteria satisfied (${coreSatisfied}/${coreTotal} core).`,
+	);
 }

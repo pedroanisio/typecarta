@@ -1,17 +1,19 @@
 # vendor/specs
 
-Vendored canonical specifications for every typecarta adapter. The contents
+Vendored canonical specifications for typecarta's tracked schema targets. The contents
 of this directory are downloaded — not authored. Edit the source list at
 `scripts/download-specs.py` and re-run the script; do not edit the cached
 files by hand.
 
 ## Why this exists
 
-Each adapter under `packages/adapters/*` declares a `specVersion` (e.g.
-`xsd 1.0`, `JSON Schema draft-07`, `Apache Avro 1.11`) and every scorecard
-verdict is a claim about *that* spec. To make those claims auditable, the
-relevant spec bytes are pinned here with a `_meta.json` recording the
-source URL, fetch timestamp, content-type, byte count, and SHA-256.
+Each implemented adapter under `packages/adapters/*` declares a `specVersion`
+(e.g. `xsd 1.0`, `JSON Schema draft-07`, `Apache Avro 1.11`) and every
+scorecard verdict is a claim about *that* spec. This directory may also include
+target specs for adapters under assessment or development, such as SHACL and
+LinkML. To make those claims auditable, the relevant spec bytes are pinned here
+with a `_meta.json` recording the source URL, fetch timestamp, content-type,
+byte count, and SHA-256.
 
 ## Layout
 

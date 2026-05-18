@@ -73,7 +73,7 @@ pnpm --filter @typecarta/core exec vitest run --coverage
 # Lint / format check
 pnpm check
 
-# Generate API docs (output: docs/api/)
+# Generate local API docs (output: ignored docs/api/)
 pnpm docs
 
 # Run the worked examples
@@ -90,13 +90,13 @@ pnpm run bench:all
 typecarta scorecard --adapter json-schema
 
 # Score against all 70 criteria
-typecarta scorecard --adapter json-schema --mode full
+typecarta scorecard --adapter json-schema --filter all
 
 # Compare two IRs side by side
 typecarta compare --left json-schema --right zod --output table
 
 # Print a witness schema
-typecarta witness --criterion pi-07
+typecarta witness --criterion pi-prime-25
 # => S₇ = μalpha. {value: string, children: alpha[]}
 
 # Profile a schema file against the expanded 70 criteria
@@ -132,14 +132,13 @@ typecarta/
 │   │   ├── src/ast/                TypeTerm (16 node kinds), Signature, traversal
 │   │   ├── src/semantics/          Value universe, extension, subtyping, denotation
 │   │   ├── src/criteria/
-│   │   │   ├── pi/                 15 core criteria (π₁–π₁₅), Π_core (§9)
-│   │   │   └── pi-prime/           70 expanded criteria (π'₁–π'₇₀), 22 families (A–V)
+│   │   │   └── pi-prime/           70 criteria, with 15 tagged core, 22 families (A–V)
 │   │   ├── src/encoding/           Soundness, completeness, faithfulness, models
 │   │   ├── src/scorecard/          Evaluate, compare, render
 │   │   ├── src/encoding-check/     ρ_W, ρ_D, ρ_G, ρ_B subtyping precision
 │   │   ├── src/universality/       Schema class, impossibility boundary
 │   │   └── src/adapter/            IRAdapter<Sig, Native> interface, registry
-│   ├── witnesses/                  Diverse schema sets C (15) and C_full (70)
+│   ├── witnesses/                  Full witness set plus derived 15-witness core subset
 │   ├── adapters/
 │   │   ├── json-schema/            JSON Schema draft-07
 │   │   ├── zod/                    Zod
@@ -154,7 +153,7 @@ typecarta/
 │   └── cli/                        Command-line interface
 ├── spec/                           Formal specification (v2.2.0)
 ├── docs/
-│   ├── api/                        Generated API docs (typedoc)
+│   ├── api/                        Local generated API docs (ignored TypeDoc output)
 │   ├── adr/                        Architecture Decision Records
 │   ├── guides/                     Tutorials and how-tos
 │   ├── faq.md                      Frequently asked questions
@@ -198,6 +197,7 @@ See [docs/adr/](docs/adr/) for all Architecture Decision Records.
 | [Glossary](docs/glossary.md) | Terms and symbols from §14 |
 | **Guides** | |
 | [Reading the Scorecard](docs/guides/reading-the-scorecard.md) | Interpret scorecard output |
+| [Scorecard Spec Assessment](docs/guides/scorecard-spec-assessment.md) | Check adapter scorecards against spec claims |
 | [Writing an Adapter](docs/guides/writing-an-adapter.md) | Implement a new IR adapter |
 | [Criterion Independence](docs/guides/criterion-independence.md) | How criteria avoid overlap |
 | [Meta-Tags Explained](docs/guides/meta-tags-explained.md) | What meta-tags mean and how they work |
@@ -244,8 +244,8 @@ See the full guide at [docs/guides/writing-an-adapter.md](docs/guides/writing-an
 | §5 Encoding & Modeling | `core/src/encoding/` |
 | §6 Universality | `core/src/universality/` |
 | §7 Impossibility | `core/src/universality/impossibility.ts` |
-| §8 Coverage Criteria | `core/src/criteria/types.ts` |
-| §9 Diverse Schema Set | `witnesses/src/pi/` (core), `witnesses/src/pi-prime/` (full) |
+| §8 Coverage Criteria | `core/src/criteria/pi-prime/types.ts` |
+| §9 Diverse Schema Set | `witnesses/src/core/` (derived core subset), `witnesses/src/pi-prime/` (full) |
 | §10 Completeness Theorems | `witnesses/tests/diversity-check.test.ts` |
 | §11 IR Scorecard | `core/src/scorecard/` |
 | §11.1 Extended Scorecard (70) | `core/src/scorecard/evaluate.ts` (`evaluatePrimeScorecard`) |
@@ -278,7 +278,8 @@ The most valuable contributions right now are:
 
 - **Scorecard verification**: Machine-checkable confirmation or refutation of any §11 cell value
 - **Additional IR evaluations**: Scoring new IRs against Π_core (adapter template at `packages/adapters/_template/`)
-- **Witness construction for Π \ Π_core**: The 55 criteria outside the core lack witness schemas (§12.5)
+- **Adapter/spec adjudication**: Classify scorecard gaps as adapter holes, target-language limits, or rubric/spec issues
+- **Scorecard regression tests**: Pin changed adapter verdicts with tests before treating them as spec-correct
 - **Citation corrections**: The bibliography has been revised twice; errors may remain
 
 ## License

@@ -1,20 +1,13 @@
 /**
  * Benchmark: Criterion coverage per adapter
  *
- * Takes an adapter, runs all PI_PRIME_CRITERIA against all witness schemas,
+ * Takes an adapter, runs all CRITERIA against all witness schemas,
  * and reports coverage percentage per family (A through V).
  */
 
 import { JsonSchemaAdapter } from "@typecarta/adapter-json-schema";
-import {
-	type CriterionFamily,
-	PI_PRIME_CRITERIA,
-	type PiPrimeCriterion,
-	type TypeTerm,
-	clearAdapters,
-	registerAdapter,
-} from "@typecarta/core";
-import { DIVERSE_SCHEMAS, type WitnessSchema } from "@typecarta/witnesses";
+import { CRITERIA, type Criterion, type CriterionFamily, type TypeTerm } from "@typecarta/core";
+import { ALL_WITNESSES, type WitnessSchema } from "@typecarta/witnesses";
 
 // ── Types ──────────────────────────────────────────────────────────
 interface FamilyCoverage {
@@ -37,8 +30,8 @@ function evaluateCoverage(
 	witnesses: readonly WitnessSchema[],
 ): FamilyCoverage[] {
 	// Group criteria by family
-	const byFamily = new Map<CriterionFamily, PiPrimeCriterion[]>();
-	for (const criterion of PI_PRIME_CRITERIA) {
+	const byFamily = new Map<CriterionFamily, Criterion[]>();
+	for (const criterion of CRITERIA) {
 		const group = byFamily.get(criterion.family) ?? [];
 		group.push(criterion);
 		byFamily.set(criterion.family, group);
@@ -108,7 +101,7 @@ function evaluateCoverage(
 // ── Report ─────────────────────────────────────────────────────────
 function printReport(adapterName: string, coverages: FamilyCoverage[]): void {
 	console.log(`=== Criterion Coverage: ${adapterName} ===`);
-	console.log(`Total criteria: ${PI_PRIME_CRITERIA.length} across ${coverages.length} families`);
+	console.log(`Total criteria: ${CRITERIA.length} across ${coverages.length} families`);
 	console.log();
 
 	console.log(
@@ -156,7 +149,7 @@ function printReport(adapterName: string, coverages: FamilyCoverage[]): void {
 // ── Main ───────────────────────────────────────────────────────────
 function main(): void {
 	const adapter = new JsonSchemaAdapter();
-	const coverages = evaluateCoverage(adapter, DIVERSE_SCHEMAS);
+	const coverages = evaluateCoverage(adapter, ALL_WITNESSES);
 	printReport(adapter.name, coverages);
 }
 

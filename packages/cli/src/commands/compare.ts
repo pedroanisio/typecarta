@@ -26,6 +26,7 @@ export async function run(args: string[]): Promise<void> {
 			"Usage: typecarta compare --left <adapter> --right <adapter> [--output table|markdown|json]",
 		);
 		process.exit(1);
+		return;
 	}
 
 	const outputIdx = args.indexOf("--output");
@@ -36,6 +37,7 @@ export async function run(args: string[]): Promise<void> {
 	if (!leftAdapter || !rightAdapter) {
 		console.error("One or both adapters not found.");
 		process.exit(1);
+		return;
 	}
 
 	const witnesses: WitnessEntry[] = CORE_SCHEMAS.map((w) => ({

@@ -159,10 +159,7 @@ function computeTotals(cells: ReadonlyMap<CriterionId, ScorecardCell>): Scorecar
  * If the adapter does not implement `supportsKind`, every kind is assumed
  * supported and this returns `undefined` (preserves pre-existing behavior).
  */
-function findUnsupportedKind(
-	term: TypeTerm,
-	adapter: IRAdapter,
-): TypeTerm["kind"] | undefined {
+function findUnsupportedKind(term: TypeTerm, adapter: IRAdapter): TypeTerm["kind"] | undefined {
 	if (!adapter.supportsKind) return undefined;
 	if (!adapter.supportsKind(term.kind)) return term.kind;
 	for (const child of children(term)) {

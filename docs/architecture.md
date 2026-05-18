@@ -12,7 +12,7 @@ typecarta/
 │   ├── core/                 @typecarta/core
 │   │   ├── src/ast/          Type-term AST (Def. 3.1–3.3)
 │   │   ├── src/semantics/    Value universe, extension, subtyping
-│   │   ├── src/criteria/     Π (15) + Π' (70) criterion predicates
+│   │   ├── src/criteria/     70 criterion predicates; 15 tagged as Π_core
 │   │   ├── src/encoding/     Encoding framework (Def. 5.1–5.6)
 │   │   ├── src/scorecard/    Evaluation engine + renderers
 │   │   ├── src/encoding-check/ Property evaluators (§13)
@@ -20,8 +20,8 @@ typecarta/
 │   │   └── src/adapter/      IRAdapter contract + registry
 │   │
 │   ├── witnesses/            @typecarta/witnesses
-│   │   ├── src/pi/           15 base witness schemas (ℂ)
-│   │   └── src/pi-prime/     70 expanded witness schemas (ℂ')
+│   │   ├── src/core/         Derived 15-witness core subset (ℂ)
+│   │   └── src/pi-prime/     70 witness schemas (ℂ_full)
 │   │
 │   ├── adapters/             One package per schema language
 │   │   ├── json-schema/      @typecarta/adapter-json-schema

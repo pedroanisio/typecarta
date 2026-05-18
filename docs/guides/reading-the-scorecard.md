@@ -2,7 +2,9 @@
 
 ## Structure
 
-A scorecard is a 15-row table (one per base criterion π₁–π₁₅) with three possible cell values:
+A scorecard is a filtered view over TypeCarta's criterion set. The default `core` filter has 15 rows; `--filter all` evaluates all 70 criteria across families A-V. The legacy alias `--mode full` is accepted for `--filter all`.
+
+Each cell has one of three values:
 
 | Value | Meaning |
 |---|---|
@@ -10,7 +12,9 @@ A scorecard is a 15-row table (one per base criterion π₁–π₁₅) with thr
 | partial | The criterion is partially supported — some operations succeed but not all |
 | ✗ | The criterion is not satisfied — the adapter cannot represent the required type construct |
 
-## Base Criteria (Π)
+## Core Filter
+
+The `core` filter contains the 15 canonical criteria formerly described as Π. In the current implementation these rows keep stable `pi-prime-NN` identifiers and are selected by a `core: true` flag.
 
 | # | Criterion | What it tests |
 |---|---|---|

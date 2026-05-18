@@ -259,7 +259,10 @@ export type XsdDescriptor =
 			readonly kind: "schema";
 			readonly targetNamespace?: string;
 			readonly includes?: readonly string[];
-			readonly imports?: readonly { readonly namespace: string; readonly schemaLocation?: string }[];
+			readonly imports?: readonly {
+				readonly namespace: string;
+				readonly schemaLocation?: string;
+			}[];
 			readonly redefines?: readonly string[];
 			readonly types: readonly XsdDescriptor[];
 			readonly annotation?: XsdAnnotation;
@@ -359,16 +362,13 @@ const XSD_ALL_BUILTIN_NAMES: readonly XsdBuiltinName[] = [
 
 const XSD_BUILTIN_NAME_SET: ReadonlySet<string> = new Set(XSD_ALL_BUILTIN_NAMES);
 
-const XSD_SIGNATURE: Signature = createSignature(
-	XSD_PRIMITIVE_NAMES as readonly string[],
-	[
-		// Constructors XSD natively supports.
-		{ name: "product", arity: 1 },
-		{ name: "array", arity: 1 },
-		{ name: "set", arity: 1 },
-		{ name: "union", arity: 2 },
-	],
-);
+const XSD_SIGNATURE: Signature = createSignature(XSD_PRIMITIVE_NAMES as readonly string[], [
+	// Constructors XSD natively supports.
+	{ name: "product", arity: 1 },
+	{ name: "array", arity: 1 },
+	{ name: "set", arity: 1 },
+	{ name: "union", arity: 2 },
+]);
 
 // ─── Adapter class ──────────────────────────────────────────────────
 
@@ -472,9 +472,7 @@ function parseXsdDescriptor(desc: XsdDescriptor): TypeTerm {
 	}
 }
 
-function parseSimpleType(
-	desc: Extract<XsdDescriptor, { kind: "simpleType" }>,
-): TypeTerm {
+function parseSimpleType(desc: Extract<XsdDescriptor, { kind: "simpleType" }>): TypeTerm {
 	const facets = desc.facets;
 	const baseTerm = parseXsdDescriptor(desc.base);
 	let body: TypeTerm;
@@ -489,9 +487,7 @@ function parseSimpleType(
 	return desc.name ? letBinding(desc.name, annotated, base(desc.name)) : annotated;
 }
 
-function parseComplexType(
-	desc: Extract<XsdDescriptor, { kind: "complexType" }>,
-): TypeTerm {
+function parseComplexType(desc: Extract<XsdDescriptor, { kind: "complexType" }>): TypeTerm {
 	const fields = [
 		...desc.elements.map(parseElement),
 		...(desc.attributes ?? []).map(parseAttribute),
@@ -522,10 +518,7 @@ function parseComplexType(
 	return desc.name ? letBinding(desc.name, body, base(desc.name)) : body;
 }
 
-function parseIdentityConstraint(
-	c: XsdIdentityConstraint,
-	body: TypeTerm,
-): TypeTerm {
+function parseIdentityConstraint(c: XsdIdentityConstraint, body: TypeTerm): TypeTerm {
 	if (c.kind === "keyref") {
 		return extension(
 			"foreign-key",
@@ -553,8 +546,7 @@ function parseIdentityConstraint(
 }
 
 function parseSchema(desc: Extract<XsdDescriptor, { kind: "schema" }>): TypeTerm {
-	const inner =
-		desc.types.length === 1 ? parseXsdDescriptor(desc.types[0]!) : top();
+	const inner = desc.types.length === 1 ? parseXsdDescriptor(desc.types[0]!) : top();
 	const payload: Record<string, unknown> = {};
 	if (desc.targetNamespace !== undefined) payload.targetNamespace = desc.targetNamespace;
 	if (desc.includes !== undefined) payload.includes = desc.includes;
@@ -592,19 +584,39 @@ function facetsToPredicate(facets: XsdFacets | undefined): RefinementPredicate |
 		predicates.push({ kind: "custom", name: "xsd:length", params: { length: facets.length } });
 	}
 	if (facets.minLength !== undefined) {
-		predicates.push({ kind: "custom", name: "xsd:minLength", params: { minLength: facets.minLength } });
+		predicates.push({
+			kind: "custom",
+			name: "xsd:minLength",
+			params: { minLength: facets.minLength },
+		});
 	}
 	if (facets.maxLength !== undefined) {
-		predicates.push({ kind: "custom", name: "xsd:maxLength", params: { maxLength: facets.maxLength } });
+		predicates.push({
+			kind: "custom",
+			name: "xsd:maxLength",
+			params: { maxLength: facets.maxLength },
+		});
 	}
 	if (facets.whiteSpace !== undefined) {
-		predicates.push({ kind: "custom", name: "xsd:whiteSpace", params: { whiteSpace: facets.whiteSpace } });
+		predicates.push({
+			kind: "custom",
+			name: "xsd:whiteSpace",
+			params: { whiteSpace: facets.whiteSpace },
+		});
 	}
 	if (facets.totalDigits !== undefined) {
-		predicates.push({ kind: "custom", name: "xsd:totalDigits", params: { totalDigits: facets.totalDigits } });
+		predicates.push({
+			kind: "custom",
+			name: "xsd:totalDigits",
+			params: { totalDigits: facets.totalDigits },
+		});
 	}
 	if (facets.fractionDigits !== undefined) {
-		predicates.push({ kind: "custom", name: "xsd:fractionDigits", params: { fractionDigits: facets.fractionDigits } });
+		predicates.push({
+			kind: "custom",
+			name: "xsd:fractionDigits",
+			params: { fractionDigits: facets.fractionDigits },
+		});
 	}
 
 	return predicates.reduce<RefinementPredicate | undefined>(
@@ -943,9 +955,7 @@ function encodeLet(term: Extract<TypeTerm, { kind: "let" }>): XsdDescriptor {
 	};
 }
 
-function encodeExtension(
-	term: Extract<TypeTerm, { kind: "extension" }>,
-): XsdDescriptor {
+function encodeExtension(term: Extract<TypeTerm, { kind: "extension" }>): XsdDescriptor {
 	switch (term.extensionKind) {
 		case "module":
 			return encodeModule(term);
@@ -988,9 +998,7 @@ function encodeModule(term: Extract<TypeTerm, { kind: "extension" }>): XsdDescri
 	};
 }
 
-function encodeVisibility(
-	term: Extract<TypeTerm, { kind: "extension" }>,
-): XsdDescriptor {
+function encodeVisibility(term: Extract<TypeTerm, { kind: "extension" }>): XsdDescriptor {
 	const payload = (term.payload ?? {}) as { readonly level?: string };
 	const child = term.children?.[0];
 	if (child === undefined) {
@@ -1006,9 +1014,7 @@ function encodeVisibility(
 	//   "sealed" / "final" → final="#all"
 	//   "abstract" → block="#all"  (loose semantic match)
 	const final =
-		payload.level === "sealed" || payload.level === "final"
-			? ("#all" as const)
-			: undefined;
+		payload.level === "sealed" || payload.level === "final" ? ("#all" as const) : undefined;
 	const block = payload.level === "abstract" ? ("#all" as const) : undefined;
 	if (inner.kind === "complexType") {
 		return {
@@ -1023,9 +1029,7 @@ function encodeVisibility(
 	};
 }
 
-function encodeForeignKey(
-	term: Extract<TypeTerm, { kind: "extension" }>,
-): XsdDescriptor {
+function encodeForeignKey(term: Extract<TypeTerm, { kind: "extension" }>): XsdDescriptor {
 	const payload = (term.payload ?? {}) as {
 		readonly name?: string;
 		readonly selector?: string;
@@ -1042,13 +1046,10 @@ function encodeForeignKey(
 	}
 	const inner = encodeToXsdDescriptor(child);
 	if (inner.kind !== "complexType") {
-		throw new Error(
-			"foreign-key extension must wrap a product (complexType) to attach xs:keyref",
-		);
+		throw new Error("foreign-key extension must wrap a product (complexType) to attach xs:keyref");
 	}
 	const refer =
-		payload.refer ??
-		(payload.targetCollection ? `${payload.targetCollection}_key` : undefined);
+		payload.refer ?? (payload.targetCollection ? `${payload.targetCollection}_key` : undefined);
 	const constraint: XsdIdentityConstraint = {
 		kind: "keyref",
 		name: payload.name ?? "fk",
@@ -1062,9 +1063,7 @@ function encodeForeignKey(
 	};
 }
 
-function encodePathConstraint(
-	term: Extract<TypeTerm, { kind: "extension" }>,
-): XsdDescriptor {
+function encodePathConstraint(term: Extract<TypeTerm, { kind: "extension" }>): XsdDescriptor {
 	const payload = (term.payload ?? {}) as {
 		readonly name?: string;
 		readonly selector?: string;
@@ -1095,9 +1094,7 @@ function encodePathConstraint(
 	};
 }
 
-function encodeXsdExtends(
-	term: Extract<TypeTerm, { kind: "extension" }>,
-): XsdDescriptor {
+function encodeXsdExtends(term: Extract<TypeTerm, { kind: "extension" }>): XsdDescriptor {
 	const payload = (term.payload ?? {}) as { readonly base?: string };
 	const child = term.children?.[0];
 	if (child === undefined) {
@@ -1149,9 +1146,7 @@ function encodeField(f: {
 	};
 }
 
-function collectAnnotation(
-	annotations: Record<string, unknown>,
-): XsdAnnotation | undefined {
+function collectAnnotation(annotations: Record<string, unknown>): XsdAnnotation | undefined {
 	const out: XsdAnnotation = {};
 	if (typeof annotations.documentation === "string") {
 		(out as { documentation?: string }).documentation = annotations.documentation;

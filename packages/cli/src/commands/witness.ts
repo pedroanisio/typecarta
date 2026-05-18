@@ -18,9 +18,7 @@ export async function run(args: string[]): Promise<void> {
 	const criterionId = args[criterionIdx + 1] as CriterionId;
 
 	if (!CRITERION_IDS.includes(criterionId)) {
-		console.error(
-			`Unknown criterion: ${criterionId}. Use one of pi-prime-01 .. pi-prime-70.`,
-		);
+		console.error(`Unknown criterion: ${criterionId}. Use one of pi-prime-01 .. pi-prime-70.`);
 		process.exit(1);
 	}
 

@@ -6,6 +6,7 @@
 			"coverage/**",
 			"docs/api/**",
 			"node_modules/**",
+			"vendor/specs/**",
 			"dist/**",
 			".turbo/**",
 			".agent-tasks/**"

@@ -3,8 +3,17 @@
 	"entryPoints": [
 		"packages/core/src/index.ts",
 		"packages/witnesses/src/index.ts",
+		"packages/adapters/avro/src/index.ts",
+		"packages/adapters/effect-schema/src/index.ts",
+		"packages/adapters/graphql/src/index.ts",
 		"packages/adapters/json-schema/src/index.ts",
-		"packages/encoding-check/src/index.ts"
+		"packages/adapters/protobuf/src/index.ts",
+		"packages/adapters/typescript/src/index.ts",
+		"packages/adapters/xsd/src/index.ts",
+		"packages/adapters/xsd-1-1/src/index.ts",
+		"packages/adapters/zod/src/index.ts",
+		"packages/encoding-check/src/index.ts",
+		"packages/cli/src/index.ts"
 	],
 	"tsconfig": "tsconfig.docs.json",
 	"out": "docs/api",
@@ -15,6 +24,11 @@
 	"includeVersion": true,
 	"categorizeByGroup": true,
 	"sort": ["source-order"],
+	"externalSymbolLinkMappings": {
+		"@typecarta/core": {
+			"TypeTerm": "#"
+		}
+	},
 	"navigation": {
 		"includeCategories": true,
 		"includeGroups": true

@@ -9,6 +9,14 @@ This file mirrors the `changelog:` frontmatter field of
 document's frontmatter is the source of truth; update it first, then
 re-synchronize this file.
 
+## Implementation note (2026-05-18)
+
+- Updated §12.5 to reflect the repository's current executable full witness
+  set and 70-criterion scorecard mode. The note keeps the specification's
+  evidence caveat intact: executable witnesses make the expanded criteria
+  testable, but individual scorecard cells still require adapter-vs-language
+  assessment before being treated as spec-correct.
+
 ## v2.2.0 (2026-03-18)
 
 - Resolve C34: replaced misattributed [Ref. 2, §6] with [Ref. 20] (Castagna

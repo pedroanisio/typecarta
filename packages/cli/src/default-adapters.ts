@@ -10,12 +10,14 @@ import { JsonSchemaAdapter } from "@typecarta/adapter-json-schema";
 import { ProtobufAdapter } from "@typecarta/adapter-protobuf";
 import { TypeScriptAdapter } from "@typecarta/adapter-typescript";
 import { XsdAdapter } from "@typecarta/adapter-xsd";
+import { XsdAdapter as Xsd11Adapter } from "@typecarta/adapter-xsd-1-1";
 import { ZodAdapter } from "@typecarta/adapter-zod";
 import { type IRAdapter, getAdapter, registerAdapter } from "@typecarta/core";
 
 /** Adapter instances bundled with the CLI, registered on startup. */
 export const DEFAULT_ADAPTERS: readonly IRAdapter[] = [
 	new XsdAdapter(),
+	new Xsd11Adapter(),
 	new ZodAdapter(),
 	new JsonSchemaAdapter(),
 	new TypeScriptAdapter(),
@@ -28,6 +30,7 @@ export const DEFAULT_ADAPTERS: readonly IRAdapter[] = [
 /** Map adapter name to the npm package that provides it. */
 export const DEFAULT_ADAPTER_PACKAGES: ReadonlyMap<string, string> = new Map([
 	["xsd", "@typecarta/adapter-xsd"],
+	["xsd-1-1", "@typecarta/adapter-xsd-1-1"],
 	["Zod", "@typecarta/adapter-zod"],
 	["JSON Schema", "@typecarta/adapter-json-schema"],
 	["TypeScript", "@typecarta/adapter-typescript"],

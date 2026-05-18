@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Download the canonical specification for every typecarta adapter.
+"""Download canonical specifications for typecarta's tracked schema targets.
 
-Vendors each adapter's authoritative spec into `vendor/specs/<adapter>/`
+Vendors each target's authoritative spec into `vendor/specs/<adapter>/`
 alongside a `_meta.json` capturing the source URL, fetch timestamp,
 content-type, byte size, and SHA-256. The point is traceability: every
 scorecard verdict the project ships should be auditable against the
@@ -85,6 +85,23 @@ SPECS: tuple[AdapterSpec, ...] = (
         ),
     ),
     AdapterSpec(
+        adapter_key="xsd-1-1",
+        name="xsd-1-1",
+        spec_version="1.1",
+        files=(
+            SpecFile(
+                url="https://www.w3.org/TR/2012/REC-xmlschema11-1-20120405/",
+                filename="xmlschema11-1-structures.html",
+                description="W3C XML Schema 1.1 Part 1: Structures (REC, 2012-04-05)",
+            ),
+            SpecFile(
+                url="https://www.w3.org/TR/2012/REC-xmlschema11-2-20120405/",
+                filename="xmlschema11-2-datatypes.html",
+                description="W3C XML Schema 1.1 Part 2: Datatypes (REC, 2012-04-05)",
+            ),
+        ),
+    ),
+    AdapterSpec(
         adapter_key="json-schema",
         name="JSON Schema",
         spec_version="draft-07",
@@ -145,6 +162,30 @@ SPECS: tuple[AdapterSpec, ...] = (
                 ("Appendix%20A%20--%20Notation%20Conventions.md", "Appendix A — Notation Conventions"),
                 ("Appendix%20B%20--%20Grammar%20Summary.md", "Appendix B — Grammar Summary"),
             )
+        ),
+    ),
+    AdapterSpec(
+        adapter_key="shacl",
+        name="SHACL",
+        spec_version="2017 Recommendation",
+        files=(
+            SpecFile(
+                url="https://www.w3.org/TR/2017/REC-shacl-20170720/",
+                filename="shacl.html",
+                description="W3C Shapes Constraint Language (SHACL) Recommendation, 20 July 2017",
+            ),
+        ),
+    ),
+    AdapterSpec(
+        adapter_key="linkml",
+        name="LinkML",
+        spec_version="current",
+        files=(
+            SpecFile(
+                url="https://linkml.io/linkml/specifications/linkml-spec.html",
+                filename="linkml-spec.html",
+                description="LinkML formal specification, published documentation page",
+            ),
         ),
     ),
     AdapterSpec(

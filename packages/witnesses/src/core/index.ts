@@ -14,9 +14,7 @@ export interface CoreWitnessSchema {
 	readonly schema: TypeTerm;
 }
 
-const CORE_IDS = new Set<string>(
-	CRITERIA.filter((c) => c.core === true).map((c) => c.id),
-);
+const CORE_IDS = new Set<string>(CRITERIA.filter((c) => c.core === true).map((c) => c.id));
 
 /** The 15 witnesses for the canonical core subset (formerly ℂ = {S₁..S₁₅}). */
 export const CORE_SCHEMAS: readonly CoreWitnessSchema[] = ALL_WITNESSES.filter((w) =>

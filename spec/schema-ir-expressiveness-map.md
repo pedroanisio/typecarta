@@ -13,6 +13,9 @@ disclaimer: >
   respective systems as of the document date and have not been
   machine-verified.
 changelog: >
+  2026-05-18 implementation note — Updated §12.5 to reflect the repository's
+  current executable full witness set and 70-criterion scorecard mode while
+  preserving the scorecard-evidence caveat.
   v2.2.0 — Resolve C34: replaced misattributed [Ref. 2, §6] with
   [Ref. 20] (Castagna & Xu, ICFP 2011) in §7 Remark 7.1.2 and §12
   π₅₉ warning; removed corresponding TODO comments. Added Remark 5.1.2
@@ -2021,28 +2024,23 @@ The following phenomena were identified during review but deferred:
 | $\pi_{X2}$ — Invariant under update | Predicate on execution traces, not on types or values; requires Hoare-logic framework, not type-theoretic criteria |
 | DNF/CNF normalizability | Property of the IR's algorithms (decidability/complexity), not of its type language expressiveness; belongs in a complexity-profile companion document |
 
-### 12.5. Future Work: Full Witness Set and 70-Criterion Scorecard
+### 12.5. Full Witness Set and 70-Criterion Scorecard
 
 The core subset $\Pi_{\mathrm{core}}$ has a corresponding
 $\Pi_{\mathrm{core}}$-diverse schema set
 $\mathbb{C} = \{S_1,\ldots,S_{15}\}$ (§9) and a machine-applicable
-scorecard (§11). A full diverse schema set covering all 70 criteria has not
-yet been constructed.
+scorecard (§11).
 
-**Missing $\mathbb{C}_{\mathrm{full}}$.** A diverse schema set
-$\mathbb{C}_{\mathrm{full}} = \{S'_1,\ldots,S'_{70}\}$ analogous to
-$\mathbb{C}$ — one schema per criterion, each the primary witness for at
-least one $\pi_i$ that no other element covers — would enable direct
-scorecard evaluation against the full $\Pi$. Without it, the 55 criteria
-outside $\Pi_{\mathrm{core}}$ serve as a taxonomy and IR design reference,
-not as a plug-in test suite.
+**Implementation note (2026-05-18).** The TypeCarta implementation now also
+ships a machine-applicable full witness set
+$\mathbb{C}_{\mathrm{full}} = \{S'_1,\ldots,S'_{70}\}$ and a 70-criterion
+scorecard mode. The physical witness sources live under
+`packages/witnesses/src/pi-prime/`; the 15-element core subset is derived in
+`packages/witnesses/src/core/` from the `core: true` criterion flag. This
+does not convert scorecard cells into formal proofs. It means the expanded
+criteria are executable witnesses as well as taxonomy.
 
-**Missing full scorecard.** §11 scores three IRs against
-$\Pi_{\mathrm{core}}$ (15 criteria). An analogous 70-criterion scorecard
-requires constructing $\mathbb{C}_{\mathrm{full}}$ first.
-
-Both are deferred to a future revision. Candidates contributing
-$\mathbb{C}_{\mathrm{full}}$ witnesses should verify:
+A valid $\mathbb{C}_{\mathrm{full}}$ witness set should maintain:
 (1) $\pi_i(S'_i) = \top$ for the claimed primary witness,
 (2) $S'_i$ is distinct from $S'_j$ in the sense of Def. 8.4, and
 (3) [meta-op] witnesses explicitly state the operational enrichment

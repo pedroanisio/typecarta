@@ -1,0 +1,16 @@
+{
+  "adapter_key": "shacl",
+  "name": "SHACL",
+  "spec_version": "2017 Recommendation",
+  "files": [
+    {
+      "filename": "shacl.html",
+      "url": "https://www.w3.org/TR/2017/REC-shacl-20170720/",
+      "description": "W3C Shapes Constraint Language (SHACL) Recommendation, 20 July 2017",
+      "fetched_at": "2026-05-18T16:33:11+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 531275,
+      "sha256": "ccca77caed771f42ea649c03d190b9c7ea0b82286c22c457b9edc8087c9ad0f8"
+    }
+  ]
+}

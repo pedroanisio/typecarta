@@ -50,10 +50,18 @@ describe("JSON Schema draft-07 full scorecard assessment", () => {
 			specFeature: string;
 		}> = [
 			{ criterionId: "pi-prime-25", current: "n/a", specFeature: "$ref recursion (mu node)" },
-			{ criterionId: "pi-prime-26", current: "n/a", specFeature: "$ref mutual recursion (nested mu)" },
+			{
+				criterionId: "pi-prime-26",
+				current: "n/a",
+				specFeature: "$ref mutual recursion (nested mu)",
+			},
 			{ criterionId: "pi-prime-40", current: "partial", specFeature: "multipleOf" },
 			{ criterionId: "pi-prime-46", current: "✗", specFeature: "uniqueItems (apply/set)" },
-			{ criterionId: "pi-prime-47", current: "✗", specFeature: "additionalProperties dictionaries (apply/map)" },
+			{
+				criterionId: "pi-prime-47",
+				current: "✗",
+				specFeature: "additionalProperties dictionaries (apply/map)",
+			},
 		];
 
 		for (const gap of knownGaps) {

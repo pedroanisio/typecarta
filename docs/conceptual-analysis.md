@@ -17,7 +17,7 @@ disclaimer: >
 
 ## 1. System Thesis
 
-typecarta is a **metrological instrument for type systems**. It answers one question: "When someone claims an IR 'supports' a type-system feature, what does that *actually* mean — and can we measure it?" The system works by defining a formal specification that treats types as predicates over a value universe, constructing a universal AST rich enough to represent any type-theoretic phenomenon observable in real schema languages, and then measuring each schema language against 70 orthogonal criteria via witness schemas that exercise one capability each. The result is a scorecard — not an opinion, but a reproducible, criterion-by-criterion measurement of what an IR can and cannot faithfully encode. A reader who grasps this should predict: any new feature request will be evaluated by asking "which criterion does this exercise?", any new schema language will be integrated by writing an adapter that maps to the shared AST, and any claim about expressiveness will be settled by checking whether the encoding preserves the relevant criterion's witness through a round-trip.
+typecarta is a **metrological instrument for type systems**. It answers one question: "When someone claims an IR 'supports' a type-system feature, what does that *actually* mean — and can we measure it?" The system works by defining a formal specification that treats types as predicates over a value universe, constructing a universal AST rich enough to represent type-theoretic phenomena observable in real schema languages, and then measuring adapters against 70 criteria via witness schemas. The result is a scorecard: reproducible adapter-backed evidence about what an IR currently preserves. It is not a proof that the target language satisfies the formal specification; contested cells still need adapter-vs-language-vs-rubric assessment. A reader who grasps this should predict: any new feature request will be evaluated by asking "which criterion does this exercise?", any new schema language will be integrated by writing an adapter that maps to the shared AST, and any expressiveness claim will be checked first against the relevant witness round trip.
 
 ---
 
@@ -30,14 +30,14 @@ typecarta is a **metrological instrument for type systems**. It answers one ques
 | 1 | **TypeTerm** | Domain | Universal AST — the Rosetta Stone all schema languages are translated into | `core/src/ast/type-term.ts` | Frozen (ADR-002: 16 node kinds, change is breaking) |
 | 2 | **Signature** | Domain | Identity card of a schema language: its base types, constructors, and arities | `core/src/ast/signature.ts` | Stable |
 | 3 | **Extension** | Domain | The set of values a type admits — ⟦τ⟧ ⊆ 𝒱 — the ground truth for "what does this type mean?" | `core/src/semantics/value-universe.ts` | Stable |
-| 4 | **CriterionPredicate** | Domain | A decidable yes/no test for a single type-system capability (e.g., "does this IR support recursion?") | `core/src/criteria/types.ts` | Growing (15 core + 70 expanded, families A–V) |
-| 5 | **Witness Schema** | Domain | A minimal type expression that exercises exactly one criterion — the test probe | `witnesses/src/pi/`, `witnesses/src/pi-prime/` | Growing (mirrors criterion set) |
+| 4 | **CriterionPredicate** | Domain | A decidable yes/no test for a single type-system capability (e.g., "does this IR support recursion?") | `core/src/criteria/pi-prime/types.ts` | Stable count (70 criteria, 15 tagged core, families A–V) |
+| 5 | **Witness Schema** | Domain | A minimal type expression that exercises exactly one criterion — the test probe | `witnesses/src/pi-prime/`; core subset derived in `witnesses/src/core/` | Stable count (70 witnesses) |
 | 6 | **Encoding** | Domain | A translation function φ that maps source types to IR types — the thing being measured | `core/src/encoding/encoding.ts` | Stable |
 | 7 | **Scorecard** | Domain | The measurement output — a per-criterion ✓/partial/✗ matrix for an adapter | `core/src/scorecard/` | Stable |
 | 8 | **IRAdapter** | Control | The plug-in boundary — connects a real-world schema language to the framework | `core/src/adapter/interface.ts` | Frozen (ADR-005: 4 mandatory + 1 optional method) |
 | 9 | **Encoding-Check (ρ)** | Domain | Relational properties testing whether an encoding preserves subtyping | `core/src/encoding-check/` | Stable |
 | 10 | **Impossibility Boundary** | Domain | The theorem that no finite IR can model all schema languages — the fundamental limit | `core/src/universality/impossibility.ts` | Frozen (mathematical result) |
-| 11 | **MetaTag** | Control | Classification of criteria requiring enriched semantics beyond basic denotation | `core/src/criteria/types.ts` | Stable |
+| 11 | **MetaTag** | Control | Classification of criteria requiring enriched semantics beyond basic denotation | `core/src/criteria/pi-prime/types.ts` | Stable |
 | 12 | **RefinementPredicate** | Domain | Value-level constraints embedded in refinement types — the bridge between types and runtime | `core/src/ast/type-term.ts` (§4) | Stable |
 | 13 | **Schema Class** | Domain | A family of schema languages grouped by shared expressiveness — the universality target | `core/src/universality/schema-class.ts` | Stable |
 
@@ -57,7 +57,7 @@ These are things the domain requires but the codebase does not (yet) reify:
 
 | Capability | Trigger | Entry Point | Key Decision Point | Failure Path |
 |---|---|---|---|---|
-| **Evaluate an IR's expressiveness** | User runs `typecarta scorecard --adapter <name>` | `cli/src/commands/scorecard.ts` → `evaluateScorecard()` | For each witness: is the schema encodable? Does the criterion survive round-trip? | `isEncodable() → false` yields ✗; encode/parse throws yields "partial" |
+| **Evaluate an IR's expressiveness** | User runs `typecarta scorecard --adapter <name> [--filter core\|all]` | `cli/src/commands/scorecard.ts` → `evaluateScorecard()` | For each selected witness: is the schema encodable? Does the criterion survive round-trip? | `isEncodable() → false` yields ✗; encode/parse throws yields "partial" |
 | **Compare two IRs** | `typecarta compare <a> <b>` | `cli/src/commands/compare.ts` → `compare()` | Diff per-criterion cells between two scorecards | Adapters must both be registered |
 | **Construct witness types** | `typecarta witness <criterion>` | `cli/src/commands/witness.ts` | Look up witness by criterion ID | Unknown criterion ID |
 | **Profile an adapter** | `typecarta profile <adapter>` | `cli/src/commands/profile.ts` | Full scorecard + encoding-check suite | Adapter not found in registry |
@@ -72,9 +72,9 @@ These are things the domain requires but the codebase does not (yet) reify:
 
 ### Flow 1: Scorecard Evaluation (user-facing, integrity-critical)
 
-A developer wants to know how well Zod represents the full spectrum of type-system features. They run `typecarta scorecard --adapter zod`.
+A developer wants to know how well Zod represents the full spectrum of type-system features. They run `typecarta scorecard --adapter zod --filter all`, or omit the filter for the 15-row core view.
 
-The CLI resolves the adapter from the registry by name. For each of the 15 core witness schemas (S₁ through S₁₅), the evaluator asks three questions in sequence. First: *can this adapter encode this witness at all?* It calls `adapter.isEncodable(witness)`. If false, the cell is immediately ✗ — this IR cannot represent this concept. Second: *does the concept survive a round-trip?* It encodes the witness to Zod's native form via `adapter.encode()`, then parses it back via `adapter.parse()`, producing a new TypeTerm. Third: *does the criterion predicate still detect the concept in the round-tripped form?* It calls `criterion.evaluate(roundTripped)`. If the predicate returns "satisfied", the cell is ✓. If "not-satisfied", the encoding lost something — the cell is "partial". If "undecidable", also "partial". The final scorecard aggregates all cells into totals (satisfied/partial/not-satisfied) and renders to terminal, Markdown, or JSON.
+The CLI resolves the adapter from the registry by name, selects either `CORE_SCHEMAS` or `ALL_WITNESSES`, and then asks three questions for each selected witness. First: *can this adapter encode this witness at all?* It calls `adapter.isEncodable(witness)`. If false, the cell is immediately ✗ — this adapter cannot represent the witness through its current encoding. Second: *does the concept survive a round-trip?* It encodes the witness to Zod's native form via `adapter.encode()`, then parses it back via `adapter.parse()`, producing a new TypeTerm. Third: *does the criterion predicate still detect the concept in the round-tripped form?* It calls `criterion.evaluate(roundTripped)`. If the predicate returns "satisfied", the cell is ✓. If "not-satisfied", the encoding lost something — the cell is "partial". If "undecidable", also "partial". The final scorecard aggregates all cells into totals and renders to terminal, Markdown, or JSON.
 
 *(Evidence: `scorecard/evaluate.ts:66-115` implements this exact three-step protocol. `cli/src/commands/scorecard.ts` dispatches to it. Confidence: high.)*
 
@@ -191,10 +191,10 @@ For someone who wants to *understand* this system (not just use it):
 | 1 | `spec/schema-ir-expressiveness-map.md` §1–§3 | Establishes the problem: types as predicates, extensions, subtyping. Without this, the code is meaningless. |
 | 2 | `docs/adr/002-ast-design.md` | The single most important design decision: *why* 16 node kinds, *why* not more, *why* not fewer. |
 | 3 | `packages/core/src/ast/type-term.ts` | The central data structure. Every other file in the codebase either produces, consumes, or transforms TypeTerms. |
-| 4 | `packages/core/src/criteria/types.ts` | The measurement interface — what a "criterion" is and how it produces results. |
+| 4 | `packages/core/src/criteria/pi-prime/types.ts` | The measurement interface — what a "criterion" is and how it produces results. |
 | 5 | `packages/core/src/adapter/interface.ts` | The plug-in boundary — how the outside world connects. |
 | 6 | `packages/core/src/scorecard/evaluate.ts` | The evaluation engine — the core algorithm that produces the system's primary output. |
-| 7 | `packages/witnesses/src/pi/s01-bottom.ts` | One concrete witness schema to see what the data looks like in practice. |
+| 7 | `packages/witnesses/src/pi-prime/family-a.ts` | Concrete witness schemas to see what the data looks like in practice. |
 | 8 | `packages/core/src/encoding/soundness.ts` | The verification layer — how the system checks its own claims. |
 | 9 | `docs/adr/005-adapter-contract.md` | Why the adapter interface looks the way it does. |
 | 10 | `packages/adapters/json-schema/src/adapter.ts` | A concrete adapter — the bridge from theory to practice. |
@@ -240,7 +240,7 @@ For someone who wants to *understand* this system (not just use it):
 **Propagation path (if criteria fit existing nodes):**
 1. Add new `CriterionPredicate` implementations in `criteria/pi-prime/`
 2. Add new witness schemas in `witnesses/src/pi-prime/`
-3. Update `PI_PRIME_CRITERIA` registry
+3. Update the `CRITERIA` registry
 4. Scorecard automatically picks them up
 
 **Propagation path (if criteria require new node kinds):**
@@ -306,7 +306,7 @@ This computational simplicity is a strength — it makes the system predictable,
 
 1. **TypeTerm exhaustiveness:** The `TypeTermVisitor<R>` type forces compile-time coverage of all 17 discriminants. *(Enforcement: TypeScript compiler. Location: `type-term.ts:234-236`.)*
 
-2. **Criterion orthogonality:** Each criterion tests exactly one type-system capability. *(Enforcement: by construction — each `pi-*.ts` file checks a single structural property. Verification: `diversity-check.test.ts` confirms witness distinctness.)*
+2. **Criterion orthogonality:** Each criterion tests exactly one type-system capability. *(Enforcement: by construction — each `pi-prime/*.ts` family file checks a focused structural property. Verification: `diversity-check.test.ts` confirms core witness coverage.)*
 
 3. **Adapter contract completeness:** Every adapter must implement `parse`, `encode`, `isEncodable`, `inhabits`. *(Enforcement: TypeScript interface. Location: `adapter/interface.ts:9-36`.)*
 

@@ -9,12 +9,22 @@
 		"noUncheckedIndexedAccess": true,
 		"skipLibCheck": true,
 		"esModuleInterop": true,
-		"declaration": true
+		"declaration": true,
+		"types": ["node"]
 	},
 	"include": [
 		"packages/core/src/**/*.ts",
 		"packages/witnesses/src/**/*.ts",
+		"packages/adapters/avro/src/**/*.ts",
+		"packages/adapters/effect-schema/src/**/*.ts",
+		"packages/adapters/graphql/src/**/*.ts",
 		"packages/adapters/json-schema/src/**/*.ts",
-		"packages/encoding-check/src/**/*.ts"
+		"packages/adapters/protobuf/src/**/*.ts",
+		"packages/adapters/typescript/src/**/*.ts",
+		"packages/adapters/xsd/src/**/*.ts",
+		"packages/adapters/xsd-1-1/src/**/*.ts",
+		"packages/adapters/zod/src/**/*.ts",
+		"packages/encoding-check/src/**/*.ts",
+		"packages/cli/src/**/*.ts"
 	]
 }

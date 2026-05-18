@@ -1,9 +1,9 @@
 import {
+	// Criteria
+	CRITERIA,
 	type Criterion,
 	type IRAdapter,
 	JSON_SIGNATURE,
-	// Criteria
-	CRITERIA,
 	type ScorecardCell,
 	type ScorecardResult,
 	type Signature,
@@ -815,12 +815,7 @@ describe("Criteria predicates", () => {
 // ────────────────────────────────────────────────────────────────────
 describe("Scorecard", () => {
 	// Use a handful of core-tagged \u03a0' ids as synthetic fixtures.
-	type SyntheticId =
-		| "pi-prime-01"
-		| "pi-prime-03"
-		| "pi-prime-05"
-		| "pi-prime-09"
-		| "pi-prime-20";
+	type SyntheticId = "pi-prime-01" | "pi-prime-03" | "pi-prime-05" | "pi-prime-09" | "pi-prime-20";
 	const SYNTHETIC_IDS: SyntheticId[] = [
 		"pi-prime-01",
 		"pi-prime-03",

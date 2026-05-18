@@ -39,12 +39,14 @@ See [docs/guides/writing-an-adapter.md](guides/writing-an-adapter.md) for a full
 
 ## Adding a Criterion
 
-All criteria live in `packages/core/src/criteria/`. Base criteria (Π) are in `pi/`, expanded (Π') are in `pi-prime/`.
+All criteria live in `packages/core/src/criteria/pi-prime/`. The canonical 15-criterion core subset is identified by `core: true` on a criterion, not by a separate directory or ID namespace.
 
 Each criterion must:
-- Have a unique ID (`pi-NN` or `pi-prime-NN`)
+- Have a unique ID (`pi-prime-NN`, zero-padded)
 - Implement the `evaluate(term: TypeTerm)` method
-- Return `{ status: "satisfied", witness }` or `{ status: "not-satisfied", reason }`
+- Return `{ status: "satisfied", witness }`, `{ status: "not-satisfied", reason }`, or `{ status: "undecidable", reason }`
+
+Use `not-satisfied` when the term lacks the phenomenon. Use `undecidable` when the predicate cannot decide with the information available to the criterion.
 
 ## Code Style
 

@@ -2,20 +2,20 @@
  * Benchmark: Wall-clock scorecard evaluation
  *
  * Measures the time to evaluate a scorecard for the JSON Schema adapter
- * across the 15 base criteria and the fixed witness corpus.
+ * across the 15 core criteria and the fixed witness corpus.
  */
 
 import { JsonSchemaAdapter } from "@typecarta/adapter-json-schema";
-import { PI_CRITERIA, evaluateScorecard } from "@typecarta/core";
+import { CORE_CRITERIA, evaluateScorecard } from "@typecarta/core";
 import type { WitnessEntry } from "@typecarta/core";
-import { DIVERSE_SCHEMAS, type WitnessSchema } from "@typecarta/witnesses";
+import { CORE_SCHEMAS, type CoreWitnessSchema } from "@typecarta/witnesses";
 
 // ── Configuration ──────────────────────────────────────────────────
 const ITERATIONS = 50;
 const WARMUP_ITERATIONS = 5;
 
-// ── Convert WitnessSchema[] to WitnessEntry[] ─────────────────────
-function toWitnessEntries(schemas: readonly WitnessSchema[]): WitnessEntry[] {
+// ── Convert CoreWitnessSchema[] to WitnessEntry[] ─────────────────
+function toWitnessEntries(schemas: readonly CoreWitnessSchema[]): WitnessEntry[] {
 	return schemas.map((s) => ({
 		criterionId: s.id,
 		schema: s.schema,
@@ -26,11 +26,11 @@ function toWitnessEntries(schemas: readonly WitnessSchema[]): WitnessEntry[] {
 // ── Benchmark runner ───────────────────────────────────────────────
 function runBenchmark(): void {
 	const adapter = new JsonSchemaAdapter();
-	const witnesses = toWitnessEntries(DIVERSE_SCHEMAS);
+	const witnesses = toWitnessEntries(CORE_SCHEMAS);
 
 	console.log("=== Scorecard Performance Benchmark ===");
 	console.log(`Adapter:        ${adapter.name}`);
-	console.log(`Criteria count: ${PI_CRITERIA.length}`);
+	console.log(`Criteria count: ${CORE_CRITERIA.length}`);
 	console.log(`Witness count:  ${witnesses.length}`);
 	console.log(`Iterations:     ${ITERATIONS} (+ ${WARMUP_ITERATIONS} warmup)`);
 	console.log();

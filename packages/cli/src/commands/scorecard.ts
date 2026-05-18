@@ -46,6 +46,7 @@ export async function run(args: string[]): Promise<void> {
 			"Usage: typecarta scorecard --adapter <name> [--filter core|all] [--output table|markdown|json]",
 		);
 		process.exit(1);
+		return;
 	}
 	const adapterName = args[adapterIdx + 1]!;
 	const outputIdx = args.indexOf("--output");
@@ -55,12 +56,14 @@ export async function run(args: string[]): Promise<void> {
 	if (typeof filter === "object") {
 		console.error(filter.error);
 		process.exit(1);
+		return;
 	}
 
 	const adapter = getAdapter(adapterName);
 	if (!adapter) {
 		console.error(`Adapter "${adapterName}" not found. Register it first.`);
 		process.exit(1);
+		return;
 	}
 
 	const witnesses =

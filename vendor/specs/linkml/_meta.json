@@ -1,0 +1,16 @@
+{
+  "adapter_key": "linkml",
+  "name": "LinkML",
+  "spec_version": "current",
+  "files": [
+    {
+      "filename": "linkml-spec.html",
+      "url": "https://linkml.io/linkml/specifications/linkml-spec.html",
+      "description": "LinkML formal specification, published documentation page",
+      "fetched_at": "2026-05-18T16:33:11+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 35697,
+      "sha256": "465bdd0fcd59fbde16952fb49f0bf4e00c1af0f01ea7d583a550b2872df055a4"
+    }
+  ]
+}

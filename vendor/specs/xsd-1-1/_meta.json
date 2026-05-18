@@ -1,0 +1,25 @@
+{
+  "adapter_key": "xsd-1-1",
+  "name": "xsd-1-1",
+  "spec_version": "1.1",
+  "files": [
+    {
+      "filename": "xmlschema11-1-structures.html",
+      "url": "https://www.w3.org/TR/2012/REC-xmlschema11-1-20120405/",
+      "description": "W3C XML Schema 1.1 Part 1: Structures (REC, 2012-04-05)",
+      "fetched_at": "2026-05-18T16:34:56+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 2021328,
+      "sha256": "5ffb773f81fb81cfc9ac54dfb871c333cefb12fbdffe4caeb28170054b21fc6a"
+    },
+    {
+      "filename": "xmlschema11-2-datatypes.html",
+      "url": "https://www.w3.org/TR/2012/REC-xmlschema11-2-20120405/",
+      "description": "W3C XML Schema 1.1 Part 2: Datatypes (REC, 2012-04-05)",
+      "fetched_at": "2026-05-18T16:34:56+00:00",
+      "content_type": "text/html; charset=utf-8",
+      "bytes": 1508774,
+      "sha256": "cc2ae20cdeab02600c73fd13f1cc31dbbdd61f62aa455026fa84388b540443b8"
+    }
+  ]
+}

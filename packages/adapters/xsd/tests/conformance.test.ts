@@ -238,11 +238,9 @@ describe("XsdAdapter", () => {
 
 		// §10: xs:unique via path-constraint extension.
 		it("encodes path-constraint extension as xs:unique on a complexType", () => {
-			const term = extension(
-				"path-constraint",
-				{ path: "$.zipCode", constraint: "unique" },
-				[product([field("zipCode", base("string"))])],
-			);
+			const term = extension("path-constraint", { path: "$.zipCode", constraint: "unique" }, [
+				product([field("zipCode", base("string"))]),
+			]);
 			const encoded = adapter.encode(term);
 			expect(encoded.kind).toBe("complexType");
 			if (encoded.kind === "complexType") {
@@ -303,7 +301,11 @@ describe("XsdAdapter", () => {
 
 		// let → named type alias, supportsKind('let') = true.
 		it("encodes let-binding as a named simple/complex type", () => {
-			const term = letBinding("Age", refinement(base("integer"), rangeConstraint(0, 150)), base("Age"));
+			const term = letBinding(
+				"Age",
+				refinement(base("integer"), rangeConstraint(0, 150)),
+				base("Age"),
+			);
 			const encoded = adapter.encode(term);
 			expect(encoded.kind).toBe("simpleType");
 			if (encoded.kind === "simpleType") {

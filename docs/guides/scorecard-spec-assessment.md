@@ -4,7 +4,7 @@ This guide describes how to decide whether a scorecard result is correct against
 
 ## What The CLI Proves
 
-`typecarta scorecard --mode full` proves that the current adapter implementation can run the 70 expanded witnesses through this pipeline:
+`typecarta scorecard --filter all` proves that the current adapter implementation can run the 70 expanded witnesses through this pipeline:
 
 ```text
 witness TypeTerm -> adapter.isEncodable -> adapter.encode -> adapter.parse -> criterion.evaluate
@@ -115,8 +115,8 @@ pnpm --filter @typecarta/adapter-xsd test
 Run the CLI scorecard manually:
 
 ```bash
-node packages/cli/dist/index.js scorecard --adapter "JSON Schema" --mode full
-node packages/cli/dist/index.js scorecard --adapter "xsd" --mode full
+node packages/cli/dist/index.js scorecard --adapter "JSON Schema" --filter all
+node packages/cli/dist/index.js scorecard --adapter "xsd" --filter all
 ```
 
 Then compare any changed row against the checklist above before treating the output as spec-correct.

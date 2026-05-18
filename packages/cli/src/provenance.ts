@@ -8,11 +8,7 @@ import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-	createProvenance,
-	type IRAdapter,
-	type ScorecardProvenance,
-} from "@typecarta/core";
+import { type IRAdapter, type ScorecardProvenance, createProvenance } from "@typecarta/core";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -50,7 +46,7 @@ function readCommitHash(): string {
 	const fromEnv = process.env.TYPECARTA_COMMIT_HASH;
 	if (fromEnv && fromEnv.length > 0) {
 		cachedCommit = fromEnv;
-		return cachedCommit;
+		return fromEnv;
 	}
 	try {
 		const hash = execSync("git rev-parse --short HEAD", {
@@ -61,7 +57,7 @@ function readCommitHash(): string {
 			.trim();
 		if (hash.length === 0) {
 			cachedCommit = "unknown";
-			return cachedCommit;
+			return "unknown";
 		}
 		try {
 			const dirty = execSync("git status --porcelain", {
@@ -77,7 +73,7 @@ function readCommitHash(): string {
 	} catch {
 		cachedCommit = "unknown";
 	}
-	return cachedCommit;
+	return cachedCommit ?? "unknown";
 }
 
 /**

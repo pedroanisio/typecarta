@@ -107,9 +107,9 @@ describe("Full Scorecard (70 criteria)", () => {
 	it("totals sum to 70", () => {
 		const result = evaluateScorecard(mockAdapter, allWitnesses, CRITERIA);
 		const { totals } = result;
-		expect(
-			totals.satisfied + totals.partial + totals.notSatisfied + totals.outOfVocabulary,
-		).toBe(70);
+		expect(totals.satisfied + totals.partial + totals.notSatisfied + totals.outOfVocabulary).toBe(
+			70,
+		);
 	});
 
 	it("15-criterion path still works unchanged", () => {

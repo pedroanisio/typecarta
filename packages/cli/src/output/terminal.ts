@@ -18,9 +18,7 @@ interface CriterionMeta {
 }
 
 const CRITERIA_BY_ID: ReadonlyMap<string, CriterionMeta> = new Map(
-	CRITERIA.map(
-		(c) => [c.id, { id: c.id, name: c.name, family: c.family }] as const,
-	),
+	CRITERIA.map((c) => [c.id, { id: c.id, name: c.name, family: c.family }] as const),
 );
 
 const FAMILY_TITLES: ReadonlyMap<string, string> = new Map([
@@ -152,10 +150,8 @@ function renderSummary(result: ScorecardResult, scopeLabel: string): string[] {
 	lines.push(
 		`  ${DIM}Coverage${RESET}   ${progressBar(satisfied, partial, notSatisfied, outOfVocabulary)}`,
 	);
-	const naSegment =
-		outOfVocabulary > 0 ? `  ${GRAY}· ${outOfVocabulary}${RESET}` : "";
-	const naPercentSegment =
-		outOfVocabulary > 0 ? ` · ${percent(outOfVocabulary, total)} n/a` : "";
+	const naSegment = outOfVocabulary > 0 ? `  ${GRAY}· ${outOfVocabulary}${RESET}` : "";
+	const naPercentSegment = outOfVocabulary > 0 ? ` · ${percent(outOfVocabulary, total)} n/a` : "";
 	lines.push(
 		`  ${BOLD}Totals:${RESET}   ${GREEN}✓ ${satisfied}${RESET}  ${YELLOW}◐ ${partial}${RESET}  ${RED}✗ ${notSatisfied}${RESET}${naSegment}` +
 			`   ${DIM}→  ${percent(satisfied, total)} satisfied · ${percent(partial, total)} partial · ${percent(notSatisfied, total)} missing${naPercentSegment}${RESET}`,
