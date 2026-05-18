@@ -1,7 +1,7 @@
 {
-	"name": "@typecarta/adapter-xsd",
+	"name": "@typecarta/adapter-xsd-core",
 	"version": "0.1.0",
-	"description": "XML Schema Definition adapter for typecarta",
+	"description": "Shared XSD adapter core used by the 1.0 and 1.1 sibling adapters",
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
@@ -13,11 +13,10 @@
 	},
 	"scripts": {
 		"build": "tsc",
-		"test": "vitest run",
+		"test": "vitest run --passWithNoTests",
 		"clean": "rm -rf dist"
 	},
 	"dependencies": {
-		"@typecarta/adapter-xsd-core": "workspace:*",
 		"@typecarta/core": "workspace:*"
 	},
 	"devDependencies": {

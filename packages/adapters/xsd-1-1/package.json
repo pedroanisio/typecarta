@@ -17,6 +17,7 @@
 		"clean": "rm -rf dist"
 	},
 	"dependencies": {
+		"@typecarta/adapter-xsd-core": "workspace:*",
 		"@typecarta/core": "workspace:*"
 	},
 	"devDependencies": {

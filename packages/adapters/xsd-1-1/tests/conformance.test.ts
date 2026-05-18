@@ -27,7 +27,7 @@ describe("XsdAdapter", () => {
 			expect(encoded).toEqual(desc);
 		});
 
-		it("roundtrips a complex type with required and optional elements", () => {
+		it("roundtrips a complex type with required and optional elements (name preserved)", () => {
 			const desc: XsdDescriptor = {
 				kind: "complexType",
 				name: "Person",
@@ -40,6 +40,7 @@ describe("XsdAdapter", () => {
 			const encoded = adapter.encode(term);
 			expect(encoded).toEqual({
 				kind: "complexType",
+				name: "Person",
 				elements: [
 					{ name: "name", type: { kind: "primitive", name: "string" } },
 					{ name: "age", type: { kind: "primitive", name: "integer" }, minOccurs: 0 },
@@ -121,15 +122,29 @@ describe("XsdAdapter", () => {
 	});
 
 	describe("XSD 1.1-only features", () => {
-		it("encodes `xs:assert` when a product carries crossField annotation", () => {
-			const term = product([field("min", base("integer")), field("max", base("integer"))], {
-				crossField: true,
-			});
-			const encoded = adapter.encode(term);
+		// xs:assert is only emitted when an explicit XPath is supplied via the
+		// `xsdAssertions` annotation. A bare `crossField: true` flag is no
+		// longer enough — the audit's §4 fix removed the synthetic
+		// `test="true()"` placeholder that always passed.
+		it("encodes `xs:assert` only when an explicit XPath is supplied", () => {
+			const withXpath = product(
+				[field("min", base("integer")), field("max", base("integer"))],
+				{ xsdAssertions: [{ test: "@min lt @max" }] },
+			);
+			const encoded = adapter.encode(withXpath);
 			expect(encoded.kind).toBe("complexType");
 			if (encoded.kind === "complexType") {
-				expect(encoded.assertions).toBeDefined();
-				expect(encoded.assertions?.length).toBeGreaterThan(0);
+				expect(encoded.assertions).toEqual([{ test: "@min lt @max" }]);
+			}
+
+			const withoutXpath = product(
+				[field("min", base("integer")), field("max", base("integer"))],
+				{ crossField: true },
+			);
+			const encodedBare = adapter.encode(withoutXpath);
+			expect(encodedBare.kind).toBe("complexType");
+			if (encodedBare.kind === "complexType") {
+				expect(encodedBare.assertions).toBeUndefined();
 			}
 		});
 

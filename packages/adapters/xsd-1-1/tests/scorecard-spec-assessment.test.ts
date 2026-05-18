@@ -18,15 +18,25 @@ describe("XSD 1.1 full scorecard assessment", () => {
 	it("pins the current adapter full-mode totals", () => {
 		const scorecard = fullScorecard();
 
-		// Totals are currently identical to the xsd 1.0 adapter (pre-extension)
-		// because no witness in ALL_WITNESSES currently exercises the
-		// 1.1-only encoder paths (xs:assert, xs:alternative). See
-		// docs/guides/xsd-1-0-vs-1-1.md for the per-row analysis.
+		// 1.1 shares the @typecarta/adapter-xsd-core engine with 1.0 and adds:
+		//   - 4 datatypes (dateTimeStamp, dayTimeDuration, yearMonthDuration,
+		//     anyAtomicType)
+		//   - 2 facets (assertions, explicitTimezone)
+		//   - the "conditional" IR kind (xs:alternative)
+		// None of these flip a current scorecard cell because:
+		//   - the SP43 cross-field witness is a `refinement(product, ...)`
+		//     shape that doesn't naturally map to xs:assert (the IR has no
+		//     XPath analog); pi-prime-43 stays `◐` for both versions.
+		//   - the SP65 conditional witness wraps `typeVar("alpha")`, an IR
+		//     `var` kind neither adapter models; pi-prime-65 stays `n/a`.
+		// So 1.1's totals equal 1.0's — the version difference is real
+		// at the contract level (see the `supportsKind` test below) but
+		// not exercised by the current witness set.
 		expect(scorecard.totals).toEqual({
-			satisfied: 24,
+			satisfied: 26,
 			partial: 15,
-			notSatisfied: 5,
-			outOfVocabulary: 26,
+			notSatisfied: 12,
+			outOfVocabulary: 17,
 		});
 	});
 
