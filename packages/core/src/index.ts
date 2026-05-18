@@ -128,12 +128,18 @@ export type {
 	Criterion,
 	CriterionRegistry,
 	MetaTag,
+	SelfCapability,
+	SelfCapabilitySupport,
+	SelfWitness,
 } from "./criteria/pi-prime/index.js";
 export {
 	CRITERION_IDS,
 	CRITERIA,
 	CORE_CRITERIA,
 	CORE_IDS,
+	SELF_CAPABILITIES,
+	SELF_CAPABILITY_BY_ID,
+	SELF_WITNESSES,
 	registerCriterion,
 	getCriterionRegistry,
 	getCriterion,
@@ -194,6 +200,14 @@ export type { WitnessEntry } from "./scorecard/evaluate.js";
 export { compareScorecards } from "./scorecard/compare.js";
 export { renderMarkdown, renderJSON, renderComparisonMarkdown } from "./scorecard/render.js";
 export { createProvenance } from "./scorecard/provenance.js";
+export {
+	checkMonotonicity,
+	formatMonotonicityViolations,
+} from "./scorecard/monotonicity.js";
+export type {
+	MonotonicityResult,
+	MonotonicityViolation,
+} from "./scorecard/monotonicity.js";
 
 // -- § 7  Encoding-Check -- width, depth, and generic preservation checks --
 export type { EncodingCheckPropertyId, EncodingCheckResult } from "./encoding-check/types.js";

@@ -23,9 +23,13 @@ describe("SHACL 1.0 full scorecard assessment", () => {
 		// the criterion predicate looks for IR structure the round-trip does
 		// not preserve (e.g. nominal subclasses, sh:multipleOf as SPARQL).
 		// See docs/guides/shacl-scorecard-audit.md for the per-row narrative.
+		//
+		// Totals shifted from (17, 30, 7, 16) → (23, 24, 7, 16) after the
+		// "empty product leak" parser fix (commit fixes pi-prime-03, -06,
+		// -07, -20, -21, -23, -42 — six rows ◐ → ✓).
 		expect(scorecard.totals).toEqual({
-			satisfied: 17,
-			partial: 30,
+			satisfied: 23,
+			partial: 24,
 			notSatisfied: 7,
 			outOfVocabulary: 16,
 		});

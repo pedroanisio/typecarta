@@ -273,49 +273,79 @@ function parseShacl(desc: ShaclDescriptor): TypeTerm {
 	}
 }
 
-function parseNodeShape(desc: ShaclNodeShape): TypeTerm {
+/**
+ * Build the structural "core" term for a NodeShape from its own content
+ * (properties, datatype, in/hasValue, class, sparql). Returns `undefined`
+ * when the NodeShape contributes no structural shape of its own — the
+ * caller decides what to do with a pure-combinator shape.
+ *
+ * This separation is what fixes the v3 reviewer's "empty product leak"
+ * bug: previously parseNodeShape unconditionally produced product([…])
+ * even when the shape only carried sh:and/or/not, leaking a spurious
+ * empty product into every logical-combinator branch.
+ */
+function parseNodeShapeCore(desc: ShaclNodeShape): TypeTerm | undefined {
 	const hasProperties = (desc.properties?.length ?? 0) > 0;
+	const hasInValue = desc.in !== undefined && desc.in.length > 0;
+	const hasHasValue = desc.hasValue !== undefined && desc.hasValue.length > 0;
+	const hasDatatype = desc.datatype !== undefined;
+	const hasClass = desc.class !== undefined && desc.class.length > 0;
+	const hasSparql = desc.sparql !== undefined && desc.sparql.length > 0;
 	const hasStructuralAnnotations =
 		desc.closed !== undefined ||
 		desc.target !== undefined ||
 		desc.deactivated !== undefined ||
-		desc.severity !== undefined;
+		desc.severity !== undefined ||
+		(desc.ignoredProperties?.length ?? 0) > 0;
 
-	// If the NodeShape carries only a top-level datatype (no properties,
-	// no logical combinators, no class), it's modeling "this focus is a
-	// literal of this type" — collapse to a bare base.
+	// sh:in pins the focus to one of an enumerated set of values.
+	if (hasInValue && !hasProperties && !hasClass) {
+		const values = desc.in!;
+		return values.length === 1 ? literal(values[0]!) : union(values.map((v) => literal(v)));
+	}
+
+	// sh:hasValue alone (no other structure) pins to a singleton or union of singletons.
+	if (hasHasValue && !hasProperties && !hasClass && !hasDatatype) {
+		const vs = desc.hasValue!;
+		return vs.length === 1 ? literal(vs[0]!) : union(vs.map((v) => literal(v)));
+	}
+
+	// Pure-datatype NodeShape models "this focus is a literal of type T".
 	if (
+		hasDatatype &&
 		!hasProperties &&
-		!hasStructuralAnnotations &&
-		desc.datatype !== undefined &&
-		desc.in === undefined &&
-		desc.hasValue === undefined &&
-		desc.class === undefined &&
-		desc.and === undefined &&
-		desc.or === undefined &&
-		desc.not === undefined &&
-		desc.xone === undefined &&
-		desc.sparql === undefined
+		!hasClass &&
+		!hasInValue &&
+		!hasHasValue &&
+		!hasSparql &&
+		!hasStructuralAnnotations
 	) {
-		return datatypeToBase(desc.datatype);
+		return datatypeToBase(desc.datatype!);
+	}
+
+	// If the shape has any product-shaped content (properties, structural
+	// annotations, or a class wrapper), build the product. Otherwise return
+	// undefined so the caller knows there's no core to wrap.
+	const needsProduct = hasProperties || hasClass || hasStructuralAnnotations || hasSparql;
+	if (!needsProduct) {
+		return undefined;
 	}
 
 	const fields = (desc.properties ?? []).map(parseProperty);
-	let term: TypeTerm = product(fields, {
-		...(desc.closed === false ? { open: true } : {}),
-		...(desc.closed === true && (desc.ignoredProperties?.length ?? 0) > 0
-			? { open: true, ignored: desc.ignoredProperties }
-			: {}),
-		...(desc.target !== undefined ? { shaclTarget: desc.target } : {}),
-		...(desc.deactivated === true ? { deactivated: true } : {}),
-		...(desc.severity !== undefined ? { severity: desc.severity } : {}),
-	});
+	const productAnnotations: Record<string, unknown> = {};
+	if (desc.closed === false) productAnnotations.open = true;
+	if (desc.closed === true && (desc.ignoredProperties?.length ?? 0) > 0) {
+		productAnnotations.open = true;
+		productAnnotations.ignored = desc.ignoredProperties;
+	}
+	if (desc.target !== undefined) productAnnotations.shaclTarget = desc.target;
+	if (desc.deactivated === true) productAnnotations.deactivated = true;
+	if (desc.severity !== undefined) productAnnotations.severity = desc.severity;
+	let term: TypeTerm =
+		Object.keys(productAnnotations).length > 0 ? product(fields, productAnnotations) : product(fields);
 
-	if (desc.class !== undefined && desc.class.length > 0) {
-		// `sh:class` on a NodeShape requires the focus to be an instance of
-		// one of the listed classes. Wrap in a nominal node with the first
-		// class as the tag (additional classes are preserved as annotation).
-		const [primary, ...rest] = desc.class;
+	if (hasClass) {
+		const [primary, ...rest] = desc.class!;
 		if (primary !== undefined) {
 			term = nominal(
 				primary,
@@ -326,23 +356,47 @@ function parseNodeShape(desc: ShaclNodeShape): TypeTerm {
 		}
 	}
 
-	term = applyLogicalCombinators(term, desc);
-
-	if (desc.in !== undefined && desc.in.length > 0) {
-		term = union(desc.in.map((v) => literal(v)));
-	} else if (desc.hasValue !== undefined && desc.hasValue.length > 0) {
-		term =
-			desc.hasValue.length === 1
-				? literal(desc.hasValue[0]!)
-				: union(desc.hasValue.map((v) => literal(v)));
-	}
-
-	if (desc.sparql !== undefined && desc.sparql.length > 0) {
-		// SHACL-SPARQL constraints are opaque to the IR; carry them as an
-		// extension node alongside the structural term.
+	if (hasSparql) {
 		term = intersection([term, extension("shacl-sparql", { constraints: desc.sparql })]);
 	}
 
+	return term;
+}
+
+function parseNodeShape(desc: ShaclNodeShape): TypeTerm {
+	const core = parseNodeShapeCore(desc);
+	const hasAnd = desc.and !== undefined && desc.and.length > 0;
+	const hasOr = desc.or !== undefined && desc.or.length > 0;
+	const hasNot = desc.not !== undefined;
+	const hasXone = desc.xone !== undefined && desc.xone.length > 0;
+
+	// Pure-combinator shape: no own structural content, just logical
+	// combinators. Return the combinator's result directly; do NOT wrap in
+	// product([]).
+	if (core === undefined) {
+		if (hasOr) return union(desc.or!.map(parseShacl));
+		if (hasAnd) return intersection(desc.and!.map(parseShacl));
+		if (hasNot) return complement(parseShacl(desc.not!));
+		if (hasXone) {
+			return extension("shacl-xone", {
+				branches: desc.xone!.map(parseShacl),
+			});
+		}
+		// Completely empty NodeShape = "any node satisfies" = top().
+		return top();
+	}
+
+	// Have a core + maybe combinators: combine.
+	let term = core;
+	if (hasAnd) term = intersection([term, ...desc.and!.map(parseShacl)]);
+	if (hasOr) term = union([term, ...desc.or!.map(parseShacl)]);
+	if (hasNot) term = intersection([term, complement(parseShacl(desc.not!))]);
+	if (hasXone) {
+		term = intersection([
+			term,
+			extension("shacl-xone", { branches: desc.xone!.map(parseShacl) }),
+		]);
+	}
 	return term;
 }
 
@@ -377,21 +431,51 @@ function parseProperty(desc: ShaclPropertyShape): ReturnType<typeof field> {
 }
 
 function parsePropertyValueType(desc: ShaclPropertyShape): TypeTerm {
-	let value: TypeTerm = desc.datatype ? datatypeToBase(desc.datatype) : top();
-
-	if (desc.in !== undefined && desc.in.length > 0) {
-		value = desc.in.length === 1 ? literal(desc.in[0]!) : union(desc.in.map((v) => literal(v)));
-	} else if (desc.hasValue !== undefined && desc.hasValue.length === 1) {
-		value = literal(desc.hasValue[0]!);
-	}
-
+	// Compute the "own value" term (datatype, in, hasValue, class, node,
+	// refinement predicate). If the property has none of those — only
+	// logical combinators — let the combinators stand alone rather than
+	// being intersected with a spurious `top()`. This is the property-level
+	// analogue of the parseNodeShapeCore fix (v3 reviewer's "empty product
+	// leak" bug; here it would leak `top()` instead).
+	const hasIn = desc.in !== undefined && desc.in.length > 0;
+	const hasHasValue = desc.hasValue !== undefined && desc.hasValue.length === 1;
+	const hasDatatype = desc.datatype !== undefined;
+	const hasClass = desc.class !== undefined && desc.class.length > 0;
+	const hasNode = desc.node !== undefined;
 	const predicate = predicateForProperty(desc);
-	if (predicate !== undefined) {
-		value = refinement(value, predicate);
+	const hasPredicate = predicate !== undefined;
+
+	const hasOwnValue = hasIn || hasHasValue || hasDatatype || hasClass || hasNode || hasPredicate;
+	const hasAnd = desc.and !== undefined && desc.and.length > 0;
+	const hasOr = desc.or !== undefined && desc.or.length > 0;
+	const hasNot = desc.not !== undefined;
+	const hasXone = desc.xone !== undefined && desc.xone.length > 0;
+
+	if (!hasOwnValue) {
+		if (hasOr) return union(desc.or!.map(parseShacl));
+		if (hasAnd) return intersection(desc.and!.map(parseShacl));
+		if (hasNot) return complement(parseShacl(desc.not!));
+		if (hasXone) {
+			return extension("shacl-xone", { branches: desc.xone!.map(parseShacl) });
+		}
+		return top();
 	}
 
-	if (desc.class !== undefined && desc.class.length > 0) {
-		const [primary, ...rest] = desc.class;
+	let value: TypeTerm = hasDatatype ? datatypeToBase(desc.datatype!) : top();
+
+	if (hasIn) {
+		const values = desc.in!;
+		value = values.length === 1 ? literal(values[0]!) : union(values.map((v) => literal(v)));
+	} else if (hasHasValue) {
+		value = literal(desc.hasValue![0]!);
+	}
+
+	if (hasPredicate) {
+		value = refinement(value, predicate!);
+	}
+
+	if (hasClass) {
+		const [primary, ...rest] = desc.class!;
 		if (primary !== undefined) {
 			value = nominal(
 				primary,
@@ -402,37 +486,21 @@ function parsePropertyValueType(desc: ShaclPropertyShape): TypeTerm {
 		}
 	}
 
-	if (desc.node !== undefined) {
-		// Combine the property's own constraints with the referenced shape.
-		const nested = parseShacl(desc.node);
-		value = intersection([value, nested]);
+	if (hasNode) {
+		value = intersection([value, parseShacl(desc.node!)]);
 	}
 
-	value = applyLogicalCombinators(value, desc);
+	if (hasAnd) value = intersection([value, ...desc.and!.map(parseShacl)]);
+	if (hasOr) value = union([value, ...desc.or!.map(parseShacl)]);
+	if (hasNot) value = intersection([value, complement(parseShacl(desc.not!))]);
+	if (hasXone) {
+		value = intersection([
+			value,
+			extension("shacl-xone", { branches: desc.xone!.map(parseShacl) }),
+		]);
+	}
+
 	return value;
-}
-
-function applyLogicalCombinators<T extends ShaclNodeShape | ShaclPropertyShape>(
-	term: TypeTerm,
-	desc: T,
-): TypeTerm {
-	if (desc.and !== undefined && desc.and.length > 0) {
-		term = intersection([term, ...desc.and.map(parseShacl)]);
-	}
-	if (desc.or !== undefined && desc.or.length > 0) {
-		term = union([term, ...desc.or.map(parseShacl)]);
-	}
-	if (desc.not !== undefined) {
-		term = intersection([term, complement(parseShacl(desc.not))]);
-	}
-	if (desc.xone !== undefined && desc.xone.length > 0) {
-		// `sh:xone` (exclusive or) has no native IR construct. Fall back to a
-		// union with an `xor: true` annotation so the parse layer is at least
-		// honest about the projection.
-		const u = union(desc.xone.map(parseShacl));
-		term = intersection([term, extension("shacl-xone", { branches: u })]);
-	}
-	return term;
 }
 
 function predicateForProperty(desc: ShaclPropertyShape): RefinementPredicate | undefined {

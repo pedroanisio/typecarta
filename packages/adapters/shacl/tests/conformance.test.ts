@@ -4,11 +4,13 @@ import {
 	complement,
 	field,
 	forall,
+	intersection,
 	literal,
 	nominal,
 	product,
 	rangeConstraint,
 	refinement,
+	top,
 	union,
 } from "@typecarta/core";
 import { describe, expect, it } from "vitest";
@@ -186,6 +188,62 @@ describe("ShaclAdapter", () => {
 				expect(parsed.fields).toHaveLength(2);
 				expect(parsed.fields?.[1]?.optional).toBe(true);
 			}
+		});
+
+		// Regression tests for the "empty product leak" bug surfaced by the
+		// external reviewer's v3 critique of the SHACL scorecard (2026-05-18).
+		// parseNodeShape used to always wrap its result in product([…]), which
+		// leaked a spurious empty product into union/intersection branches when
+		// the NodeShape had no own structural content.
+		describe("regression: no empty product leakage", () => {
+			it("union of literals (pi-prime-06 lane) round-trips as a flat union of literals", () => {
+				const term = union([literal("red"), literal("green"), literal("blue")]);
+				const parsed = adapter.parse(adapter.encode(term));
+				expect(parsed.kind).toBe("apply");
+				if (parsed.kind === "apply") {
+					expect(parsed.constructor).toBe("union");
+					expect(parsed.args).toHaveLength(3);
+					expect(parsed.args.every((a) => a.kind === "literal")).toBe(true);
+				}
+			});
+
+			it("union of products (pi-prime-20 lane) preserves the branch shapes", () => {
+				const branchA = product([field("kind", literal("a"))]);
+				const branchB = product([field("kind", literal("b"))]);
+				const term = union([branchA, branchB]);
+				const parsed = adapter.parse(adapter.encode(term));
+				expect(parsed.kind).toBe("apply");
+				if (parsed.kind === "apply") {
+					expect(parsed.constructor).toBe("union");
+					// Two product branches, no spurious empty product.
+					expect(parsed.args).toHaveLength(2);
+					for (const arg of parsed.args) {
+						expect(arg.kind).toBe("apply");
+						if (arg.kind === "apply") expect(arg.constructor).toBe("product");
+					}
+				}
+			});
+
+			it("intersection of products (pi-prime-23 lane) preserves both branches", () => {
+				const left = product([field("name", base("string"))]);
+				const right = product([field("age", base("integer"))]);
+				const term = intersection([left, right]);
+				const parsed = adapter.parse(adapter.encode(term));
+				expect(parsed.kind).toBe("apply");
+				if (parsed.kind === "apply") {
+					expect(parsed.constructor).toBe("intersection");
+					expect(parsed.args).toHaveLength(2);
+					for (const arg of parsed.args) {
+						expect(arg.kind).toBe("apply");
+						if (arg.kind === "apply") expect(arg.constructor).toBe("product");
+					}
+				}
+			});
+
+			it("top() round-trips as top(), not as product([])", () => {
+				const parsed = adapter.parse(adapter.encode(top()));
+				expect(parsed.kind).toBe("top");
+			});
 		});
 	});
 

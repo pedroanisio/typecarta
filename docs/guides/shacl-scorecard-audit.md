@@ -23,11 +23,20 @@ disclaimer:
 
 ---
 
+## Revision history
+
+| Date | Totals (✓ / ◐ / ✗ / n/a) | Cause |
+|---|---|---|
+| 2026-05-18 v1 | 17 / 30 / 7 / 16 | Initial SHACL adapter (commit `a396295`) |
+| 2026-05-18 v2 | **23 / 24 / 7 / 16** | Parser fix: "empty product leak" — `parseNodeShape` no longer wraps logical-combinator-only shapes in a spurious `product([])`. Six rows ◐ → ✓ (pi-prime-03, -06, -07, -20, -21, -23, -42). Regression-tested. See [Reviewer follow-up (v2)](#reviewer-follow-up-v2) below for the full diff and a response to the reviewer's individual claims. |
+
+---
+
 ## TL;DR
 
 | Adapter | ✓ | partial | ✗ | n/a | Universe |
 |---|---:|---:|---:|---:|---:|
-| `shacl-1-0` | 17 | 30 | 7 | 16 | 70 |
+| `shacl-1-0` | 23 | 24 | 7 | 16 | 70 |
 | `JSON Schema` (draft-07) | 22 | 15 | 8 | 25 | 70 |
 
 **SHACL is wider but shallower than JSON Schema** on this witness set:
@@ -109,19 +118,33 @@ it; the scorecard does not penalize it.
 | pi-prime-35 Nominal Tag / Brand | `✓` | `n/a` | `SP35_NOMINAL_TAG` | SHACL has `sh:class` — first-class nominal class membership. JSON Schema declares neither `nominal` in its `supportsKind` nor an equivalent vocabulary. **Real expressivity advantage**. |
 | pi-prime-59 Type-Level Complement | `✓` | `partial` | `SP59_COMPLEMENT` | SHACL has `sh:not` — direct complement. JSON Schema's `not` exists but the criterion predicate doesn't match what the round-trip produces. |
 
-### JSON Schema stronger than SHACL (8 rows)
+### SHACL parity with JSON Schema (7 rows — strengthened after the v2 parser fix)
+
+These rows were marked `partial` in v1 of this audit because the SHACL
+parser's "empty product leak" bug ([Reviewer follow-up (v2)](#reviewer-follow-up-v2))
+prevented the round-trip from preserving the witness's structural shape.
+After the fix they are `✓`, matching JSON Schema:
+
+| # | SHACL v1 → v2 | JS | Witness | Why |
+|---|:---:|:---:|---|---|
+| pi-prime-03 Global Top | `partial` → `✓` | `✓` | `SP03_GLOBAL_TOP` | Empty `sh:NodeShape` now round-trips as `top()` rather than `product([])`. |
+| pi-prime-06 Finite Homogeneous Enum | `partial` → `✓` | `✓` | `SP06_HOMO_ENUM` | `sh:in [...]` (or `sh:or` over `sh:hasValue`) now round-trips as `union([literal, …])` without a spurious leading `product([])`. |
+| pi-prime-07 Finite Heterogeneous Enum | `partial` → `✓` | `✓` | `SP07_HETERO_ENUM` | Same as 06. |
+| pi-prime-20 Discriminated Union | `partial` → `✓` | `✓` | `SP20_DISCRIMINATED_UNION` | `sh:or` over property-tagged shapes round-trips to a binary `union` of products without the spurious empty branch. |
+| pi-prime-21 Shape-Discriminated Union | `partial` → `✓` | `✓` | `SP21_SHAPE_DISCRIMINATED` | Same fix as 20; not flagged by the reviewer but had the identical bug. |
+| pi-prime-23 Record-Merge Intersection | `partial` → `✓` | `✓` | `SP23_RECORD_MERGE` | `sh:and` over two NodeShapes round-trips to `intersection(product, product)` cleanly. |
+| pi-prime-42 Tagged Dependent Choice | `partial` → `✓` | `✓` | `SP42_TAGGED_DEPENDENT` | Same fix as 20. |
+
+### JSON Schema stronger than SHACL (3 rows — remaining)
+
+After the v2 fix, the rows where JSON Schema still has a ✓ that SHACL
+does not:
 
 | # | SHACL | JS | Witness | Why |
 |---|:---:|:---:|---|---|
-| pi-prime-01 Syntactic Bottom | `partial` | `✓` | `SP01_SYNTACTIC_BOTTOM` | JSON Schema has `false` as a schema. SHACL has no first-class empty extension — encoded as `NodeShape { in: [] }` which the criterion predicate doesn't recognize as `bottom`. **Projection artifact**. |
-| pi-prime-03 Global Top | `partial` | `✓` | `SP03_GLOBAL_TOP` | Same shape: JSON Schema's `true` is bottom's dual; SHACL's empty NodeShape is structurally indistinguishable from "any node" but the round-trip produces a NodeShape, not a `top()` term. |
-| pi-prime-06 Finite Homogeneous Enum | `partial` | `✓` | `SP06_HOMO_ENUM` | JSON Schema's `enum: [...]` round-trips to `union([literal(...), …])` directly. SHACL's `sh:in` round-trips the same way, but the criterion's predicate matches the JSON Schema shape better. |
-| pi-prime-07 Finite Heterogeneous Enum | `partial` | `✓` | `SP07_HETERO_ENUM` | Same as 06. |
-| pi-prime-13 Nullable-by-Value | `partial` | `✓` | `SP13_NULLABLE_FIELD` | JSON Schema models nullable with `type: [..., "null"]`; SHACL has no native null type and the adapter falls back to `xsd:string` for `base("null")` — round-trip drops the union. **Real SHACL weakness**: RDF doesn't have null. |
-| pi-prime-20 Discriminated Union | `partial` | `✓` | `SP20_DISCRIMINATED_UNION` | JSON Schema's `oneOf` + a tag property is the textbook pattern. SHACL's `sh:or` is unordered; the discriminator-property convention isn't native. |
-| pi-prime-23 Record-Merge Intersection | `partial` | `✓` | `SP23_RECORD_MERGE` | JSON Schema's `allOf` merges two object schemas by field union. SHACL's `sh:and` over two NodeShapes round-trips to `intersection(...)` but the witness criterion expects the merged product. |
-| pi-prime-24 Refinement Intersection | `partial` | `✓` | `SP24_REFINEMENT_INTERSECTION` | Same shape as 23 but on simple-type refinements. |
-| pi-prime-42 Tagged Dependent Choice | `partial` | `✓` | `SP42_TAGGED_DEPENDENT` | JSON Schema's `if/then/else` is closer to the witness shape than SHACL's `sh:or` of branches. |
+| pi-prime-01 Syntactic Bottom | `partial` | `✓` | `SP01_SYNTACTIC_BOTTOM` | JSON Schema has `false` as a schema. SHACL has no first-class empty extension — encoded as `NodeShape { in: [] }`, which the criterion predicate doesn't recognize as a bottom node. **Projection artifact**. |
+| pi-prime-13 Nullable-by-Value | `partial` | `✓` | `SP13_NULLABLE_FIELD` | JSON Schema models nullable with `type: [..., "null"]`; SHACL has no native null type. The current adapter folds `base("null")` to `xsd:string` at encode, losing the null arm before parse. **Real SHACL adapter weakness**, separate from the parser bug; RDF genuinely has no null. |
+| pi-prime-24 Refinement Intersection | `partial` | `✓` | `SP24_REFINEMENT_INTERSECTION` | `encodeRefinement` wraps the base in a `complexType` with an `rdf:value` PropertyShape rather than flowing facets through to a `simpleType`. Round-trip yields `intersection(base, product(…))` instead of the witness's `intersection(base, refinement)`. **Real encoder limitation**, separate from the parser bug. Tracked for a follow-up encoder change. |
 | pi-prime-46 Set / Unique Collection | `partial` | `✗` | `SP46_SET` | SHACL has no native set — encodes as array. JSON Schema's `uniqueItems` is closer but the adapter throws. SHACL's `partial` is the more graceful failure; JSON Schema's `✗` is the more honest signal. |
 
 ### Where the comparison flips the adapter-hole story (10 rows)
@@ -198,3 +221,77 @@ not the headline number. If a future contributor renders a "SHACL is
 more expressive than JSON Schema" or vice-versa claim from a single
 totals comparison, point them at the diff table and the methodology
 section.
+
+---
+
+## Reviewer follow-up (v2)
+
+An external reviewer (2026-05-18) critiqued v1 of this audit, arguing
+the SHACL scorecard "looks materially wrong" because rows where SHACL
+has more direct constructs than XSD (sh:in, sh:and, sh:or, sh:not, sh:path,
+sh:equals/disjoint/lessThan) were marked ◐ where XSD got ✓. The reviewer
+identified 10 specific rows as suspect.
+
+The critique was substantially right. A probe through `parse(encode(t))`
+on every flagged witness revealed a single root cause:
+
+> `parseNodeShape` used to unconditionally produce `product([…])` even
+> when the SHACL NodeShape carried no own structural content. When that
+> shape was a child of `sh:or` / `sh:and` / `sh:not`, the empty product
+> leaked into the parsed union/intersection/complement as a spurious
+> extra arg. The criterion predicates for those rows pattern-match the
+> arg shape exactly, so the spurious arg flipped them to ◐.
+
+The fix split `parseNodeShape` into a `parseNodeShapeCore` (which
+returns `undefined` when there's no own structural content) and a
+top-level `parseNodeShape` (which returns a logical combinator's
+result directly when the core is empty, and `top()` for a fully empty
+NodeShape). The same pattern was applied to `parsePropertyValueType`
+where logical combinators on a pure-combinator property would have
+leaked `top()` instead of `product([])`.
+
+Six rows moved from ◐ → ✓ as a direct result: pi-prime-03, -06, -07,
+-20, -21, -23, -42. All six are covered by regression tests in
+`packages/adapters/shacl/tests/conformance.test.ts` under the
+"regression: no empty product leakage" describe block.
+
+### Response to specific reviewer claims
+
+| Row | Reviewer | Resolution |
+|---|---|---|
+| pi-prime-03 Global Top | should be ✓ | **Accepted, fixed.** |
+| pi-prime-06 Homogeneous Enum | should be ✓ | **Accepted, fixed.** |
+| pi-prime-07 (implied, same family) | should be ✓ | **Accepted, fixed.** |
+| pi-prime-20 Discriminated Union | should be ✓ | **Accepted, fixed.** |
+| pi-prime-23 Record-Merge Intersection | should be ✓ | **Accepted, fixed.** |
+| pi-prime-42 Tagged Dependent Choice | should be ✓ | **Accepted, fixed.** |
+| pi-prime-24 Refinement Intersection | should be ✓ | **Partially declined.** Separate from the parser bug. `encodeRefinement` wraps the base type in a `complexType` with an `rdf:value` PropertyShape rather than flowing facets through; the round-trip yields `intersection(base, product(...))` rather than the witness's `intersection(base, refinement)`. This is a real encoder limitation that needs its own fix; flagging for follow-up. The reviewer's claim that "`sh:and` between a base shape and a constraint shape narrows the value set" is true at the language level but doesn't address the round-trip shape mismatch. |
+| pi-prime-41 Compound Decidable Predicate | should be ✓ | **Declined.** The reviewer conflated this row with pi-prime-23. The pi-prime-41 predicate looks specifically for `refinement(_, andPredicate \| orPredicate)` — i.e., compound predicates *on a refinement node* (e.g. `{n : number \| (0 ≤ n ≤ 100) ∧ n mod 5 = 0}`). The witness `SP41_COMPOUND` is `refinement(number, range ∧ multipleOf)`. SHACL has `sh:and` / `sh:or` as constraint components, but it has no native `multipleOf` facet, so the SHACL adapter routes `multipleOf` through `sh:sparql`. The round-trip cannot reconstruct the `andPredicate(range, multipleOf)` shape because the `multipleOf` arm is no longer in the refinement tree. **XSD's ✓ on this row is itself a function of XSD having `multipleOf` as a native facet, not of XSD's compound-predicate handling being stronger than SHACL's.** SHACL's ◐ here is honest. |
+| pi-prime-43 Intra-Object Cross-Field | should be ✓ | **Declined as adapter issue.** The witness `SP43_CROSS_FIELD` doesn't carry `annotations.crossField` — the criterion predicate is checking for that annotation, and both SHACL and XSD adapters get ◐ for the same reason. This is a **witness gap** (same finding as the xsd-1-1 audit's pi-prime-43 note), tracked separately. SHACL's `sh:equals`/`sh:disjoint`/`sh:lessThan` are correctly modeled in `ShaclPairConstraint` and encoded when the annotation is present. |
+| pi-prime-46 Set / Unique Collection | should be ✓ | **Declined as methodological.** The reviewer argues "RDF triples are deduplicated by definition: any multi-valued property is set-valued at the data layer." That is correct at the *data* layer. The criterion predicate measures at the *IR-structure* layer: it pattern-matches `apply("set", …)`. The SHACL adapter encodes IR `set` as `array` (no native `sh:list+sh:unique` vocabulary at the encoder), so the IR-side round-trip loses set-ness. The reviewer's data-layer argument is the same methodological clash flagged in earlier rounds (the "split the dot" thread): is `n/a` / `◐` a property of the target language or of the harness? In this row, it's a property of the harness's IR-level measurement, not of SHACL the language. Keeping ◐ until either the adapter declares `sh:list+sh:unique` for round-trip set preservation or the criterion is reworded. |
+| pi-prime-67 Path-Navigating Constraint | should be ✓ | **Declined as encoder issue.** The witness `SP67_PATH_CONSTRAINT` uses `extension`, which the SHACL adapter declares in `supportsKind`, so it reaches the encoder. The encoder wraps the extension's payload in a SHACL-SPARQL stub. The criterion looks for the round-tripped structural shape, which the SPARQL envelope flattens. The reviewer's claim that "`sh:path` accepts SPARQL property paths" is true and is already modeled in `ShaclPath`, but the witness doesn't use a SHACL-path witness — it uses `extension`. To flip this row to ✓ we'd need either a new witness using a SHACL-native path shape or a different round-trip choice. Tracked for follow-up. |
+| pi-prime-70 State-Machine Type | "either standardize as · or ✗" across all adapters | **Acknowledged.** This is a broader cross-adapter consistency point. Currently SHACL gets ◐ (via the `extension`→SPARQL projection) and XSD gets · (does not model `extension`). The right resolution is probably to add `extension` to every adapter's `supportsKind` set and route to `extension("language-sparql-like", …)` envelopes — but that's an adapter-wide refactor, not a SHACL fix. |
+
+### Where the reviewer was wrong about methodology
+
+The reviewer framed pi-prime-41's XSD-✓ / SHACL-◐ split as evidence
+that "the rubric drifts between adapters" or "two adapters are being
+asked different questions under the same row name." Neither is true.
+The criterion `evaluate` function is a single static function in
+`packages/core/src/criteria/pi-prime/family-j.ts`. It takes a
+`TypeTerm`, returns a status. The same function is called on the
+round-tripped term from every adapter. The cell verdict differs
+because the round-tripped term differs — that's the *measurement*, not
+the rubric.
+
+What the reviewer correctly intuited but mis-framed is that *adapter
+implementation gaps look identical to rubric drift* in the output.
+The scorecard does need a way to distinguish "the language doesn't
+have this" from "the adapter doesn't round-trip this" from "the
+witness doesn't exercise this." We already have `n/a` for one of those
+three. The remaining two are conflated under `◐` — that's the real
+methodological hole, and the reviewer was right to push on it. The
+follow-up is to add justification taxonomy to cells (e.g.
+`{value: "partial", reason: "adapter-encoder-limitation" | "witness-shape-mismatch" | …}`)
+so audits can mechanically distinguish these cases. Tracked for a
+future change.
