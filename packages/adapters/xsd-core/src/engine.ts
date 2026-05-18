@@ -1007,12 +1007,25 @@ function checkInhabitation(value: unknown, term: TypeTerm, ctx: XsdEngine): bool
 			const inner = term.children?.[0];
 			return inner !== undefined ? checkInhabitation(value, inner, ctx) : true;
 		}
-		case "conditional":
-			// Without an XPath evaluator we accept values that satisfy either
-			// branch; the actual `check`/`extends` semantics are opaque here.
+		case "conditional": {
+			// xs:alternative dispatches on an XPath `test`; without an XPath
+			// evaluator we cannot decide which branch applies. Two cases:
+			//   - The IR's `check` and `extends` share the same `kind` (e.g.
+			//     both literal "foo"). The conditional is trivially decidable
+			//     in the structural sense — pick `then`.
+			//   - Otherwise the test is opaque; conservatively over-approximate
+			//     by accepting either branch. This is safer than intersection
+			//     (which would reject values that DO satisfy the eventually-
+			//     selected branch) at the cost of false positives on the
+			//     unselected branch. False positives are recoverable; false
+			//     negatives are not.
+			if (term.check.kind === term.extends.kind) {
+				return checkInhabitation(value, term.then, ctx);
+			}
 			return (
 				checkInhabitation(value, term.then, ctx) || checkInhabitation(value, term.else, ctx)
 			);
+		}
 		default:
 			return false;
 	}
