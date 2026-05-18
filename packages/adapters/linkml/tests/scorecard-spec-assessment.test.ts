@@ -18,16 +18,16 @@ describe("LinkML full scorecard assessment", () => {
 	it("pins the current adapter full-mode totals", () => {
 		const scorecard = fullScorecard();
 
-		// v2 lifted 17 rows via metamodel-aligned encoding (any_of, all_of,
-		// multivalued, ifabsent, linkml:Any, rules, identifier,
-		// inlined_as_dict, plus typecarta markers for round-trip fidelity).
-		// v3 (this commit) lifts 3 more by preserving union arms' inner
-		// product structure on round-trip and encoding literal-typed
-		// fields via LinkML's native equals_string / equals_number
-		// constants. pi-prime-20 / -21 / -42 flip from ◐ to ✓.
+		// v2 lifted 17 rows via metamodel-aligned encoding. v3 lifted 3 more
+		// (pi-prime-20/-21/-42) by preserving union-arm IR structure and
+		// encoding literal fields via equals_string / equals_number.
+		// v4 (this commit) lifts Family O — pi-prime-53 / -54 / -55 — by
+		// reading LinkML's native `deprecated:` slot and round-tripping
+		// `version` / `backwardCompatibleWith` through typecarta-keyed
+		// entries in the metamodel's `annotations:` slot.
 		expect(scorecard.totals).toEqual({
-			satisfied: 34,
-			partial: 11,
+			satisfied: 37,
+			partial: 8,
 			notSatisfied: 8,
 			outOfVocabulary: 17,
 		});
@@ -82,7 +82,7 @@ describe("LinkML full scorecard assessment", () => {
 		}
 	});
 
-	it("flipped 17 rows total (14 in v2, 3 more in v3) via metamodel-aligned encoding", () => {
+	it("flipped 20 rows total (14 in v2, 3 in v3, 3 in v4) via metamodel-aligned encoding", () => {
 		const scorecard = fullScorecard();
 		const cells = scorecard.cells;
 		// These rows were ✗ or ◐ in v1 (commit acb8e29) and now ✓ as of
@@ -107,6 +107,9 @@ describe("LinkML full scorecard assessment", () => {
 			"pi-prime-45", // Array → typecarta:collection=array
 			"pi-prime-46", // Set → typecarta:collection=set
 			"pi-prime-47", // Map → typecarta:collection=map
+			"pi-prime-53", // Deprecation → LinkML `deprecated:` slot                       (v4)
+			"pi-prime-54", // Versioned Identity → typecarta:version in annotations         (v4)
+			"pi-prime-55", // Backward Compatibility → typecarta:backwardCompatibleWith     (v4)
 			"pi-prime-56", // Description → typecarta:base-annotations
 			"pi-prime-57", // Examples → typecarta:base-annotations
 			"pi-prime-58", // Custom metadata → typecarta:base-annotations

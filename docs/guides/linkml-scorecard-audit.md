@@ -29,15 +29,16 @@ disclaimer:
 |---|---|---|
 | 2026-05-18 v1 | 14 / 20 / 19 / 17 | Initial LinkML adapter (commit `acb8e29`) |
 | 2026-05-18 v2 | 31 / 14 / 8 / 17 | Reviewer-driven lift: metamodel-aligned encoding for `any_of`/`all_of`/`exactly_one_of` (sh:or/sh:and/sh:xone exact_mappings), collection-via-multivalued-slot for array/set/map, typecarta markers for intersection / refinement-over-product / extension / base-annotations. 17 rows flipped. |
-| 2026-05-18 v3 | **34 / 11 / 8 / 17** | Discriminated unions: preserve inner product structure across `any_of` round-trip (typecarta:union-arm-terms) and encode literal-typed fields via LinkML's native `equals_string` / `equals_number`. pi-prime-20 / pi-prime-21 / pi-prime-42 flip ◐ → ✓. |
+| 2026-05-18 v3 | 34 / 11 / 8 / 17 | Discriminated unions: preserve inner product structure across `any_of` round-trip (typecarta:union-arm-terms) and encode literal-typed fields via LinkML's native `equals_string` / `equals_number`. pi-prime-20 / pi-prime-21 / pi-prime-42 flip ◐ → ✓. |
+| 2026-05-18 v4 | **37 / 8 / 8 / 17** | Family O (evolution / compatibility) encoder-fill: read LinkML's native `deprecated:` slot back into IR `annotations.deprecated`, and round-trip `version` / `backwardCompatibleWith` via typecarta-prefixed keys in the metamodel's `annotations:` slot. pi-prime-53 / pi-prime-54 / pi-prime-55 flip ◐ → ✓. |
 
 ## TL;DR
 
 | Adapter | ✓ | partial | ✗ | n/a | Universe |
 |---|---:|---:|---:|---:|---:|
-| `LinkML` | **34** | **11** | **8** | **17** | 70 |
+| `LinkML` | **37** | **8** | **8** | **17** | 70 |
 
-LinkML scores **49% satisfied** — comfortably above SHACL (37%) and
+LinkML scores **53% satisfied** — comfortably above SHACL (37%) and
 above JSON Schema draft-07 (31%), which matches the natural
 ordering: LinkML's class hierarchies, rules with expressions, and
 first-class annotation slots (`description`, `examples`,
@@ -186,6 +187,51 @@ Reviewer projection was 33–34 ✓ (47–49%). v3 lands at **34 ✓ (49%)**
 — top of the projected range. The v3 fix is the same pattern as v2's
 collection / intersection / extension markers: encoder-side under-
 coding closed by reading the LinkML metamodel's declarations.
+
+---
+
+## v4 lifts (Family O: evolution / compatibility)
+
+After v3, the reviewer noted Family O (deprecation, version,
+backward-compatibility) was still 0/3/0 — the same shape v2 left
+Family P in, where every row sat at `◐` until the encoder learned to
+emit and parse the annotations the criteria look for. The reviewer
+called Family O "mechanically similar to the family that just got
+fixed (P)."
+
+v4 closes Family O the same way:
+
+- **pi-prime-53 Deprecation.** The witness is
+  `product([...], { deprecated: true })`. The criterion checks
+  `term.annotations?.deprecated === true`. LinkML's metamodel has a
+  native `deprecated:` slot (range: string) on every element. The
+  encoder now reads `term.annotations.deprecated` and emits
+  `deprecated: "true"`; the parser reads `c.deprecated === "true"`
+  back into `annotations.deprecated = true`. Non-boolean deprecated
+  values (e.g. an explanatory string) round-trip as strings.
+
+- **pi-prime-54 Versioned Schema Identity.** The witness carries
+  `annotations.version`. LinkML has `version` on `SchemaDefinition`,
+  not on class definitions — so this round-trips via a
+  `typecarta:version` key in the class's `annotations:` slot. The
+  metamodel's first-class `annotations:` slot is the canonical place
+  for typecarta to stash IR-carried metadata that has no class-scope
+  equivalent.
+
+- **pi-prime-55 Backward Compatibility.** Same shape as -54, via
+  `typecarta:backwardCompatibleWith`. LinkML has `exact_mappings` /
+  `broad_mappings` / `narrow_mappings` at slot-version level, but no
+  class-scope "compatible with prior version" slot. The typecarta
+  marker preserves the IR's intent without inventing a LinkML
+  construct that doesn't exist.
+
+| Row | v3 | v4 | LinkML construct used |
+|---|---:|---:|---|
+| `pi-prime-53` Deprecation | ◐ | ✓ | `deprecated:` slot (native) |
+| `pi-prime-54` Versioned Identity | ◐ | ✓ | `typecarta:version` in `annotations:` |
+| `pi-prime-55` Backward Compatibility | ◐ | ✓ | `typecarta:backwardCompatibleWith` in `annotations:` |
+
+Reviewer projection was 37 ✓ (53%). v4 lands at exactly **37 ✓ (53%)**.
 
 ---
 

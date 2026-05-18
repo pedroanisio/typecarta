@@ -478,6 +478,28 @@ function parseClass(c: LinkmlClass, schema: LinkmlSchema | undefined): TypeTerm 
 	if (c.abstract === true) annotations.abstract = true;
 	if (c.mixin === true) annotations.mixin = true;
 	if (c.in_subset !== undefined) annotations.in_subset = c.in_subset;
+	// Family O (evolution / compatibility).
+	//   - LinkML's native `deprecated:` slot lifts to `annotations.deprecated`.
+	//     The slot's range is `string`, but the IR criterion checks
+	//     `annotations.deprecated === true`, so the canonical empty / "true"
+	//     marker becomes a boolean while anything else stays a string.
+	//   - `version` and `backwardCompatibleWith` aren't class-scope LinkML
+	//     slots; round-trip via typecarta-prefixed keys in the `annotations:`
+	//     slot. Strip those keys from the rebuilt class so downstream
+	//     consumers don't see typecarta:* leaking out.
+	if (c.deprecated !== undefined) {
+		annotations.deprecated =
+			c.deprecated === "true" || c.deprecated === "" ? true : c.deprecated;
+	}
+	const cAnn = c.annotations;
+	if (cAnn !== undefined) {
+		if (cAnn["typecarta:version"] !== undefined) {
+			annotations.version = cAnn["typecarta:version"];
+		}
+		if (cAnn["typecarta:backwardCompatibleWith"] !== undefined) {
+			annotations.backwardCompatibleWith = cAnn["typecarta:backwardCompatibleWith"];
+		}
+	}
 
 	let body: TypeTerm =
 		Object.keys(annotations).length > 0 ? product(fields, annotations) : product(fields);
@@ -985,6 +1007,26 @@ function encodeProduct(term: Extract<TypeTerm, { kind: "apply" }>): LinkmlDescri
 	for (const f of term.fields ?? []) {
 		attributes[f.name] = fieldToSlot(f);
 	}
+	// Family O (evolution / compatibility) annotations land here. LinkML
+	// has a native `deprecated:` slot on every element. `version` and
+	// `backwardCompatibleWith` are not first-class on classes (LinkML
+	// versions live on `SchemaDefinition`); carry them through the
+	// metamodel's structured `annotations:` slot with typecarta-prefixed
+	// keys, which the parse side reads back into IR annotations.
+	const carriedTypecartaAnnotations: Record<string, unknown> = {};
+	if (annotations.version !== undefined) {
+		carriedTypecartaAnnotations["typecarta:version"] = annotations.version;
+	}
+	if (annotations.backwardCompatibleWith !== undefined) {
+		carriedTypecartaAnnotations["typecarta:backwardCompatibleWith"] =
+			annotations.backwardCompatibleWith;
+	}
+	const deprecatedValue =
+		annotations.deprecated === true
+			? "true"
+			: typeof annotations.deprecated === "string"
+				? annotations.deprecated
+				: undefined;
 	return {
 		kind: "class",
 		name: "AnonymousClass",
@@ -994,6 +1036,10 @@ function encodeProduct(term: Extract<TypeTerm, { kind: "apply" }>): LinkmlDescri
 			: {}),
 		...(annotations.abstract === true ? { abstract: true } : {}),
 		...(annotations.mixin === true ? { mixin: true } : {}),
+		...(deprecatedValue !== undefined ? { deprecated: deprecatedValue } : {}),
+		...(Object.keys(carriedTypecartaAnnotations).length > 0
+			? { annotations: carriedTypecartaAnnotations }
+			: {}),
 	};
 }
 
