@@ -7,7 +7,7 @@ import type { TypeTerm } from "../ast/type-term.js";
 
 /** Connect a real-world schema language to typecarta; generic over Sig and Native. */
 export interface IRAdapter<Sig extends Signature = Signature, Native = unknown> {
-	/** Human-readable name (e.g. "JSON Schema draft-07"). */
+	/** Human-readable name without spec version (e.g. "JSON Schema", "xsd"). */
 	readonly name: string;
 
 	/**

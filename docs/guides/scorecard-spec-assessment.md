@@ -115,7 +115,7 @@ pnpm --filter @typecarta/adapter-xsd test
 Run the CLI scorecard manually:
 
 ```bash
-node packages/cli/dist/index.js scorecard --adapter "JSON Schema draft-07" --mode full
+node packages/cli/dist/index.js scorecard --adapter "JSON Schema" --mode full
 node packages/cli/dist/index.js scorecard --adapter "xsd" --mode full
 ```
 
