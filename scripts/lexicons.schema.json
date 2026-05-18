@@ -1,0 +1,998 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/scrape-lexicons/v2.1/lexicons.schema.json",
+  "title": "Cross-language schema/type lexicons (scrape_lexicons v2.1 output)",
+  "type": "object",
+  "required": [
+    "notice",
+    "metadata",
+    "summary"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "notice": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object",
+      "required": [
+        "fetched_at",
+        "tool",
+        "sources",
+        "pinned_versions",
+        "source_provenance",
+        "source_authority",
+        "extraction_rules",
+        "disclaimer"
+      ],
+      "properties": {
+        "fetched_at": {
+          "type": "string"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "sources": {
+          "type": "object"
+        },
+        "pinned_versions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "source_provenance": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "url",
+              "sha256",
+              "byte_length"
+            ],
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "byte_length": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "source_authority": {
+          "type": "object"
+        },
+        "logical_sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "extraction_rules": {
+          "type": "object"
+        },
+        "disclaimer": {
+          "type": "string"
+        }
+      }
+    },
+    "json_schema_2020_12": {
+      "type": "object",
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "vocabulary",
+              "vocabulary_url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "vocabulary": {
+                "type": "string"
+              },
+              "vocabulary_url": {
+                "type": "string"
+              },
+              "value_constraint_schema": true,
+              "comment": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "shared_defs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": [
+              "schema",
+              "defined_in_vocabulary",
+              "defined_in_url"
+            ],
+            "properties": {
+              "schema": true,
+              "defined_in_vocabulary": {
+                "type": "string"
+              },
+              "defined_in_url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "xsd_1_1": {
+      "type": "object",
+      "properties": {
+        "elements": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source",
+              "source_url",
+              "parent_path"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "parent_path": {
+                "type": "string"
+              },
+              "type": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "attributes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source",
+              "source_url",
+              "parent_path"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "parent_path": {
+                "type": "string"
+              },
+              "type": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "datatypes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "section",
+              "source_url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "section": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "datatype_productions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "production_number",
+              "name",
+              "rhs"
+            ],
+            "properties": {
+              "production_number": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "rhs": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "shacl": {
+      "type": "object",
+      "properties": {
+        "core_vocabulary": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source_url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "rdf_type": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "compact_syntax_grammar": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "rhs"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "lexer_token",
+                  "parser_rule"
+                ]
+              },
+              "rhs": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "json_ld_1_1": {
+      "type": "object",
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source_url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^@[A-Za-z]+$"
+              },
+              "description": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "typescript": {
+      "type": "object",
+      "properties": {
+        "syntactic_constructs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source_url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "intrinsic_types_es5": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "source_url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "interface",
+                  "type_alias"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "zod_v3": {
+      "type": "object",
+      "properties": {
+        "exports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "version",
+              "source_url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "version": {
+                "const": "v3"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "zod_v4": {
+      "type": "object",
+      "properties": {
+        "exports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "version",
+              "source_url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "version": {
+                "const": "v4"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "zod_v3_v4_delta": {
+      "type": "object",
+      "required": [
+        "added_in_v4",
+        "removed_in_v4",
+        "common",
+        "note"
+      ],
+      "properties": {
+        "added_in_v4": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "removed_in_v4": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "common": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "linkml": {
+      "type": "object",
+      "required": [
+        "classes",
+        "slots",
+        "types",
+        "imports"
+      ],
+      "properties": {
+        "classes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "authority_status": {
+                "const": "community-spec"
+              },
+              "is_a": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "mixins": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "abstract": {
+                "type": "boolean"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "slots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "authority_status": {
+                "const": "community-spec"
+              },
+              "domain": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "range": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "multivalued": {
+                "type": "boolean"
+              },
+              "is_a": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "authority_status": {
+                "const": "community-spec"
+              },
+              "uri": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "base": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "imports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "source_url"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "const": "import"
+              },
+              "source_url": {
+                "type": "string"
+              },
+              "authority_status": {
+                "const": "community-spec"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "python_3_12": {
+      "type": "object",
+      "required": [
+        "keywords",
+        "soft_keywords",
+        "builtin_functions",
+        "builtin_classes",
+        "builtin_exceptions"
+      ],
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "const": "keyword"
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "soft_keywords": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "const": "soft_keyword"
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "builtin_functions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "const": "function"
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "builtin_classes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "const": "class"
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "builtin_exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "const": "exception"
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "protobuf": {
+      "type": "object",
+      "required": [
+        "scalar_types",
+        "well_known_types",
+        "field_options"
+      ],
+      "properties": {
+        "scalar_types": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "wire_value",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^TYPE_[A-Z0-9]+$"
+              },
+              "kind": {
+                "enum": [
+                  "scalar",
+                  "composite"
+                ]
+              },
+              "wire_value": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "well_known_types": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "source_url",
+              "source_file",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^google\\.protobuf\\."
+              },
+              "kind": {
+                "enum": [
+                  "message",
+                  "enum"
+                ]
+              },
+              "source_file": {
+                "type": "string"
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "field_options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "postgres_18": {
+      "type": "object",
+      "required": [
+        "keywords",
+        "types",
+        "functions",
+        "operators",
+        "casts"
+      ],
+      "properties": {
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "category",
+              "bare_label",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "category": {
+                "enum": [
+                  "RESERVED_KEYWORD",
+                  "UNRESERVED_KEYWORD",
+                  "COL_NAME_KEYWORD",
+                  "TYPE_FUNC_NAME_KEYWORD"
+                ]
+              },
+              "bare_label": {
+                "enum": [
+                  "BARE_LABEL",
+                  "AS_LABEL"
+                ]
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "functions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "overload_count",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "overload_count": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "operators": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "overload_count",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "overload_count": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "casts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "source_type",
+              "target_type",
+              "source_url",
+              "authority_status"
+            ],
+            "properties": {
+              "source_type": {
+                "type": "string"
+              },
+              "target_type": {
+                "type": "string"
+              },
+              "authority_status": {
+                "const": "reference-implementation"
+              }
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "cross_language_index": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 2
+      }
+    }
+  }
+}

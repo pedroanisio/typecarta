@@ -10,3 +10,4 @@ tsconfig.tsbuildinfo
 .agent-tasks/
 global-ast-space-*.html
 bench.txt
+scripts/_spec_cache/
