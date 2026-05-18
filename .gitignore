@@ -7,3 +7,4 @@ coverage
 typecarta/docs/
 tsconfig.tsbuildinfo
 .turbo/
+.agent-tasks/
