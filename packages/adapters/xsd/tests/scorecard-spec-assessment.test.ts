@@ -19,10 +19,10 @@ describe("XSD full scorecard assessment", () => {
 		const scorecard = fullScorecard();
 
 		expect(scorecard.totals).toEqual({
-			satisfied: 24,
+			satisfied: 26,
 			partial: 15,
-			notSatisfied: 5,
-			outOfVocabulary: 26,
+			notSatisfied: 12,
+			outOfVocabulary: 17,
 		});
 	});
 
@@ -40,17 +40,25 @@ describe("XSD full scorecard assessment", () => {
 		// pi-prime-13 (nillable), pi-prime-17 (xs:any open record), and pi-prime-46
 		// (xs:list+xs:unique for sets) were previously here but now encode faithfully
 		// — adapter implementations exist for each.
+		// pi-prime-35 (nominal), -44 (keyref), -50 (named alias), -51 (modules)
+		// were previously n/a; the adapter has since grown support and they now
+		// encode (partial or ✓). The remaining genuine adapter holes are the
+		// two recursion rows.
 		const knownAdapterHoles: Array<{
 			criterionId: string;
 			current: "partial" | "✗" | "n/a";
 			xsdFeature: string;
 		}> = [
-			{ criterionId: "pi-prime-25", current: "n/a", xsdFeature: "named complexType self-reference" },
-			{ criterionId: "pi-prime-26", current: "n/a", xsdFeature: "named complexType mutual reference" },
-			{ criterionId: "pi-prime-35", current: "n/a", xsdFeature: "nominal {ns}name + xsi:type" },
-			{ criterionId: "pi-prime-44", current: "n/a", xsdFeature: "xs:keyref (document-scoped)" },
-			{ criterionId: "pi-prime-50", current: "n/a", xsdFeature: 'simpleType / complexType name="..."' },
-			{ criterionId: "pi-prime-51", current: "n/a", xsdFeature: "targetNamespace, xs:include, xs:import" },
+			{
+				criterionId: "pi-prime-25",
+				current: "n/a",
+				xsdFeature: "named complexType self-reference",
+			},
+			{
+				criterionId: "pi-prime-26",
+				current: "n/a",
+				xsdFeature: "named complexType mutual reference",
+			},
 		];
 
 		for (const gap of knownAdapterHoles) {
